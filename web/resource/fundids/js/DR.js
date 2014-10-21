@@ -1,12 +1,12 @@
 
-function initAuditorDialog(o,existAudit){
+function initAuditorDialog(o,existAudit,existFund){
   destroyDialog(o);
   var sHtml = '<div class="temp_dialog"><form class="form-box">'
 	          + '<label class="form-label">审核人</label>'
 	          +getUserSelect(existAudit)
 	          + '<label class="form-label">产  品</label><input type="hidden" class="txt-products">'
             + '<input type="hidden" class="add-element-id" value="'+$(o).parents('.layout-row:first').attr('id')+'">'
-            + genProductsChecks()
+            + genProductsChecks(existFund)
 	          + '</form>'
             + '<div class="btns-container">'
             + '<button class="btn btn-primary">确定</button>'
@@ -17,14 +17,14 @@ function initAuditorDialog(o,existAudit){
   
 }
 
-function initEditorDialog(o,existAudit){
+function initEditorDialog(o,existAudit,existFund){
   destroyDialog(o);
  	var sHtml = '<div class="temp_dialog"><form class="form-box">'
 	          + '<label  class="form-label">维护人</label>'
 	          +getUserSelect(existAudit)
 	          + '<label class="form-label">产  品</label><input type="hidden" class="txt-products">'
             + '<input type="hidden" class="add-element-id" value="'+$(o).parents('.layout-row:first').attr('id')+'">'
-            + genProductsChecks()
+            + genProductsChecks(existFund)
 	          + '</form>'
             + '<div class="btns-container">'
             + '<button class="btn btn-primary">确定</button>'
@@ -39,8 +39,8 @@ function AddAudit(o){
 	$(o).parents(".btns-container:eq(0)").prev(".Data_Element_Content").find(".td-auditor").each(function(){
 			existAudit+= (existAudit=='')?$(this).attr("uid"):';'+$(this).attr("uid");
 	})
-	var d = initAuditorDialog(o,existAudit).dialog({title:'添加审核人',width:'500px'});
-  $('.btn-primary').click(function(){appendAuditor(this);});  
+	var d = initAuditorDialog(o,existAudit,'').dialog({title:'添加审核人',width:'500px'});
+  $('.btn-primary').click(function(){appendAuditor(this,'');});  
 }
 
 function AddDm(o){
@@ -48,29 +48,40 @@ function AddDm(o){
 	$(o).parents(".btns-container:eq(0)").prev(".Data_Element_Content").find(".td-editor").each(function(){
 			existAudit+= (existAudit=='')?$(this).attr("uid"):';'+$(this).attr("uid");
 	})
-  var d = initEditorDialog(o,existAudit).dialog({title:'添加维护人',width:'500px'});
-  $('.btn-primary').click(function(){appendEditor(this);});
+  var d = initEditorDialog(o,existAudit,'').dialog({title:'添加维护人',width:'500px'});
+  $('.btn-primary').click(function(){appendEditor(this,'');});
 }
 
 function destroyDialog(o){
   $(o).parents('.temp_dialog').dialog('destroy');
 }
 
-function appendAuditor(o){  
+function appendAuditor(o,t){  
   var eid = $('.add-element-id').val(),
   	  auditorPeopleID = $('.txt-right-people').val(),
       auditorPeopleName = $('.txt-right-people').find("option:selected").text(),
       products = $('.txt-products').val(),
+      productsText= $('.txt-products').attr("idtext");
       trAuditorLast = $('#'+eid+' .tr-auditor:last'),
       trAuditorClone = trAuditorLast.clone();
   if(products=='')return alert("请选择产品!");
-  postDR({dowhat:'add-auditor',eid:eid,userid:auditorPeopleID,fundids:products},
+  var dowhat='add-auditor';
+  if(t=='edit') dowhat='edit-auditor';
+  postDR({dowhat:dowhat,eid:eid,userid:auditorPeopleID,fundids:products},
          function(data){
            if(data == '1'){
-           	  trAuditorClone.find('.td-auditor').attr("uid",auditorPeopleID);
-  			  trAuditorClone.find('.td-auditor').text(auditorPeopleName);
-  			  trAuditorClone.find('.td-products').text($('.txt-products').attr("idtext"));
-  			  trAuditorLast.after(trAuditorClone);
+           	if(t=='edit'){
+           		if($(".td-products[eflag='1']").length<=0)return alert("Error");
+           		$(".td-products[eflag='1']").attr("ids",products);
+           		$(".td-products[eflag='1']").text(productsText);
+           		$(".td-products[eflag='1']").removeAttr("eflag");
+           	}
+           	else{ 
+					trAuditorClone.find('.td-auditor').attr("uid",auditorPeopleID);
+					trAuditorClone.find('.td-auditor').text(auditorPeopleName);
+					trAuditorClone.find('.td-products').text(productsText);
+					trAuditorLast.after(trAuditorClone);
+  			 }
            }
            else{
              alert('增加失败！'+data);
@@ -81,7 +92,7 @@ function appendAuditor(o){
   destroyDialog(o);
 }
 
-function appendEditor(o){  
+function appendEditor(o,t){  
   var eid = $('.add-element-id').val(),
       editorPeopleID = $('.txt-right-people').val(),
       editorPeopleName = $('.txt-right-people').find("option:selected").text(),
@@ -89,7 +100,9 @@ function appendEditor(o){
       trEditorLast = $('#'+eid+' .tr-editor:last'),
       trEditorClone = trEditorLast.clone();
    if(products=='')return alert("请选择产品!");  
-  postDR({dowhat:'add-editor',eid:eid,userid:editorPeopleID,fundids:products},
+   var dowhat='add-editor';
+  if(t=='edit') dowhat='edit-editor';
+  postDR({dowhat:dowhat,eid:eid,userid:editorPeopleID,fundids:products},
          function(data){
            if(data == '1'){
            	trEditorClone.find('.td-editor').attr("uid",editorPeopleID);
@@ -121,21 +134,26 @@ function removeRights(o){
 }
 
 function editRights(o){
+  if($(".td-products[eflag='1']").length>0)$(".td-products[eflag='1']").removeAttr("eflag");
   var role = '',
       row = $(o).parents('tr:first');
   if(row.hasClass('tr-editor')){
-    initEditorDialog(o,'').dialog({'title':'修改维护人',width:'500px'});
+  	var existFund=$(o).parent(".DRtd5").prev(".td-products").attr("ids");
+    initEditorDialog(o,'',existFund).dialog({'title':'修改维护人',width:'500px'});
     role = 'editor';
   }
   else{
-    initAuditorDialog(o,'').dialog({'title':'修改审核人',width:'500px'});
+  	var existFund=$(o).parent(".DRtd5").prev(".td-products").attr("ids");
+    initAuditorDialog(o,'',existFund).dialog({'title':'修改审核人',width:'500px'});
     role = 'auditor';
   }
   var name = $('.td-'+role,row).attr("uid"),//text(),
-      products = $('.td-products',row).text();
+      products = $('.td-products',row).attr("ids");
   //console.log('name:'+name+' products:'+products);
   $('.txt-right-people').val(name).attr('disabled',true);
   $('.txt-products').val(products);
+  var existFund=$(o).parent(".DRtd5").prev(".td-products").attr("eflag",1);
+  $('.btn-primary').click(function(){appendAuditor(this,'edit');});  
 }
 //用户select获取
 function getUserSelect(existUser)
@@ -236,12 +254,19 @@ function postDR(params,handler){
 }
 
 
-function genProductsChecks(){
+function genProductsChecks(existFund){
+  var checkStr= '';
+  var flag=0;
+  if(existFund=='all') {checkStr= 'checked';flag=1;}
   var d = getSelectData('allproduct'),
       sHtml = '<div class="container-products">'
-            + '<label><input type="checkbox" value="all" onclick="checkAllProducts(this)" />所有</label>';
+            + '<label><input type="checkbox" value="all" onclick="checkAllProducts(this)" '+checkStr+'/>所有</label>';
   for(var i = 0;i<d.length;i++){
-    sHtml += '<label><input type="checkbox" value="'+d[i].value+'" class="chk-product" onclick="setTxtProducts(this)" />'+d[i].label+'</label>';
+  	if(!flag){
+  			if(existFund.indexOf(d[i].value)>-1) checkStr= 'checked';
+  			else checkStr='';
+  	}
+    sHtml += '<label><input type="checkbox" value="'+d[i].value+'" class="chk-product" onclick="setTxtProducts(this)" '+checkStr+'/>'+d[i].label+'</label>';
   }
   sHtml += '</div>';
   return sHtml;
@@ -271,7 +296,7 @@ function setTxtProducts(o){
 			if(s.length>0)
         		selectedText+= (selectedText=="")?s[1]:";"+s[1];
       });
-   if(selectedProducts!=""&&$(o).parents('.container-products').find('input:checkbox').not("input:checked").length==0)selectedProducts= 'all';
+   if(selectedProducts!=""&&$(o).parents('.container-products').find('input:checkbox').not("input:checked").length==0){selectedProducts= 'all';selectedText='所有';}
   $('.txt-products').val(selectedProducts);
   $('.txt-products').attr("idtext",selectedText);
 }

@@ -40,8 +40,7 @@ begin
 	   Level := utf8toansi(urltotext(httpGetQueryValueByName('Level')));
 	   updateData := array();
 	   updateData['Table'] := 'TS_RTemplateE';
-	   updateData['Conf'] := array(("QueryStr":"TID='"+tostring(TID)+"' and SERIESID="+tostring(SID),"Data":(('Field':'SRC3','Type':'Number','Value':Level))));
-     dolog('wordReport','QueryStr='+"TID='"+tostring(TID)+"' and SERIESID="+tostring(SID));
+	   updateData['Conf'] := array(("QueryStr":"TID='"+tostring(TID)+"' and SERIESID="+tostring(SID),"Data":(('Field':'SRC3','Type':'Number','Value':Level))));    
      r := class(ExecuteSQL).update(updateData);
      if r then return echo 1
      else return;
@@ -89,8 +88,7 @@ begin
 		   insertData['Table'] := 'TS_RTemplateE';
 		   insertData['Data'] := data;
 		   r := class(ExecuteSQL).insert(insertData);	
-		end;
-	
+		end;	  
 		if not r then return 0;
 		return echo TID;		
 end;
@@ -197,12 +195,13 @@ begin
      if EType in conf['Layout'] then
      begin                   
            case EType of
-		           'Title':
+		           'title':
 		           begin		               
 		                insertData := array();
                     insertData['Table'] := 'TS_RTemplateE';
-                    insertData['Data'] := array(('TID':TID,'SERIESID':SID,'SRC1':1,'TYPE':EType,'USERID':UID));
-                    f := class(ExecuteSQL).insert(insertData);                    
+                    insertData['Data'] := array(('TID':TID,'SERIESID':SID,'SRC1':1,'TYPE':EType,'USERID':UID,'STATUS':-1));
+                    f := class(ExecuteSQL).insert(insertData);                                   
+                    dolog('wordReport','insertData='+tostn(insertData));
                     if not f then return;
 		                conf := array('Conf':('Type':EType,'Conf':('Level':1)),'op':'add','SID':SID,'TID':TID);
 		                html := outForm.outElementEditForm(conf);
@@ -212,8 +211,7 @@ begin
 		           begin
 		                insertData := array();
                     insertData['Table'] := 'TS_RTemplateE';
-                    insertData['Data'] := array(('TID':TID,'SID':SID,'SRC1':0,'TYPE':EType,'USERID':UID));
-                    dolog('wordReport','insertData='+tostn(insertData));
+                    insertData['Data'] := array(('TID':TID,'SID':SID,'SRC1':0,'TYPE':EType,'USERID':UID));                    
                     return 0;
                     f := class(ExecuteSQL).insert(insertData);
                     if not f then return;                    
@@ -225,15 +223,15 @@ begin
      end
      else
      begin			     
-			     EType := EType?EType:'Txt';
+			     EType := EType?EType:'txt';
 			     randomize();	  
 				   timeStr := FormatDateTime('yyyymmddhhnnssz',now());
 				   EID := timeStr+'_'+inttostr(random(2000000000))+inttostr(random(2000000000))+inttostr(random(2000000000));
 				   insertData := array();
 				   insertData['Table'] := 'TS_RTemplateElement';
-				   insertData['Data'] := array(('EID':EID,'USERID':UID,'STATUS':-1));
-				   r := class(ExecuteSQL).insert(insertData);	  
-				   if not r then return;
+				   insertData['Data'] := array(('EID':EID,'USERID':UID,'STATUS':-1));				   
+				   r := class(ExecuteSQL).insert(insertData);				   
+				   if not r then return;				   
 				   data := array();
 				   conf := array('Type':EType,'Conf':(),'DataSource':());
 				   data['TID'] := TID;
@@ -431,8 +429,11 @@ if dowhat = 'clearNewElement' then
 begin
 	   deleteData := array();
 	   deleteData['Table'] := 'TS_RTemplateElement';
-	   deleteData['QueryStr'] := "STATUS=-1 and USERID='"+UID+"'";
+	   deleteData['QueryStr'] := "STATUS=-1 and USERID='"+UID+"'";	  
 	   r := class(ExecuteSQL).delete(deleteData);
+	   deleteData['Table'] := 'TS_RTemplatee';
+	   deleteData['QueryStr'] := "STATUS=-1 and USERID='"+UID+"'";
+	   r2 := class(ExecuteSQL).delete(deleteData);
 	   if r then
 	   return 1
 	   else

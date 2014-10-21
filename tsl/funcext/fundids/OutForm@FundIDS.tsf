@@ -976,9 +976,9 @@ function OutForm.outElementEditForm(data);
 begin	   
 	   conf := data['Conf'];	   
 	   case conf['Type'] of
-	   'Title': tsFormConf := getTitleFormConfig(data);
-	   'Category':tsFormConf := getCategoryFormConfig(data);
-	   'Newline','PageBreak':tsFormConf := getCommonFormConfig(data);
+	   'title': tsFormConf := getTitleFormConfig(data);
+	   'category':tsFormConf := getCategoryFormConfig(data);
+	   'newline','pagebreak':tsFormConf := getCommonFormConfig(data);
 	   else
 	   tsFormConf := getElementEditFormConfig(data);
 	   end;

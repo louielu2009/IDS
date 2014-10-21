@@ -23,8 +23,6 @@ class function deleteEditor(param);//删除相关维护人(param=array('EID':???,'Edito
 class function editEditorRight(param);//保存维护人(param=array('EID':???,'FundID':???))
 class function editAuditorRight(param);//保存审核人(param=array('EID':???,'FundID':???))
 
-//2014-10-17
-class function getDepartmentByUserid(userid);//根据用户获取部门
 
 end;
 
@@ -186,9 +184,9 @@ begin
      	    if not EditorsArr[i] then continue;
      	    if EditorsArr[i] in r[:,array('USERID')] then
      	    begin
-	            arr := select * from r where ['USERID'] = EditorsArr[i] end;
-	            if not length(arr) then continue;
-	            arr := arr[0];
+            arr := select * from r where ['USERID'] = EditorsArr[i] end;
+            if not length(arr) then continue;
+            arr := arr[0];
      	    end
      	    else
             	data[len] := array('USERID':EditorsArr[i],'EID':EID,'TYPE':1,'PRODUCTS':Products);     	    
@@ -455,7 +453,7 @@ begin
 	   level := strtointDef(data['Element_Title_Level'],1)   
 	   else level := data['Element_Title_Level'];	
 	     
-	   r := update sqlTable 'TS_RTemplateE' of class(TWebFundIDSConfig).getDBAlia() set ['SRC1'] = 1,['SRC2'] = Content,['SRC3'] = Level,['TYPE'] = 'title' where ['TID'] = tid and ['SERIESID'] = sid end;	  
+	   r := update sqlTable 'TS_RTemplateE' of class(TWebFundIDSConfig).getDBAlia() set ['STATUS'] = 1 ,['SRC1'] = 1,['SRC2'] = Content,['SRC3'] = Level,['TYPE'] = 'title' where ['TID'] = tid and ['SERIESID'] = sid end;	  
 	   if r then
 	       return 1
 	   else
@@ -650,7 +648,4 @@ begin
 end;
 }
 
-class function Element.getDepartmentByUserid(userid);//根据用户获取部门
-begin
 		
-end;

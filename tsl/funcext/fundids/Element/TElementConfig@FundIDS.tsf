@@ -6,15 +6,15 @@ end;
 
 class function TElementConfig.outElementTypeConf();overload;
 begin
-	   conf := array('Base':(('Type':'Txt'),
-	                         ('Type':'Table'),
-	                         ('Type':'Pic'),
-	                         ('Type':'WordFile')
+	   conf := array('Base':(('Type':'txt'),
+	                         ('Type':'table'),
+	                         ('Type':'pic'),
+	                         ('Type':'wordfile')
 	                        ),
-	                 'Layout':(('Type':'Title'),
-	                           ('Type':'Newline'),
-	                           ('Type':'PageBreak'),
-	                           ('Type':'Category'),
+	                 'Layout':(('Type':'title'),
+	                           ('Type':'newline'),
+	                           ('Type':'pagebreak'),
+	                           ('Type':'category'),
 	                          )
 	                 );
 	    return conf;

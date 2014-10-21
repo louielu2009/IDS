@@ -19,7 +19,7 @@ type ElementData = class
   function saveData(param);//保存数据并设置数据状态
 
   function getDataRight(UID);//获取该用户所有元素的责权关系
-  function getDataRightData();//获取所有元素责权关系
+  function getDataRightData(UID);//获取所有元素责权关系
   //********2014-9-24(Bin)**********//
   function getDataVersion(EID,FundID,rpt);//获得eid元素对应的所有的数据版本(fundid可选参数)
   function genDataVersion(EID,FundID,rpt);//输出eid元素对应的版本
@@ -40,6 +40,9 @@ type ElementData = class
   //********2014-10-20(Bin)********//
   function getMatchedTemplates(Data);//获取符合条件的模板列表数据
   function genMatchedTemplates(Data);//获取符合条件的模板列表
+  
+	function getProductAuditInfo(UID,type);overload;//获取产品审核、维护分配情况：type:1:编辑；2:审核
+	function getProductAuditInfo(UID,type,allFund);overload;//获取产品审核、维护分配情况：type:1:编辑；2:审核
 end;
 
 
@@ -970,10 +973,11 @@ begin
      return data;
 end;
 
-function ElementData.getDataRightData();
+function ElementData.getDataRightData(UID);
 begin
      //**********代码名称映射表***********//
      FundList := class(TgenReport).getFundList();
+     allFund:= FundList;
      List := array();
      reindex(FundList,FundList[:,"代码"]);
      List := FundList[:,'名称'];
@@ -986,12 +990,10 @@ begin
      //***************END****************//
      data := array();
      sql1 := "select * from TS_RTemplateElement where STATUS = 1";
-     if not execSQL(class(TWebFundIDSConfig).getDBAlia(),sql1,Elements) or not length(Elements) then
-     return ;
+     if not execSQL(class(TWebFundIDSConfig).getDBAlia(),sql1,Elements) or not length(Elements) then return array();
      sql2 := "select * from TS_DataRight where USERID IS NOT NULL and IsValid!=0";     
      if not execSQL(class(TWebFundIDSConfig).getDBAlia(),sql2,DataRights) or not length(DataRights) then
-     
-     DataRights := array();
+     	DataRights := array();
      for i := 0 to length(Elements)-1 do
      begin
           DLen := length(data);
@@ -1015,9 +1017,11 @@ begin
                     for k := 0 to length(PArr)-1 do
                     begin
                          l := length(EDataRights);
-                         //if List[PArr[k]] in EDataRights[:,array('Product')] then continue;                         
-                         EDataRights[l]['Product'] := List[PArr[k]]?List[PArr[k]]:'';
+                         //if List[PArr[k]] in EDataRights[:,array('Product')] then continue; 
                          EDataRights[l]['fundID'] := PArr[k];
+                         if PArr[k]= 'all' then EDataRights[l]['Product'] :='所有'
+                         else EDataRights[l]['Product'] := List[PArr[k]]?List[PArr[k]]:'';
+                         
                          if Arr[j]['TYPE'] = 1 then
                          EDataRights[l]['Editor'] := Arr[j]['USERID']
                          else
@@ -1028,20 +1032,23 @@ begin
           data[DLen]['Data'] := EDataRights;
           data[DLen]['EID'] := Elements[i]['EID'];
      end;      
-     return data;    
+     auditInfo:= getProductAuditInfo(UID,1,allFund);
+     dmInfo:= getProductAuditInfo(UID,2,allFund);
+     return array("eleRelation":data,"auditInfo":auditInfo,"dmInfo":dmInfo);
 end;
 
 function ElementData.getDataRight(UID);//生成所有元素责权关系
 begin   
-  r :=getDataRightData();  
+  r :=getDataRightData(UID);
+  auditInfo:= r['auditInfo'];
+  dmInfo:= r['dmInfo'];
+  r:= r['eleRelation'];
   divStr := '';
   indexsArr := getAllIndexs(r);  
-
   for i := 0 to length(r)-1 do
   begin
       _data := r[i]['Data'];
-      //return echo tostn(_data);
-      auditors := sselect distinct ['Auditor'] from _data end;    
+      auditors := sselect distinct ['Auditor'] from _data order by ['Auditor'] end;    
       data := array();
       obj:= createObject("TWSMemberDB",-1);
 	  userInfo:= obj.GetMembers(); 
@@ -1054,9 +1061,11 @@ begin
         data[n]['Products'] := '';
         p := sselect distinct ['Product'] from _data where ['Auditor'] = a end;
         if istable(p) then data[n]['Products']:= array2Str(p,';');
+        t := sselect distinct ['fundID'] from _data where ['Auditor'] = a end;
+        if istable(t) then data[n]['fundID']:= array2Str(t,';');
       end;
       
-      editors := sselect distinct ['Editor'] from _data end;     
+      editors := sselect distinct ['Editor'] from _data  order by ['Editor'] end;     
       for m := 0 to length(editors) - 1 do
       begin        
         e := editors[m];
@@ -1066,6 +1075,9 @@ begin
         data[len]['Products'] := '';
         p := sselect distinct ['Product'] from _data where ['Editor'] = e end;
         if istable(p) then data[len]['Products']:= array2Str(p,';');
+        
+        t := sselect distinct ['fundID'] from _data where ['Editor'] = e end;
+        if istable(t) then data[len]['fundID']:= array2Str(t,';');
       end;
             
       trs := '';
@@ -1081,7 +1093,7 @@ begin
           	uName:= vselect ['MemberName'] from userInfo where ['MemberId']= data[k]['Auditor'] end;
             tds += '<td class="DRtd2 td-auditor" uid="'+data[k]['Auditor']+'">'+tostring(uName)+'</td>';
             tds += '<td class="DRtd3"><b>产品</b></td>';   
-            tds += '<td class="DRtd4 td-products">'+tostring(data[k]['Products'])+'</td>';
+            tds += '<td class="DRtd4 td-products" ids="'+data[k]['fundID']+'">'+tostring(data[k]['Products'])+'</td>';
             tds += '<td class="DRtd5"></td>';
             trs += '<tr class="tr-auditor">'+tds+'</tr>';
         end
@@ -1091,7 +1103,7 @@ begin
             eName:= vselect ['MemberName'] from userInfo where ['MemberId']= data[k]['Editor'] end; 
             tds1 += '<td class="DRtd2 td-editor" uid="'+data[k]['Editor']+'">'+tostring(eName)+'</td>';
             tds1 += '<td class="DRtd3"><b>产品</b></td>';   
-            tds1 += '<td class="DRtd4 td-products">'+tostring(data[k]['Products'])+'</td>';
+            tds1 += '<td class="DRtd4 td-products" ids="'+data[k]['fundID']+'">'+tostring(data[k]['Products'])+'</td>';
             tds1 += '<td class="DRtd5"></td>';
             trs += '<tr class="tr-editor">'+tds1+'</tr>';	
         end;    	  
@@ -1099,10 +1111,54 @@ begin
       
       ElementId := r[i]['EID'];
       table := '<table class="underlineTable">'+trs+'</table>';
+      //"auditInfo":auditInfo,"dmInfo":dmInfo);
+      tStr1:='';
+      n1:= vselect ['NotPlannedProductNum'] from auditInfo where ['EID']= ElementId end;
+      n2:= vselect ['NotPlannedProductNum'] from dmInfo where ['EID']= ElementId end;
+      if n1>0 then tStr1:= '尚有'+tostring(n1)+'个产品未分配审核人';
+      if n2>0 then tStr1+= (tStr1='')?'':',' +tostring(n2)+'个产品没未分配维护人';
       divStr += '<div class="layout-row" id="'+ElementId+'"><h3 class="Data_Element_Item">'+tostring(r[i]['Name'])+'</h3>'
+      	   +'<p class="warning">'+tStr1+'</p>'
            + '<div class="Data_Element_Content">'+table+'</div>'
-           + '<div class="btns-container"><button class="btn btn_AddAudit">+审核</button><button class="btn btn_AddDm">+维护</button></div>'
+           + '<div class="btns-container"><button class="btn btn_AddAudit">+审核</button><button class="btn btn_AddDm">+维护</button></div>'          
            + '</div>';
   end;  
   return divStr;
+end;
+
+function ElementData.getProductAuditInfo(UID,type);overload;
+begin
+		productArr := class(TgenReport).getFundList();
+		return getProductAuditInfo(UID,type,productArr);
+end;
+
+function ElementData.getProductAuditInfo(UID,type,allFund);overload;//获取产品审核、维护分配情况：type:1:编辑；2:审核
+begin
+		productArr:= allFund;
+		sql := "select EID,PRODUCTS from TS_DataRight where USERID IS NOT NULL and IsValid!=0 and TYPE="+tostring(type);     
+     	if not execSQL(class(TWebFundIDSConfig).getDBAlia(),sql,arr) or not length(arr) then return array();
+    	update arr set ['PRODUCTS']= str2Array(['PRODUCTS'],';')  end;
+    	eidArr:= sselect distinct ['EID'] from arr end;
+    	if not istable(eidArr) then return array();
+    	data:= array();
+    	for i:= 0 to length(eidArr) -1 do begin
+				L:= length(data);
+				data[L]['EID']:= eidArr[i];
+				tArr:= select ['PRODUCTS'] from arr where ['EID']= eidArr[i] end;
+				plannedProduct:= array();
+				for j:= 0 to length(tArr)-1 do 
+				begin
+					plannedProduct&= tArr[j]['PRODUCTS'];
+				end;
+				plannedProduct:= DistinctStr(plannedProduct);
+				data[L]['plannedProduct']:= plannedProduct;
+				if "all" in plannedProduct then begin
+					NotPlannedProduct:= array();
+				end else begin 
+					NotPlannedProduct:= sselect ['代码']  from productArr where not (['代码'] in plannedProduct)  end;
+					//data[L]['NotPlannedProduct']:= NotPlannedProduct;
+				end;
+				data[L]['NotPlannedProductNum']:= length(NotPlannedProduct);
+    	end;
+     	return data;
 end;

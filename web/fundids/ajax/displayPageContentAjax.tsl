@@ -364,7 +364,7 @@ begin
 	  		  rightContent := ElementData.genElementData(RID);
 	   else
 	   begin
-   		    Data := ElementData.getAllElementData(UID);   		    
+   		    Data := ElementData.getAllElementData(UID);    		    	    
    		    RightContent := ElementData.genAllElementData(Data);   		    
    		    Funds := ElementData.getMatchFunds(Data);
 		     // FundList := ElementData.genFundList(Funds);
@@ -402,20 +402,27 @@ end;
 if Ctype = 'DR' then
 begin	
 	obj:= createObject("TWSMemberDB",-1);
-	departInfo:= obj.GetDepartmentByUserID(UID);
+	departInfo:= obj.GetDepartmentByUserID(UID);	
+	roleArr:= obj.GetMemberRoles(UID);
 	if not istable(departInfo) then DepartmentName :='【无效部门】'
   	else DepartmentName := departInfo[0]['RoleName']+' 责权关系';//'财务部责权关系';
-  html := '<div class="main_content" roleid="'+departInfo[0]['RoleId']+'">';  
-  html += '<h1>'+DepartmentName+'</h1>';  
-  RID := utf8toansi(urltotext(httpGetQueryValueByName('RID')));	  
-  queryData := array();
-  queryData['Table'] := 'TS_ReportInfo';
-  r  := class(ExecuteSQL).Query(queryData); 
+  html := '<div class="main_content" roleid="'+tostring(departInfo[0]['RoleId'])+'">';  
+  html += '<h1>'+DepartmentName+'</h1>';    
+  //判断角色权限：只有“管理员(role1409200001)+部门负责人(role1410170005)”可进入权责页面
+  if not (('role1409200001' in roleArr) or ('role1410170005' in roleArr)) then begin
+    html+= '<div style="color:red;margin:10px;font-size:14px">权限不足！您当前不是部门负责人或管理员。</div>';
+  end else
+  begin
+    RID := utf8toansi(urltotext(httpGetQueryValueByName('RID')));	  
+    queryData := array();
+    queryData['Table'] := 'TS_ReportInfo';
+    r  := class(ExecuteSQL).Query(queryData); 
   
-  ElementData := createObject('ElementData');
-  RightContent := ElementData.getDataRight(UID);
-  rightContent := rightContent?rightContent:'无相关记录！';		   	   
-  html+=rightContent;  
+    ElementData := createObject('ElementData');
+    RightContent := ElementData.getDataRight(UID);
+    rightContent := rightContent?rightContent:'无相关记录！';		   	   
+    html += rightContent;  
+  end;
   html+='</div>';
   return echo html;   
 end;

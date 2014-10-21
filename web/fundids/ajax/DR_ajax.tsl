@@ -13,6 +13,11 @@ case dowhat of
   end;
   'edit-auditor':
   begin
+  		//两步：1、删除；2、添加
+  		t1:= deleteAuditor(eid,userid);
+  		data['Auditors']:= userid;
+    	t2:= class(Element).addAuditors(data);
+    	return echo t1 and t2;
   end;
   'remove-auditor':
   begin
@@ -25,7 +30,11 @@ case dowhat of
   end;
   'eidt-editor':
   begin
-  
+  		//两步：1、删除；2、添加
+  		t1:= deleteEditor(eid,userid);
+  		data['Editors'] := userid;
+    	t2:= class(Element).addEditors(data);
+    	return echo t1 and t2;
   end;
   'remove-editor':
   begin

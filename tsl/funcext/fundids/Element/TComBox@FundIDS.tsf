@@ -430,10 +430,10 @@ begin
           end;
      end;	   
 	   Element := '<div class="Element_Base"><div><span class="Element_BaseTitle">基本</span></div>';
-	   Element += '<div><span class="Element_Type" comID="Txt">文本</span></div><div><span class="Element_Type" comID="Table">表格</span></div><div><span class="Element_Type" comID="Pic">图</span></div><div><span class="Element_Type" comID="WordFile">word文档</span></div>';
+	   Element += '<div><span class="Element_Type" comID="txt">文本</span></div><div><span class="Element_Type" comID="table">表格</span></div><div><span class="Element_Type" comID="pic">图</span></div><div><span class="Element_Type" comID="wordfile">word文档</span></div>';
 	   Element += '</div>';
 	   Element += '<div class="Element_Layout"><div><span class="Element_LayoutTitle">布局</span></div>';
-	   Element += '<div><span class="Element_Type" comID="Title">标题</span></div><div><span class="Element_Type Element_Layout" comID="Newline">换行</span></div><div><span class="Element_Type Element_Layout" comID="PageBreak">分页符</span></div><div><span class="Element_Type Element_Layout" comID="Category">目录</span></div>';
+	   Element += '<div><span class="Element_Type" comID="title">标题</span></div><div><span class="Element_Type Element_Layout" comID="newline">换行</span></div><div><span class="Element_Type Element_Layout" comID="pagebreak">分页符</span></div><div><span class="Element_Type Element_Layout" comID="category">目录</span></div>';
 	   Element += '</div>';							           
 		 Element := '<div class="Element_EType">'+Element+'</div>';		
 	    

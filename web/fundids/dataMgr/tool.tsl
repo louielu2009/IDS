@@ -1,11 +1,15 @@
 
-
+//8、产品相关信息
+obj:= createObject("ElementData");
+arr:= obj.getProductAuditInfo(UID,1);//获取产品维护分配情况
+arr:= obj.getProductAuditInfo(UID,2);//获取产品审核分配分配情况
+return echo tostn(arr);
 //7、获取用户信息
 obj:= createObject("TWSMemberDB",-1);
-t:= obj.GetMembers();
-echo tostn(t);
+//t:= obj.GetMembers();
+//echo tostn(t);
 arr:= obj.GetMemberRoles("admin");
- echo tostn(arr);
+ return echo tostn(arr);
 //roles:= obj.GetRoles();
 
 departnent:= obj.GetDepartment();
