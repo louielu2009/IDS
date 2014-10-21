@@ -1,0 +1,109 @@
+type ReportData = class
+
+function getWordReportData(RID);
+function getData(Data);
+function convertEData(Data);
+function genDocumentFlow(Data);
+end;
+
+function ReportData.genDocumentFlow(Data);
+begin
+     lv1_order := lv2_order := lv3_order := lv4_order := lv5_order := lv6_order := 1;
+	   for i := 0 to length(data)-1 do
+	   begin	   	   
+	   	    if data[i]['type'] = 'title' or data[i]['setTitle'] then
+		   	  begin  
+		   	    data[i]['OriginC'] := data[i]['content'] ; 
+		   	    case data[i]['lv'] of
+				   	    1:
+				   	    begin				            
+				             data[i]['Label'] := inttostr(lv1_order++);
+				             lv2_order := lv3_order := lv4_order := lv5_order := lv6_order := 1;
+				             data[i]['content'] := '¡ì'+data[i]['Label']+data[i]['content'];
+				   	    end;
+				   	    2:
+				   	    begin				   	    	   
+				   	    	   data[i]['Label'] := inttostr(lv1_order-1)+'.'+inttostr(lv2_order++);
+				   	    	   data[i]['content'] := data[i]['Label']+data[i]['content'];				   	    	  
+				   	    end;
+				   	    3:
+				   	    begin				   	    	   
+				   	    	   data[i]['Label'] := inttostr(lv1_order-1)+'.'+inttostr(lv2_order-1)+'.'+inttostr(lv3_order++);
+				   	         data[i]['content'] := data[i]['Label']+data[i]['content'];
+				   	    end;
+				   	    4:
+				   	    begin				   	    	   
+				   	    	   data[i]['Label'] := inttostr(lv1_order-1)+'.'+inttostr(lv2_order-1)+'.'+inttostr(lv3_order-1)+'.'+inttostr(lv4_order++)+'.';
+				   	         data[i]['content'] := data[i]['Label']+data[i]['content'];
+				   	    end;
+				   	    5:
+				   	    begin
+				   	    	   data[i]['Label'] := inttostr(lv1_order-1)+'.'+inttostr(lv2_order-1)+'.'+inttostr(lv3_order-1)+'.'+inttostr(lv4_order-1)+'.'+inttostr(lv5_order++);
+				   	         data[i]['content'] := data[i]['Label']+data[i]['content'];
+				   	    end;
+				   	    6:
+				   	    begin
+				   	    	   data[i]['Label'] := inttostr(lv1_order-1)+'.'+inttostr(lv2_order-1)+'.'+inttostr(lv3_order-1)+'.'+inttostr(lv4_order-1)+'.'+inttostr(lv5_order-1)+'.'+inttostr(lv6_order++);
+				   	         data[i]['content'] := data[i]['Label']+data[i]['content'];
+				   	    end;
+	          end;
+	       end;
+	   end;
+	   return data;
+end;
+
+function ReportData.getWordReportData(RID);
+begin
+     queryData := array();
+     queryData['Table'] := 'TS_ReportInfo';
+     queryData['QueryStr'] := "ID ='"+tostring(RID)+"'";
+     r := class(ExecuteSQL).query(queryData);
+     if not ifArray(r)or not length(r) then
+     begin     
+         return;	       
+     end; 		 
+     r := r[0];
+     TID := r['TID']?r['TID']:'';        
+     sql := "select * from TS_RTemplateE a left join TS_RTemplateElement b on a.EID = b.EID where TID='"+TID+"' order by SERIESID asc";
+     if not execSQL(class(TWebFundIDSConfig).getDBAlia(),sql,Elements) or  not length(Elements) then
+     return;
+     EIDs := `(Elements[:,array('EID')]);
+     EIDs := EIDs['EID'];
+     EData := getData(array('EIDs':EIDs,'ReportDate':r['REPORTDATE'],'FundID':r['FUNDID']));
+     Elements := select [1].*,[2].['DATA'] as 'Data' from Elements left join EData on [1].['EID'] = [2].['EID'] end;
+     Elements := convertEData(Elements);
+     EArr := genDocumentFlow(Elements);
+     return EArr;
+end;
+
+function ReportData.getData(Data);
+begin
+     EArr := array();
+	   EIDs := Data['EIDs'];
+	   EIDs := array2Str(EIDs,"','");
+	   ReportDate := Data['ReportDate'];
+	   FundID := Data['FundID'];	   	   
+	   sql := "select a.EID,a.DATA from TS_RFormalData a left join TS_RTemplateElement b on a.EID=b.EID where a.EID in ('"+EIDs+"') and a.STATUS=4 and (b.TIP1=0 or (b.TIP1=1 and a.TIP1='"+tostring(ReportDate)+"')) and (b.TIP2=0 or (b.TIP2=1 and a.TIP2='"+tostring(FundID)+"'))";
+	   if not Execsql(class(TWebFundIDSConfig).getDBAlia(),sql,r) or not length(r) then return EArr;
+	   return r;     
+end;
+
+function ReportData.convertEData(Data);
+begin
+     if not ifArray(Data) then return ;
+     for i := 0 to length(Data)-1 do
+     begin         
+          conf := Data[i]['CONF'] ? stm(Data[i]['CONF']): array();
+          if Data[i]['EID'] then
+          Data[i]['type'] := conf['Type']?conf['Type'] :''
+          else
+          Data[i]['type'] := Data[i]['TYPE']?Data[i]['TYPE']:'';
+          if Data[i]['SRC1'] and Data[i]['SRC2'] and Data[i]['SRC3'] then
+          begin              
+               Data[i]['setTitle'] := 1;
+               Data[i]['content'] := Data[i]['SRC2'];
+               Data[i]['lv'] := Data[i]['SRC3'];
+          end;
+     end;     
+     return Data;
+end;

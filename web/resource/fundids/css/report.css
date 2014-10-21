@@ -1,0 +1,40 @@
+
+ 
+
+/*新建报告*/
+.fundList span {margin-right: 20px;}
+.report_param{line-height:30px;}
+.report_param p{margin-top: 10px;}
+.report_param input,.report-param-span{margin-left: 30px;width: 320px;/*height: 30px;*/}
+
+/***报告页面列表样式***/
+.underlineTable tr td{text-align:center;}
+.rep_thead_name,.rep_name{text-align:left;}
+.rep_plan{width:100%;height:20px;border:1px solid #70AD47;background-color:#fff;}
+.rep_plan div{width:0px;;height:21px;background-color:#70AD47;text-align:center;line-height:20px;color:#000000;}
+.rep_btn{width:135px;}
+.repspan_plan,.repspan_sum{margin-left:10px;}
+.rep_finish{color:#4BB408;text-align:center;}
+.span_button button{margin-right:5px;}
+
+.Report_Config{background:#f8f8f8;box-shadow:inset 0 0 3px rgba(0, 0, 0, 0.3);max-height:400px;overflow-x:hidden;}
+.Report_Config .underlineTable tr{background-color:transparent;}
+.Report_Config .underlineTable tr td{padding:0.2em 1em;text-align: center;}
+.Report_Config .underlineTable tr th{padding:0.5em 1em;text-align: center;}
+.Report_Config tr td:nth-child(2),.Report_Config tr th:nth-child(2){white-space: normal;text-align: left;}
+
+.rpt_tr_selected{background-color:rgb(237,237,237);}
+
+.right-department-table{
+  width:540px;
+}
+
+.right-deparment-table tr th{
+  white-space:nowrap;	
+}
+.right-deparment-table tr td{
+  text-align:left;
+  white-space:normal;
+  padding:.2em .5em;
+}
+.report-list-table{width:760px;}

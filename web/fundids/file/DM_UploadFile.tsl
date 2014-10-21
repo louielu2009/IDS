@@ -1,0 +1,121 @@
+Frame := CreateObject("TWebFrame","TWebFundIDSHeader");
+Frame.outHeader("上传文件");
+
+EID := utf8toansi(urltotext(httpGetQueryValueByName('EID')));
+tip1 := utf8toansi(urltotext(httpGetQueryValueByName('tip1')));
+tip2 := utf8toansi(urltotext(httpGetQueryValueByName('tip2')));
+status := utf8toansi(urltotext(httpGetQueryValueByName('status')));
+FileContent := httpGetQueryValueByName('uploadFile',fileInf);
+//********获取当前登录用户*******//
+request := createObject('TWebRequest');
+TStrings := request.CookieFields;
+Uid := TStrings.Values('SecUserId');
+manager := array('admin');
+//*************END***********//
+<?tslx>
+<script type="text/javascript">
+$(function(){
+   $(".uploadFile").live("change",function(){   
+                          parent.$(".Upload_FileName").val($(this).val()).change();
+                        });
+});
+</script>
+<form class="form" method="post" enctype="multipart/form-data">
+<input type="file" class="uploadFile" name="uploadFile" />
+<input type="hidden" class="EID" name="EID" value="<?=EID?>" />
+<input type="hidden" class="tip1" name="tip1" value="<?=tip1?>" />
+<input type="hidden" class="tip2" name="tip2" value="<?=tip2?>" />
+<input type="hidden" class="status" name="status" value="<?=status?>" />
+</form>
+<?tsl
+if status then
+begin	   
+	   QueryData := array();
+     QueryData['Table'] := 'TS_RTemplateElement';
+     QueryData['QueryStr'] := "EID='"+tostring(EID)+"'";
+     Element := class(ExecuteSQL).Query(QueryData);     
+     if not ifArray(Element) or not length(Element) then
+     return echo '<script type="text/javascript">alert("操作失败！");</script>';     
+     Element := Element[0];
+	   ElementData := createObject('ElementData');
+	   StatusConf := ElementData.getElementStatusConf('DataStatus');
+	   
+	   if Status = '2' then
+	   begin   	       
+	       if Element['TIP1'] and  Element['TIP2'] then
+	       r := update sqlTable 'TS_RFormalData' of class(TWebFundIDSConfig).getDBAlia() set ['DATA'] = FileContent,['CREATEDDATE']= now(),['STATUS']= 2 where ['EID'] = tostring(EID) and ['TIP1'] = tostring(TIP1) and ['TIP2'] = tostring(TIP2) and ['STATUS']<>0 end;
+    	   else if Element['TIP1'] then
+    	   r := update sqlTable 'TS_RFormalData' of class(TWebFundIDSConfig).getDBAlia() set ['DATA'] = FileContent,['CREATEDDATE']= now(),['STATUS']= 2 where ['EID'] = tostring(EID) and ['TIP1'] = tostring(TIP1) and ['STATUS'] <> 0 end;
+    	   else if Element['TIP2'] then
+    	   r := update sqlTable 'TS_RFormalData' of class(TWebFundIDSConfig).getDBAlia() set ['DATA'] = FileContent,['CREATEDDATE']= now(),['STATUS']= 2 where ['EID'] = tostring(EID) and ['TIP2'] = tostring(TIP2) and ['STATUS'] <> 0 end;
+    	   else    	       	   
+    	   r := update sqlTable 'TS_RFormalData' of class(TWebFundIDSConfig).getDBAlia() set ['DATA'] = FileContent,['CREATEDDATE']= now(),['STATUS']= 2 where ['EID'] = tostring(EID) and ['STATUS'] <> 0 end;	       
+	       DataStatus := StatusConf[2];
+	       op := '<a class="Data_Edit" href="###" status=2 role="" reportDate="'+tostring(TIP1)+'" product="'+tostring(TIP2)+'" eid="'+tostring(EID)+'">编辑</a>';
+	   end
+	   else if Status = '3' then
+	   begin
+	        QueryStr := "EID='"+tostring(EID)+"'";
+	        if Element['TIP1'] then
+	        QueryStr += " and TIP1='"+tostring(TIP1)+"'";	        
+	        if Element['TIP2'] then
+	        QueryStr += " and TIP2='"+tostring(TIP2)+"'";
+	        
+	        QueryStr += " and STATUS<>0";
+	        QueryData['Table'] := 'TS_RFormalData';
+	        QueryData['QueryStr'] := QueryStr;
+	        data := class(ExecuteSQL).Query(QueryData);	        
+	        if not ifArray(data) or not length(data) then
+	        r := 0;	        
+	        else
+	        begin
+	             data := data[0];
+	             if not FileContent then
+	             begin
+	                  FileContent := data['DATA'];
+	                  updateData := array();
+	                  updateData['Table'] := 'TS_RFormalData';
+	                  updateData['Conf'] := array(('QueryStr':QueryStr,'Data':(('Field':'STATUS','Type':'Number','Value':0))));
+	                  r := class(ExecuteSQL).Update(updateData);	                  
+	                  if not r then 
+	                  goto finished;
+	                  nofile := 1;
+	             end;	             
+	             arr := array(('USERID':UID,'DATA':FileContent,'EID':EID,'TIP1':Element['TIP1']? tip1:'','TIP2':Element['TIP2']? tip2:'','LIMITDATE':data['LIMITDATE'],'STATUS':3,'VERSION':data['VERSION']?data['VERSION']+1:1));
+	             r := insert into sqlTable 'TS_RFormalData' of class(TWebFundIDSConfig).getDBAlia() arr;
+	             DataStatus := StatusConf[3];
+	             if UID in manager then
+	             op := '<a class="Data_Audit" href="###"status=3 role="" reportDate="'+tostring(TIP1)+'" product="'+tostring(TIP2)+'" eid="'+tostring(EID)+'">审核</a>'; 
+	             else
+	             op := '<a class="Data_Check" href="###" status=3 role="0" reportDate="'+tostring(TIP1)+'" product="'+tostring(TIP2)+'" eid="'+tostring(EID)+'">查看</a>';	            
+	        end;
+	   end
+	   else r := 0;	   
+	   label finished;
+	   if not r then 
+	   begin	        
+	        if nofile then
+	        begin
+	             QueryStr := "EID='"+tostring(EID)+"'";
+	             if Element['TIP1'] then
+    	         QueryStr += " and TIP1='"+tostring(TIP1)+"'";	        
+    	         if Element['TIP2'] then
+    	         QueryStr += " and TIP2='"+tostring(TIP2)+"'";
+	             updateData := array();
+               updateData['Table'] := 'TS_RFormalData';
+               updateData['Conf'] := array(('QueryStr':queryStr+" and VERSION=(select max(VERSION) from TS_RFormalData where "+queryStr+")",'Data':(('Field':'STATUS','Type':'Number','Value':2))));         
+	             f := class(ExecuteSQL).update(updateData);
+	        end;
+	        return echo '<script type="text/javascript">alert("操作失败！");</script>';
+	   end
+	   else		   
+	   return echo '<script type="text/javascript">	                 
+	                 $(function(){
+            	                 alert("操作成功！");
+            	                 parent.$(".status_flag").parents("tr").find("td:eq(5)").html("'+datetimetostr(now())+'");                               
+                               parent.$(".status_flag").parents("tr").find("td:eq(6)").html(\''+tostring(DataStatus)+'\');                               
+                               parent.$(".status_flag").replaceWith(\''+tostring(op)+'\');            	                 
+            	                 parent.DialogClose();            	                
+	                 });
+	               </script>';	             
+end;

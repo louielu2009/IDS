@@ -1,0 +1,41 @@
+
+EID := utf8toansi(urltotext(httpGetQueryValueByName('EID')));
+tip1 := utf8toansi(urltotext(httpGetQueryValueByName('tip1')));
+tip2 := utf8toansi(urltotext(httpGetQueryValueByName('tip2')));
+
+if not EID then return echo '<script type="text/javascript">alert("没有相关文件信息！");</script>';
+
+queryStr := "EID='"+tostring(EID)+"' ";
+queryData := array();
+queryData['Table'] := 'TS_RTemplateElement';
+queryData['QueryStr'] := queryStr;
+Element := class(ExecuteSQL).Query(queryData);
+if not ifArray(Element) or not length(Element) then return echo '<script type="text/javascript">alert("没有相关文件信息！");</script>';
+Element := Element[0];
+if Element['TIP1'] then
+queryStr += " and TIP1='"+tostring(tip1)+"'";
+if Element['TIP2'] then
+queryStr += " and TIP2='"+tostring(tip2)+"'";
+queryStr += " and STATUS<>0";
+
+queryData := array();
+queryData['Table'] := 'TS_RTempData';
+queryData['QueryStr'] := queryStr;
+r := class(ExecuteSql).query(queryData);
+
+if not ifArray(r) or not length(r) then
+return echo '<script type="text/javascript">alert("没有相关文件信息！");</script>';
+
+filecontent := r[0]['DATA'];
+if not filecontent then
+return echo '<script type="text/javascript">alert("没有相关文件信息！");</script>';
+
+
+FileName := Element['NAME'] ? Element['NAME']+'.doc':'';
+FileName := FileName ? FileName:'文件.doc';
+
+httpsetheadstring(
+                    'content-disposition:attachment;filename='+filename+'\r\n'+
+                    'content-length:'+inttostr(length(filecontent))+'\r\n'+
+                    'content-type:application/octstream\r\n\r\n');
+echo filecontent; 

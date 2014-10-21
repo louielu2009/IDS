@@ -1,0 +1,1432 @@
+//2013/5/2 
+//加入雷达图
+
+
+//2012.4.19 
+{
+    1、'showLabels:false,'  //新加入控制泡上字体显示
+    2、'autoscaleBubbles:false,' //新加入 泡半径是否自适应
+    3、为冒泡图增加 列表
+        <table id="chartTable_',Fnum,'"></table>
+}
+//2011.12.20
+{
+    加入图形可作为图片导出：FExportPic
+}
+
+//2011.12.5
+{
+    加入图形 导出数据：FExportData
+}
+type TWebsiteGraph = class
+    FOK;
+    FMsg;
+    FData;
+    FConf;
+    FGraphType;
+    FLegendPostion;
+    FWidth;
+    FHeight;
+    FTitle;
+    FIdxs;
+    FXfieldName;
+    FMaxVisibleTicks;//X轴主标记个数：为防止X轴数目过多设置，如大量时间
+    FXLabel;    //2011.9.13 轴名
+    FYfieldUnit;
+    FSerials;
+    FSerialFields;
+    FAxisHash;
+    FSide;
+    
+    FExportData;//2011.12.5
+    FTmpDownload;
+    FExportPic;//2011.12.20
+    
+    
+   {
+		背景网格gridArr：=array("背景网格": 
+		("边框":"normal",
+		"网格设置": ("类型":"详细","背景颜色":"#eee",
+		"网格线": ("类型":"自定义","颜色":"#EEE","宽度":"3"),
+		"阴影": ("类型":"自定义","颜色":"#sss","宽度":"2","深度":"3")))
+		grid所有属性：
+		 grid:
+            drawBorder:true,
+            borderWidth:2.0,
+            borderColor:'#999999',
+            
+            drawGridlines:true,
+            gridLineColor:'#cccccc',
+            gridLineWidth:1.0,
+            
+            background:'#fffdf6',
+            shadow:true,
+            shadowColor: 'rgba(230, 230, 230, 0.07)'
+            shadowWidth: 10,
+            shadowDepth: 8,
+            shadowOffset: 3,
+	}
+    FGridArr;
+    FGridDrawBorder;
+    FGridBorderWidth;
+    FGridBorderColor;
+    FGridBorder;//2011.7.13加入‘边框’控制
+    FGridBC;
+    FGridLineType;
+    FGridLineColor;
+    FGridLineWidth;
+    FGridShadowType;
+    FGridShadowColor;
+    FGridShadowWidth;
+    FGridShadowDepth;
+    
+    FLocation;
+    FYfieldOrigin ;
+    FXfieldDegree;
+    FXfieldMark ;
+    FXfieldType;
+    FYfieldLeft ; 
+    FYfieldRight ;
+    FYfieldThird ;
+    FYfieldForth ;
+    FYfieldMin ;
+    FYfieldMax ;
+    F2YfieldMax; 
+    F2YfieldMin ;
+    F3YfieldMax;
+    F3YfieldMin ;
+    F4YfieldMax;
+    F4YfieldMin ;
+    
+    FYLLabel;//2011.9.13轴名
+    FYRLabel;
+    FYTLabel;
+    FYFLabel;
+    Fsuffix;//2012-9-27 控制Y轴坐标带%
+    
+    static  FNum;
+    fFill;  //线图是否被填充做为面积图
+     
+    function Create(data,conf);
+    function drawPie();
+    function drawDonutPie();
+    //function drawBar();
+    //function drawLine();
+    //function drawk_line();		
+    //function drawStacked();	 
+    function drawMultiType();	
+    function draw();
+    function drawstackedBar();
+    function drawBoxChart();
+    function drawGrid();
+    function drawBubble();
+    function drawRadar();
+end;
+
+function TWebsiteGraph.Draw();
+begin
+        if not FOK then 
+            return echo FMsg;
+         
+        if  length(FGraphType)=1 and(  21  in FGraphType) then   begin                        	 
+            //echo '饼图';
+            drawPie(); 
+        //if  length(FGraphType)=1 and(  40  in FGraphType) then   begin                        	 
+            //echo '冒泡图';
+          //  drawBubble(); 
+        end else if  length(FGraphType)=1 and(  42  in FGraphType) then   begin 
+            //echo '环形饼图';
+            drawDonutPie();
+        end else if length(FGraphType)=1 and(  44  in FGraphType) then   begin 
+        		//echo '宫图';
+        		drawBoxChart();
+        end else if length(FGraphType)=1 and(  9 in FGraphType)or (  8 in FGraphType)  then begin //堆积图
+             //echo '堆积条形图；条型图';
+             drawStackedBar();
+        end else if length(FGraphType)=1 and(  45  in FGraphType) then   begin 
+             drawRadar(); //2013/5/2 雷达图
+        end else  begin
+             //echo '混合图形';             
+            drawMultiType();
+        end;    
+ 
+	
+end;
+
+function TWebsiteGraph.Create(data,conf);
+begin
+	  //echo tostn(data),'====',tostn(conf);
+    FOK:=1;
+    FMsg:='';    
+    if not istable(data) or length(getIntIndexs(Data))=0 then
+    begin
+        FOK:=0;
+        FMsg:='无效的数据结构';     
+        return;
+    end;
+    FConf:=conf;
+    FData:=data; 
+
+    Fsuffix:='';
+    FGridLineType:=false;     
+    FGridDrawBorder:=false;
+    FGridBorderWidth:=0;
+    FGridBorderColor:='#999999';
+    FGridBorder:=0;//2011.7.13加入‘边框’控制
+    FGridBC:='';
+    FGridLineColor:='';
+    FGridLineWidth:=0;
+    FGridShadowColor:='';
+    FGridShadowWidth:=0;
+    FGridShadowDepth:=0;
+    FMaxVisibleTicks:=0;
+
+//2011.12.5 --是否可导出数据--begin---    
+    FExportData:= 0; //2011.12.5 默认值 为不可导出数据
+    FTmpDownload:='';
+    if Fconf['可导出数据']= 0 or Fconf['可导出数据']= 1 then 
+        FExportData:=Fconf['可导出数据'];
+////2011.12.5 ----end---   
+    FExportPic:= 1;//2011.12.20 默认可导出图片
+    if  Fconf['可导出图片']= 0 or Fconf['可导出图片']= 1 then 
+        FExportPic:=Fconf['可导出图片'];
+    
+if FExportData= 1 then
+begin
+    dg:=createObject("tsgrid",FData);
+    class(TDataGridBL).enableDownload(dg); 
+    dg.genData();
+    downloadURL:= dg.MakeDownloadURL(-1);
+    //echo downloadURL;
+    downloadURL:= class(TDataGridBL).getDownloadURL(downloadURL,"图形-所有数据");
+    //echo tostn(downloadURL),'------------';
+    //echo downloadURL+'tttttt'+dg.genHtml();	
+    FTmpDownload:= '<a href="'+downloadURL +'"><img  style="vertical-align:middle;border:0;margin-right:5px" src="/Resource/website/images/excel.jpg">导出数据</a>';
+end;
+
+        Fwidth:=Fconf['width'];
+        Fheight:=Fconf['height'];
+            
+        FTitle:= Fconf['名称'];
+        
+        // ----------X轴属性----------------
+        FXfieldType :=Fconf['图形属性']['X轴']['类型']; //类型（0:文本；1：数字；2：时间）
+        FXfieldName :=Fconf['图形属性']['X轴']['X轴列名'];
+        //update Fdata set [FXfieldName]= leftStr([FXfieldName],16) end;
+        
+        if not isEmpty(Fconf['图形属性']['X轴']['主标记个数']) then  begin
+            FMaxVisibleTicks:= Fconf['图形属性']['X轴']['主标记个数'];
+            if FMaxVisibleTicks>0 then FMaxVisibleTicks+=1;
+        end;
+        if Fconf['图形属性']['X轴']['轴名'] and Fconf['图形属性']['X轴']['轴名']<>'' then FXLabel:= Fconf['图形属性']['X轴']['轴名']
+        else FXLabel:='';
+        
+        FXfieldMark :=Fconf['图形属性']['X轴']['刻度'];
+        FXfieldDegree :=Fconf['图形属性']['X轴']['角度'];
+        
+        //-----------Y轴属性------------------
+        
+        FSerials:=Fconf['图形属性']['图表类型和坐标轴'];
+				FIdxs:=getStrIndexs(FSerials);  
+        
+    if istable(FConf['图形属性']['背景网格']) then
+    begin
+    		tempFGridArr:=FConf['图形属性']['背景网格'];
+    //echo tostn(tempFGridArr);
+            if tempFGridArr['边框'] then
+                FGridBorder:=tempFGridArr['边框'];
+            if not isEmpty(tempFGridArr['是否画网格线']) then
+                FGridLineType:= tempFGridArr['是否画网格线'];
+                
+            if FGridBorder='normal' then 
+            begin
+                FGridDrawBorder:=true;
+                FGridBorderWidth:=2.0;
+                
+                FGridBorderColor:='#999999';
+            end
+            else 
+                FGridDrawBorder:=false;
+            
+    		if istable(tempFGridArr['网格设置']) then FGridArr:=tempFGridArr['网格设置'];
+    	//FGridArr:=FConf['图形属性']['背景网格'];//此处需被 注释处内容替换
+    		
+    		
+		   if (not istable(FGridArr)) or FGridArr['类型']='系统默认' then 
+		   begin
+            FGridDrawBorder:=true;
+            FGridBorderWidth:=2.0;
+            FGridBorderColor:='#999999';
+                    
+				   	FGridBC:='#fffdf6';
+				    //FGridLineType:=false;
+				    FGridLineColor:='#cccccc';
+				    FGridLineWidth:=1.0;
+				    
+				    FGridShadowType:=true;
+				    FGridShadowColor:='#accf9b';
+				    FGridShadowWidth:=10;
+				    FGridShadowDepth:=0;
+		 	 end
+		 	 else  
+		 	 begin
+		 	    
+		 	 			FGridBC:=FGridArr['背景颜色'];
+		 	 			if FGridArr['网格线']['类型']='常用' then 
+		 	 			begin
+		 	 				FGridLineType:=false;
+		 	 			end
+		 	 			else 
+		 	 			begin
+		 	 				  FGridLineType:=true;
+						    FGridLineColor:=FGridArr['网格线']['颜色'];
+						    FGridLineWidth:=FGridArr['网格线']['宽度'];
+		 	 			end;
+		 	 			
+		 	 			if FGridArr['阴影']['类型']='常用' then 
+		 	 			begin
+		 	 					FGridShadowType:=false;
+		 	 			end
+		 	 			else 
+		 	 			begin
+		 	 				FGridShadowType:=true;
+						    FGridShadowColor:=FGridArr['阴影']['颜色'];
+						    FGridShadowWidth:=FGridArr['阴影']['宽度'];
+						    FGridShadowDepth:=FGridArr['阴影']['深度'];
+		 	 			end;
+		 	 end;
+		 end;
+		{ //最终获得grid格式如下，分别加入到3种图中
+		 grid:
+            drawBorder:<?=FGridDrawBorder?>,
+            borderWidth:<?=FGridBorderWidth?>,
+            borderColor:'<?=FGridBorderColor?>',
+            
+            drawGridlines:<?=FGridLineType?>,
+            gridLineColor:'<?=FGridLineColor?>',
+            gridLineWidth:<?=FGridLineWidth?>,
+            
+            background:'#fffdf6',
+            shadow:<?=FGridShadowType?>,
+            shadowColor: '<?=FGridShadowColor?>',
+            shadowWidth: <?=FGridShadowWidth?>,
+            shadowDepth: <?=FGridShadowDepth?>,
+            shadowOffset: 3,
+		 }
+		 
+		if istable(FConf['图形属性'])  and istable(FConf['图形属性']['Y轴']) then begin
+		    FAxisHash:=FConf['图形属性']['Y轴'];
+		    if istable(FAxisHash['左轴']) then 
+		        FYfieldLeft:= FConf['图形属性']['Y轴']['左轴']
+		end else
+			FAxisHash:=array();
+			 
+		if not istable(FConf['图形属性']) then
+			FAxisHash:=array()
+		else begin
+		//dolog("tsbinderGraph_numberTicks","FIdxs="+tostn(FIdxs));	
+				for KK:=0 to length(FIDXs)-1 do
+				begin
+						yyy:='左轴';
+						case FSerials[FIdxs[kk]]['坐标轴'] of 
+							0:
+								yyy:='左轴';
+							1:
+								yyy:='右轴';
+							2:
+								yyy:='第三轴';
+							3:
+								yyy:='第四轴';
+						end;
+						if yyy in getAllIndexs(FAxisHash) then 
+						begin
+						    continue;
+						end;
+						FAxisHash[yyy]:=array();					 
+				end;			
+		end;
+    //dolog("tsbinderGraph_numberTicks","FAxisHash2="+tostn(FAxisHash));
+    //------todo------
+    //echo tostn(Fconf['图形属性']['Y轴']);
+        if istable(FYfieldLeft) then
+        begin
+	        FYfieldLeft := Fconf['图形属性']['Y轴']['左轴'];
+	        FYfieldMax := FYfieldLeft['最大值'];
+          FYfieldMin := FYfieldLeft['最小值'];
+          Fsuffix:= FYfieldLeft['Y轴显示单位'];
+           
+        end
+        if istable(FYfieldRight) then
+        begin
+	        FYfieldRight:= Fconf['图形属性']['Y轴']['右轴'];
+	        F2YfieldMax := FYfieldRight['最大值'];
+	        F2YfieldMin := FYfieldRight['最小值'];
+        end
+        if istable(FYfieldThird) then
+        begin
+           	FYfieldThird := Fconf['图形属性']['Y轴']['第三轴'];
+           	F3YfieldMax := FYfieldThird['最大值'];
+            F3YfieldMin := FYfieldThird['最小值'];
+        end;
+        if istable(FYfieldForth) then
+        begin
+	        FYfieldForth := Fconf['图形属性']['Y轴']['第四轴'];
+	        F4YfieldMax := FYfieldForth['最大值'];
+	        F4YfieldMin := FYfieldForth['最小值'];
+        end   
+        //FYfieldOrigin := Fconf['图形属性']['Y轴']['数据最低点作为原点'];  //0:无；1：是；2：否
+        //-------------图表类型和坐标属性--------
+        //c:=Fconf['图形属性']['图表类型和坐标轴'];        
+
+        
+        //--------所有系列同种图时用"*"表示的情况-begin---
+        if 0 and length(FIdxs)= 1 and  FIdxs[0]= '*' then //只有1个* //111
+        begin
+            		FDataIndex:=fieldnames(FData);
+    				    delete from FDataIndex where thisrow=FXfieldName;    				
+        				a:=FSerials['*'];
+        				newFSerials:=array();
+        				for i:=0 to length(FDataIndex)-1 do
+        				begin
+        				   newFSerials[FdataIndex[i]]:=a;    
+        				end;
+        				FSerials:=newFSerials;
+        		    FIdxs:=getStrIndexs(FSerials);				
+        end else begin //111
+                	
+            			notTransIdxs:=array();
+            	    multiFields:=array();
+            			regIdxsHash:=array(); 
+            			for kk:=0 to length(FIdxs)-1 do
+            			begin        			 		
+    	        			 		if FIdxs[kk] like 'regex:' then begin
+    	        			 				ttt:=FIdxs[kk];
+    	        			 			 	regIdxsHash[ttt[7:length(ttt)]]:=Fidxs[kk];	        			 			 		 
+    	        			 		end else if FIdxs[kk] like '\\*' then begin
+    	        			 				ttt:=replaceStr( FIdxs[kk],'*','(\\w\\W)*');	        			 				
+    	        			 				regIdxsHash[ttt]:=Fidxs[kk];	
+    							      end else begin        			 			
+    									        NotTransIdxs[length(NotTransIdxs)]:=Fidxs[kk];
+    									        if length(str2array(Fidxs[kk],';'))>1 then begin
+    									                multiFields&=str2array(Fidxs[kk],';');
+    									        end;
+    	        			 		end;	        	        			 		
+            			end;
+            			//echo tostn(notTransIdxs);
+            			
+            			 //dolog('debug',tostn(regIdxsHash));
+            			 newFSerials:=array();
+            			 if istable(notTransIdxs) then begin
+            			    for kk:=0 to length(notTransIdxs)-1 do
+            			        newFSerials[notTransIdxs[kk]]:=FSerials[notTransIdxs[kk]];
+            			    
+            			 end;   
+            			    
+            			 if length(notTransIdxs )<length(FIdxs) then begin //333            			      
+                			 	 FDataIndex:=fieldnames(FData);
+                			 	 delete from FDataIndex where thisrow=FXfieldName;
+        	        			 
+        	        			 
+        	        			 
+        	        			 for kk:=0 to length(FDataIndex)-1 do
+        	        			 begin
+        	        			 		if  FDataIndex[kk] in notTransIdxs then begin
+        	        			 				newFSerials[FDataIndex[kk]]:=FSerials[FDataIndex[kk]];
+        	        			 				continue;
+        	        			 		end;
+        	        			 		
+        	        			 		//echo tostn(Fserials);
+        	        			 		//echo 'aaaaaaaaaaaa'+tostn( FDataIndex[kk]);
+        	        			 		//if tostring(FDataIndex[kk]) like ';' (*pos(';',FDataIndex[kk])>0*) then continue;//2012-05-14
+        	        			 		 
+        	        			 		
+        	        			 		for nn in regIdxsHash do begin	        			 			  
+        	        			 		    if FDataIndex[kk] in multiFields then continue;
+        	        			 				if FDataIndex[kk] like nn then
+        	        			 					newFSerials[FDataIndex[kk]]:=FSerials[  regIdxsHash[nn] ];	        			 				
+        	        			 		end;	        			 		
+        	        			 		//if FIdxs[kk] like 'regex:' then begin    	        			 		 
+        	        			 end;
+        	        			 FSerials:=newFSerials;
+        		         	   FIdxs:=getStrIndexs(FSerials);				        			 	
+            			end;//3333
+            			 //dolog('debug',tostn(newFSerials));
+            			
+        end;//111
+        //---------------------end----------------------
+        
+        FLocation:=Fconf['图形属性']['图例格式']['位置'] ;
+        FSide:=Fconf['图形属性']['图例格式']['内外'] ;
+        //FSerialFields:=getStrIndexs(FSerials);
+        FFill:=0;  //1是面积图，0是线图
+        if ifnil(FNum) then
+          FNum:=0;      
+        else FNum:=Fnum+1;
+        chartTypes:=array();
+        chartGrid:=array() ;
+         
+         //echo tostn(FSerials);
+         for n in FSerials do
+         begin                             
+              if   not( Fserials[n]['图形属性'] in chartTypes) then
+              begin
+                      chartTypes[length(chartTypes)]:= Fserials[n]['图形属性'] ;                    
+             end
+         end;
+        for m in FSerials do
+           begin                             
+                if   not( Fserials[m]['坐标轴'] in chartGrid) then
+                begin
+                        chartGrid[length(chartGrid)]:= Fserials[m]['坐标轴'] ;                    
+               end
+           end;
+        FGraphType:=chartTypes;
+        FGraphGrid :=chartGrid ;  //坐标轴 0:左轴 ；1 :右轴 ;2 :第三轴 ；3 ：第四轴 ；
+      //echo tostn(FSide);
+     //  echo (1 in FGraphGrid) ;
+      // echo tostn(FGraphType);
+       
+{//-----------画图基本类型格式-------------
+ array(
+        "modelName":"432",
+        "dispWay":1,
+        "width":423,
+        "height":400,
+        "名称":"",
+        "数据":"",
+        "图形属性": (
+                 "图例格式": ("内外":"外部 ","位置":"s","类型":"简要"),
+                 "X轴": ("类型":"文本","X轴列名":"","刻度":"","角度":""),
+                 "Y轴": (
+                           "左轴": ("Y轴显示单位":"34","最大值":"","最小值":"","主要刻度":"43","小数位数":"","数据最低点作为原点":"无")
+                            ),
+                 "图表类型和坐标轴": ("43234": ("图形属性":1,"坐标轴":0))))
+                 "图表类型和坐标轴": ("系1": ("图形属性":1,"坐标轴":0,"标识类型":"+","大小":"15","空值是否连续":"no"),"系2": ("图形属性":1,"坐标轴":0,"标识类型":"+","大小":"15","空值是否连续":"no"),"第3": ("图形属性":1,"坐标轴":0,"标识类型":"+","大小":"15","空值是否连续":"no"))))
+
+}
+
+
+
+end;
+//-----------------堆积条形图和条型图--------------------------
+function TWebsiteGraph.drawstackedBar();
+begin
+	 echo '<div id="chart_',Fnum,'" style="width:',tostring(FWidth),'; height:',tostring(FHeight),';"></div>',FTmpDownload;
+	 n:=Fnum;
+ <?tslx>
+   
+    <script type="text/javascript" language="javascript">
+  
+    $(document).ready(function(){
+      $.jqplot.config.enablePlugins = true;
+     <?tsl
+    
+		    for i:=0 to length(FIdxs)-1 do
+			begin		
+					if isempty(FXfieldName) then
+						r:=  select [FIdxs[i] ] from FData end;		    			    					 
+					else
+						r:=  select [FIdxs[i] ] ,[FXfieldName] from FData order by [FXfieldName] end;		    			    					 
+					echo '\n var line_',n,'_'+tostring(i)+'='+class(TDataConverter).Table2JSON(r,0)+';'; 
+			end;
+     
+    ?>
+     	plot1 = $.jqplot('chart_<?=n?>', [
+          <?tsl
+             for j:=0 to length(FIdxs)-1 do
+             begin
+                 if  j=length(FIdxs)-1 then
+			       echo 'line_',n,'_',j;
+			   else   echo 'line_',n,'_',j,',';
+			end;
+			?>], {
+			<?tsl
+			   if  (  9 in FGraphType)  then echo "stackSeries: true,captureRightClick: true,";
+			?>
+         legend: {
+             renderer: $.jqplot.EnhancedLegendRenderer
+             //show: true,
+             <?tsl
+		           if FSide='外部'  then
+		           begin
+		              echo ',placement: "outsideGrid",';
+		           end
+		           if FLocation<>'no' then 
+		           begin
+		                echo ',show:true';
+		                echo ",location:'",FLocation,"'";
+		           end
+		           else 
+		                echo ',show:false';
+            ?>
+         },
+         title: '<?=Ftitle?>',
+         
+         seriesDefaults: {
+             renderer: $.jqplot.BarRenderer,
+             rendererOptions: {
+                 barDirection: 'horizontal',
+                 rendererOptions: { fillToZero: true }
+                 //barPadding: 6,
+                 //barMargin: 40
+             }
+         },
+          series:[     
+			  <?tsl
+			       for j:=0 to length(FIdxs)-1 do
+			       begin
+			           if  j=length(FIdxs)-1 then
+			               echo "{label:'",FIdxs[j],"'}";
+			          else  echo "{label:'",FIdxs[j],"'},";
+			      end;
+			        
+			?> 
+			 ],
+			 
+			 axes: {
+             yaxis: {
+                  <?tsl
+                   if not isEmpty(FXLabel) then echo 'label:"',FXLabel,'",labelRenderer: $.jqplot.CanvasAxisLabelRenderer,';
+			      if FXfieldType="时间" then
+			      begin
+		             echo " renderer:$.jqplot.DateAxisRenderer, tickOptions:{formatString:'%Y/%#m/%#d'}";
+		              if FXfieldMark<>'' then 
+	                     echo ",tickInterval:'",FXfieldMark,"'";
+	                  else echo ",tickInterval:'auto'";
+		          end
+		          else echo "renderer:$.jqplot.CategoryAxisRenderer, rendererOptions:{sortMergedLabels:true}";
+	            
+		          if FXfieldDegree<>'' then
+		             echo ',tickRenderer: $.jqplot.CanvasAxisTickRenderer ,      tickOptions: {        angle: ',FXfieldDegree,' , fontSize: "10pt"      } ';
+	     ?>
+             },
+
+             xaxis: {  
+             　<?tsl
+			     axisName:='';
+			     //if not istable(FAxisHash) then FAxisHash:=array('左轴':()); 
+			     for  n in FAxisHash do
+			     begin
+			     		 case n  of
+				       	    	'左轴':
+				       	    	axisName:='axis';
+				       	    	'右轴':
+				       	    	axisName:='a2xis';
+				       	    	'第三轴':
+				       	    	axisName:='a3xis';
+				       	    	'第四轴':
+				       	    	axisName:='a4xis';
+				       	 end;	       	        		 
+			     		echo  axisName,":{";
+			     		//if istable(FAxisHash[n]) then 
+			     		         if FAxisHash[n]['轴名'] and FAxisHash[n]['轴名']<>'' then echo 'label:"',FAxisHash[n]['轴名'],'",labelRenderer: $.jqplot.CanvasAxisLabelRenderer,';
+			     		         
+			     		         if FAxisHash[n]['主要刻度']='' then echo " tickOptions:{showGridline:true}"
+				     		     else if FAxisHash[n]['主要刻度']<>'' then echo " tickOptions:{formatString:'",FAxisHash[n]['小数位数'],"',showGridline:true}";
+				     		     if FAxisHash[n]['小数位数']<>'' then echo ",numberTicks:", FAxisHash[n]['主要刻度'];	
+				     		     if FAxisHash[n]['角度']<>'' then echo ',tickRenderer: $.jqplot.CanvasAxisTickRenderer ,tickOptions: {  angle: ',FAxisHash[n]['角度'],' , fontSize: "10pt"} ';	     		     		     		     
+			     		         if FAxisHash[n]['最大值']<>'' then  echo ',max:', FAxisHash[n]['最大值'];
+			     		         if FAxisHash[n]['最小值']<>'' then  echo ',min:', FAxisHash[n]['最小值'];	
+			     		// end;	     		  	     		     		     		
+		     		    echo " }";
+	           end;   
+	    ?> 
+             }
+         }
+          
+     });
+    });
+
+</script>
+   
+
+<?tsl
+end;
+
+//饼图
+function TWebsiteGraph.drawPie();
+begin	       
+    
+	 echo '<div  class="comContainer" id="chart_',Fnum,'" style="width:',tostring(Fwidth),'; height:', tostring(Fheight) ,';"></div>',FTmpDownload;
+	 N:=Fnum;
+   <?tslx>
+    <style type="text/css">
+		    #code {
+		        font: 10pt "Andale Mono", Monaco, "Courier New", sans-serif ;
+		        white-space: pre;
+		    }
+		    pre{
+		        background: #D8F4DC;
+		        border: 1px solid rgb(200, 200, 200);
+		        padding-top: 1em;
+		        padding-left: 3em;
+		        padding-bottom: 1em;
+		        margin-top: 1em;
+		        margin-bottom: 3em;
+		        
+		    }    
+		    p{margin: 2em 0;}
+  	</style>
+  
+  <script  type="text/javascript">$(document).ready(function()
+	{
+		  <?tsl
+					if isEmpty(FXfieldName) then
+						r:=  select  thisrowIndex,[FIdxs[0]] from FData end;		    			    					 
+					else
+						r:=  select [FXfieldName],[FIdxs[0]] from FData  order by [FXfieldName] end;		    			    					 
+					echo '\n var s_',n,'_1='+class(TDataConverter).Table2JSON(r,0)+';';    
+		  ?>
+		        
+      plot1 = $.jqplot('chart_<?=N?>', [s_<?=n?>_1], 
+      {
+          title: '<?=FTitle ?>',
+		      seriesDefaults:{
+		          renderer:$.jqplot.PieRenderer , 
+		          trendline:{ show: true },
+		          rendererOptions: {
+		              padding: 2, sliceMargin: 4,
+		          		showDataLabels: true,
+		              dataLabelThreshold: 1,
+		              dataLabelFormatString: '%.1f%%'
+		          }  
+		      },
+		   grid:{
+                   <?tsl
+                   drawGrid();
+                   ?> 
+                },
+		    legend: {
+			          renderer: $.jqplot.EnhancedLegendRenderer,
+			          show: true,
+			          location: '<?=Flocation?>',
+			          rendererOptions:{
+	              numberColumns:2
+              }
+		      }
+		   }); 
+		});
+ 	</script>
+ <?tsl
+     end;
+ 
+function TWebsiteGraph.drawDonutPie();
+begin	 	 
+	 echo '<div  class="comContainer"  id="chart_',Fnum,'" style=" width:',tostring(Fwidth),'; height:', tostring(Fheight) ,';"></div>',FTmpDownload;
+	 N:=Fnum;
+ <?tslx>
+    
+  <script  type="text/javascript">$(document).ready(function()
+  {
+  	 $.jqplot.config.enablePlugins = true;
+     <?tsl
+        r:=array();
+        //多于1个系列，最内部的变成饼图
+        if length(Fidxs)=1 then
+        		innerDiameter:=110
+        else
+        		innerDiameter:=0;
+		    for i:=0 to length(FIdxs)-1 do
+				begin		
+						if isEmpty(FXfieldName) then
+							r:=  select thisrowIndex,[FIdxs[i]] from FData end
+						else
+							r:=  select [FXfieldName],[FIdxs[i] ] from FData order by [FXfieldName] end;					    			    					 
+						echo '\n var line_',n,'_'+tostring(i)+'='+class(TDataConverter).Table2JSON(r,0)+';';
+				end;			 
+    	?>
+       plot1 = $.jqplot('chart_<?=n?>', [
+          <?tsl
+             for j:=0 to length(FIdxs)-1 do
+			       begin
+			           if  j=length(FIdxs)-1 then
+			               echo 'line_',n,'_',j;
+			          else   echo 'line_',n,'_',j,',';
+			       end;
+					?>
+			], {
+    series:[    	         
+					  <?tsl
+					       for j:=0 to length(FIdxs)-1 do
+					       begin
+					       	  //------对其进行判断-begin----如：累积净值;radius;labelValue
+					       		labeArr:=str2array(FIdxs[j],';');
+					       		//------------end------------
+					       	   echo "{label:'",labeArr[0],"'";	
+					       	   //echo "{label:'",FIdxs[j],"'";	
+					       	   //echo ',breakOnNull:true'; 
+					       	   echo ",renderer:$.jqplot.DonutRenderer,rendererOptions:{showDataLabels: true,dataLabels: 'value',sliceMargin: 1,innerDiameter: ",innerDiameter,",startAngle: -90}";		       	   		      	          	    	       	   
+					       	   echo '}';	
+					           if  j<length(FIdxs)-1 then
+					            	echo ",";
+					      end;
+						?>     
+			 ],
+	grid:{
+            <?tsl
+                drawGrid();
+            ?> 
+        },
+          legend: {
+              renderer: $.jqplot.EnhancedLegendRenderer,
+	            show: true,
+	            location: '<?=Flocation?>',
+	            rendererOptions:{
+               numberColumns:2
+              }
+          }      
+        });
+    });
+ </script>
+ <?tsl
+     end;
+
+//------------混合图---begin---------
+
+    function TWebsiteGraph.drawMultiType();	
+    begin               
+   if length(FGraphType)=1 and (FGraphType[0]=40) then  //FGraphType[0]=27 or 
+   begin
+        echo FTmpDownload,'<table><tr><td><div  class="comContainer"  id="chart_',Fnum,'" style="width:800px; height:', tostring(Fheight) ,';"></div>';
+        echo '<td><table id="chartTable_',Fnum,'"></table></td></tr></table>';
+        
+   end
+   else 
+        echo ' <div  class="comContainer"  id="chart_',Fnum,'" style="width:',tostring(Fwidth),'; height:', tostring(Fheight) ,';"></div>',FTmpDownload;
+   n:=Fnum;
+    <?tslx>
+    <style type="text/css" media="screen">
+    .jqplot-axis {
+      font-size: 0.85em;    
+    }
+    .jqplot-legend {
+      font-size: 0.75em;
+    }
+    #chartTable_0 {
+        font-size: 12px;
+        border: 1px solid #cdcdcd;
+        border-collapse: collapse;
+    }
+    #chartTable_0 td, #chartTable_0 th {
+        border: 1px solid #cdcdcd;
+        padding: 1px 4px;
+    }
+  </style>
+  <script type="text/javascript" language="javascript">
+  
+  
+ // $(document).ready(function(){
+      $.jqplot.config.enablePlugins = true;
+        <?tsl
+        NeedTicks:=false;         	      
+        if (2 in FGraphType) or (3 in FGraphType) or (43 in FGraphType) then          
+       		NeedTicks:=true;         	      
+		    
+		    for i:=0 to length(FIdxs)-1 do
+				begin		
+				 		
+						case FSerials[Fidxs[i]]['图形属性'] of 	
+								2:    //堆积图
+								begin
+										if isEmpty(FXfieldName) then
+											r:= sselect   [FIdxs[i]] from FData end
+										else
+											r:= sselect   [FIdxs[i]] from FData order by [FXfieldName] end;	
+										echo '\n var line_',n,'_'+tostring(i)+'='+class(TDataConverter).array2JSON(r)+';'; 
+										NeedTicks:=true;
+								end	;
+								3:  	//百分比堆积柱形图(*)'
+								begin
+										if isEmpty(FXfieldName) then
+											r:= sselect   [FIdxs[i]] from FData end
+										else
+											r:= sselect   [FIdxs[i]] from FData order by [FXfieldName] end;	
+										echo '\n var line_',n,'_'+tostring(i)+'='+class(TDataConverter).array2JSON(r)+';'; 
+										NeedTicks:=true;
+								end;
+								43:			//瀑布图			
+								begin
+										if isEmpty(FXfieldName) then
+											r:= sselect   [FIdxs[i]] from FData end
+										else	
+											r:= sselect   [FIdxs[i]] from FData order by [FXfieldName] end;	
+										echo '\n var line_',n,'_'+tostring(i)+'='+class(TDataConverter).array2JSON(r)+';'; 
+										NeedTicks:=true;
+								end;
+								27: //散点图
+								begin
+								    bubbleArr:=str2Array(FIdxs[i],';');
+								 		if length(bubbleArr)=2 then 
+								 		begin
+								 		     if isEmpty(FXfieldName) then
+								 				r:=  select [thisrowIndex],[bubbleArr[0]],[bubbleArr[1]] from FData end
+								 			 else	
+								 			    r:=  select [FXfieldName],[bubbleArr[0]],[bubbleArr[1]] from FData  order by [FXfieldName]  end;		
+								 		end
+									 	else
+										 	if isEmpty(FXfieldName) then
+										 	    r:=  select thisrowIndex,[bubbleArr[0]] from FData end
+										 	else    
+										 	    r:=  select [FXfieldName],[bubbleArr[0]] from FData  order by [FXfieldName]  end;
+										//dolog("test_graph",tostn(r));										 
+										echo '\n var line_',n,'_'+tostring(i)+'='+class(TDataConverter).Table2JSON(r,0)+';'; 
+								end;
+								40:  					///*[x, y, radius, <label or object>]. 冒泡图数据格式  */
+								begin
+								 		bubbleArr:=str2Array(FIdxs[i],';');
+								 		if length(bubbleArr)=2 then 
+								 		begin
+								 		     if isEmpty(FXfieldName) then
+								 				r:=  select [thisrowIndex],[bubbleArr[0]],[bubbleArr[1]] from FData end
+								 			 else	
+								 			    r:=  select [FXfieldName],[bubbleArr[0]],[bubbleArr[1]] from FData  order by [FXfieldName]  end;		
+								 		end
+									 	else
+										 	if isEmpty(FXfieldName) then
+										 	    r:=  select thisrowIndex,[bubbleArr[0]],[bubbleArr[1]],[bubbleArr[2]] from FData end
+										 	else    
+										 	    r:=  select [FXfieldName],[bubbleArr[0]],[bubbleArr[1]],[bubbleArr[2]] from FData  order by [FXfieldName]  end;
+																				 
+										echo '\n var line_',n,'_'+tostring(i)+'='+class(TDataConverter).Table2JSON(r,0)+';'; 
+								end;
+								38 to 39:  				//38 k线、39 k线蜡烛图
+								begin										 										  
+										 b:=str2Array(FIdxs[i],';');										  
+										 ffOpen:=b[0];
+										 ffHigh:=b[1];
+										 ffLow:=b[2];
+										 ffClose:=b[3];
+										 		
+										 if isempty(FXfieldName) then
+									   	 	r:=  select thisrowIndex, [ffOpen],[ffHigh],[ffLow],[ffClose]from FData end
+									   else
+									   	 	r:=  select [FXfieldName],[ffOpen],[ffHigh],[ffLow],[ffClose] from FData order by [FXfieldName] end;		
+									   	 
+									   echo '\n var line_',n,'_'+tostring(i)+'='+class(TDataConverter).Table2JSON(r,0)+';'; 
+									   //2013/5/3 对39 k线蜡烛图做特殊处理：添加均值点--为K线蜡烛图多加了2个衡量标准
+									    update FData set ['averageV']= ([ffOpen] + [ffLow])/2 end;
+									    update FData set ['crosshairV']= ([ffHigh] + [ffLow])/2 end;
+									   avR:= select [FXfieldName],['averageV'] from FData end;
+									   crosshairR:= select [FXfieldName],['crosshairV'] from FData end;
+									   echo '\n var k_line_2='+class(TDataConverter).Table2JSON(avR,0)+';'; 
+									   echo '\n var k_line_3='+class(TDataConverter).Table2JSON(crosshairR,0)+';'; 
+									   
+								end;
+								41:     //41区域图
+								begin
+										blockArr:=str2Array(FIdxs[i],';');
+								 		if length(blockArr)=2 then 
+								 		begin
+								 		     if isEmpty(FXfieldName) then        
+								 				r:=  select thisrowindex, [blockArr[0]],[blockArr[1]] from FData end	
+								 			 else	
+								 			    r:=  select [FXfieldName],[blockArr[0]],[blockArr[1]] from FData end;		
+								 		end
+									 	else begin
+									 	     if isEmpty(FXfieldName) then 
+									 	        r:=  select thisrowIndex,[FIdxs[i]] from FData  end
+									 	     else
+												r:=  select [FXfieldName],[FIdxs[i]] from FData  end;
+										end;		
+												
+										//if not isEmpty(FXfieldName) then
+										//	r:=select * from r order by [FXfieldName] end;
+										 			
+										echo '\n var line_',n,'_'+tostring(i)+'='+class(TDataConverter).Table2JSON(r,0)+';'; 
+								end;
+								else begin								       
+									  if NeedTicks then begin									     
+									  	if isEmpty(FXfieldName) then begin
+									  		r:=  sselect [FIdxs[i]] from FData end;
+									  		echo '\n var line_',n,'_'+tostring(i)+'='+class(TDataConverter).array2JSON(r)+';'; 
+									  		
+									  	end else begin
+									  			if FSerials[Fidxs[i]]['图形属性']=1 then begin  //簇状柱形图
+									  	        r:=  sselect [FIdxs[i]] from FData end;
+									  	    end else
+									  					r:=  sselect [FIdxs[i]] from FData order by [FXfieldName] end;
+									  	    echo '\n var line_',n,'_'+tostring(i)+'='+class(TDataConverter).array2JSON(r)+';'; 
+									  	end;
+									  end else begin									      
+									  	if isEmpty(FXfieldName) then begin
+									  		r:=  sselect [FIdxs[i]] from FData  end;
+									  	    echo '\n var line_',n,'_'+tostring(i)+'='+class(TDataConverter).array2JSON(r)+';'; 	
+									  	end else begin
+									  			if FSerials[Fidxs[i]]['图形属性']=1 then begin  //簇状柱形图
+									  	        r:=  select [FXfieldName],[FIdxs[i]] from FData end;
+									  	    end else
+									    				r:=  select [FXfieldName],[FIdxs[i]] from FData order by [FXfieldName] end;
+									        echo '\r\n var line_',n,'_'+tostring(i)+'='+class(TDataConverter).Table2JSON(r,0)+';'; 
+									        
+									    end;  
+									  end;	
+									  								      
+								end;
+						end;
+				end;
+				  //echo tostn(r);
+    	?>
+
+
+plot2 = $.jqplot('chart_<?=n?>', [
+<?tsl
+       for j:=0 to length(FIdxs)-1 do
+       begin
+           if  j=length(FIdxs)-1 then
+               echo 'line_',n,'_',j;
+          else   echo 'line_',n,'_',j,',';
+      end;
+      if 38 in FGraphType then //为K线蜡烛图多加了2个衡量标准
+            echo ',k_line_2,k_line_3';
+?>
+], {
+<?tsl
+         if(2 in FGraphType ) or (3 in FGraphType ) or (33 in FGraphType )  then echo "stackSeries: true,";
+ 				 
+ ?>
+  
+  legend: {
+		  renderer: $.jqplot.EnhancedLegendRenderer,
+     <?tsl
+           if FSide='外部'  then
+           begin
+              echo 'placement: "outsideGrid",';              
+           end
+           if FSide='内部' or FSide='外部' then 
+           begin
+                echo 'show:true';
+                
+                echo ",location:'",FLocation,"'";
+                if FLocation='n' or FLocation='s' then 
+                      echo ",rendererOptions:{numberRows:1}"     //numberRows:1
+                else  echo ",rendererOptions:{numberColumns:2}";
+           end
+           else 
+                echo 'show:false';
+           
+       ?>    
+           },
+  title :'<?=FTitle?>', 
+  series:[    	         
+	  <?tsl
+	       kLine_static:= 0;    //K线蜡烛图
+	       for j:=0 to length(FIdxs)-1 do
+	       begin//-----循环系列--begin---
+	       	  //------对其进行判断-begin----如：累积净值;radius;labelValue
+	       		labeArr:=str2array(FIdxs[j],';');
+	       		//------------end------------
+	       	   echo "{label:'",labeArr[0],"'";	
+	       	   if FSerials[Fidxs[j]]['空值是否连续']= 1 then echo ',breakOnNull:false'			//控制关键点样式类型 FSerials[Fidxs[j]]['大小']，FSerials[Fidxs[j]]['空值是否连续'] 
+	       	   else 	echo ',breakOnNull:true';       	   	
+	       	   case FSerials[Fidxs[j]]['图形属性'] of 	       	        
+	       	   		32: //面积图
+	       	   			echo ",fill:true,fillToZero: true";	
+	       	   		33:   			//堆积面积图(*)'
+	       	   			echo ",fill:true,fillToZero: true";	
+	       	   		2:	//堆积柱形图
+								begin
+	       	   		    tmpArr:=_calBarWidth(FData,0);
+	       	   		    tmpBarWidth:=tmpArr['BarWidth'];
+	       	   		    tmpBarMargin:=tmpArr['BarMargin'];           	       	   		                
+									echo ",renderer: $.jqplot.BarRenderer,barWidth:"+tmpBarWidth+"barMargin:"+tmpBarMargin+',';
+             		end;
+             		3:  //百分比堆积柱形图
+             		begin
+             		    tmpArr:=_calBarWidth(FData,0);
+	       	   		    tmpBarWidth:=tmpArr['BarWidth'];
+	       	   		    tmpBarMargin:=tmpArr['BarMargin'];           	       	   		                
+             			  echo ',pointLabels:{ypadding: -15},pointLabels:{ypadding:9000},renderer: $.jqplot.BarRenderer,rendererOptions:{barWidth:'+tmpBarWidth+',barMargin: ',tmpBarMargin,'},pointLabels:{stackedValue: true},shadow: false';
+             		end;
+	       	   		1:  //簇状柱形图
+	       	   		 begin     
+	       	   		    tmpArr:=_calBarWidth(FData,1);
+	       	   		    tmpBarWidth:=tmpArr['BarWidth'];
+	       	   		    tmpBarMargin:=tmpArr['BarMargin'];
+	       	   			//echo ",renderer:$.jqplot.BarRenderer,rendererOptions:{barMargin:10,barPadding:5,shadow: false,fill:true,fillToZero:true,barWidth:"+tmpBarWidth+"}";	       	     	       	   		
+	       	   			 echo ",renderer:$.jqplot.BarRenderer,rendererOptions:{barMargin:",tmpBarMargin,",barPadding:0,shadow: false,fill:true,fillToZero:true,barWidth:"+tmpBarWidth+"}";	       	     	       	   		
+	       	   		end;	
+	       	   		14 :	//折线图
+	       	   		begin
+		       	   		//polyline
+		       	   		echo ",showMarker: true";
+		       	   		if FSerials[Fidxs[j]]['线型粗细']<> 0 then 
+		       	   				echo ",lineWidth:",FSerials[Fidxs[j]]['线型粗细'];
+									echo ',renderer:$.jqplot.LineRenderer';
+		       	   		
+		       	   		echo ",markerOptions:{style:'",FSerials[Fidxs[j]]['标识类型'],"',size: ",FSerials[Fidxs[j]]['大小'],"}";	//控制关键点样式类型 FSerials[Fidxs[j]]['大小']，FSerials[Fidxs[j]]['空值是否连续']
+	       	   		end;
+	       	   		17:  //数据点折线图
+	       	   		begin
+	       	   		    echo ",showMarker:true";
+	       	   		    echo ",showLine:false";
+	       	   		    //if FSerials[Fidxs[j]]['线型粗细']<> 0 then 
+	       	   		    		//echo ",lineWidth:",FSerials[Fidxs[j]]['线型粗细'];
+	       	   		    echo ",markerOptions:{style:'",FSerials[Fidxs[j]]['标识类型'],"',size: ",FSerials[Fidxs[j]]['大小'],"}";	//控制关键点样式类型 FSerials[Fidxs[j]]['大小']，FSerials[Fidxs[j]]['空值是否连续']
+	       	   		    //echo ",markerOptions:{style:'circle'}";
+	       	   		end;
+	       	   		27:  //散点图
+	       	   		begin
+	       	   		echo ',renderer: $.jqplot.BubbleRenderer,'+
+					            'rendererOptions: {'+
+					                'autoscalePointsFactor: -0.85,'+
+					                //'varyBubbleColors:false,'+    //控制bubble颜色变化
+					                'autoscaleMultiplier: 0.85,'+
+					                'highlightMouseDown: true,'+
+					                'showLabels:true,'+    //2012.4.19 新加入 控制冒泡上字体显示
+					               // 'autoscaleBubbles:false,'+   //控制半径
+					                'bubbleAlpha: 0.7},'+
+					            'shadow: true,'+
+					            'shadowAlpha: 0.05';
+	       	   		    // echo ",showLine:false";
+	       	   		     //echo ",markerOptions:{style:'",FSerials[Fidxs[j]]['标识类型'],"',size: ",FSerials[Fidxs[j]]['大小'],"}";	//控制关键点样式类型 FSerials[Fidxs[j]]['大小']，FSerials[Fidxs[j]]['空值是否连续']
+	       	   		end;
+	       	   		40:   //冒泡图
+     	   				begin
+	     	   				echo ',renderer: $.jqplot.BubbleRenderer,'+
+					            'rendererOptions: {'+
+					                'autoscalePointsFactor: -0.1,'+
+					                'autoscaleMultiplier: 0.85,'+
+					                'highlightMouseDown: true,'+
+					                'showLabels:false,'+    //2012.4.19 新加入 控制冒泡上字体显示
+					               // 'autoscaleBubbles:false,'+   //控制半径
+					                'bubbleAlpha: 0.7},'+
+					            'shadow: true,'+
+					            'shadowAlpha: 0.05';
+     	   				end;
+     	   				38:		 //K线蜡烛图
+     	   				begin
+     	   					echo ',renderer:$.jqplot.OHLCRenderer, rendererOptions:{candleStick:true}';
+     	   					kLine_static:= 1;
+     	   				end;
+     	   				39:		 //K线图
+     	   				begin
+     	   					echo ',renderer:$.jqplot.OHLCRenderer, rendererOptions:{}';
+     	   				end;
+     	   				41:   //区域图
+     	   				begin
+     	   					echo ',renderer:$.jqplot.BlockRenderer,rendererOptions:{css:{background:"#A1EED6"},varyBlockColors: true,pointLabels:{show: false}},rendererOptions:{css:{background:"#D3E4A0"}}';
+     	   				end;     	   				
+     	   				43:		 //瀑布图----
+     	   				begin
+     	   					echo ',renderer:$.jqplot.BarRenderer, rendererOptions:{waterfall:true,varyBarColor: true},pointLabels: {hideZeros: true}';
+     	   				end;
+	       	   end;	//----case of--
+	       	   
+	       	   if not (FSerials[Fidxs[j]]['图形属性'] in array(2,3,33) ) then 
+	       	   		echo ',disableStack:true';
+	       	   
+	       	     case Fserials[FIdxs[j]]['坐标轴']  of
+	       	    	0:
+	       	    	echo ",yaxis:'yaxis'";
+	       	    	1:
+	       	    	echo ",yaxis:'y2axis'";
+	       	    	2:
+	       	    	echo ",yaxis:'y3axis'";
+	       	    	3:
+	       	    	echo ",yaxis:'y4axis'";
+	       	    end;
+		       	 //if j=1 then echo ",yaxis:'y2axis'";
+		       	 //if j=2 then echo ",yaxis:'y3axis'";
+		         //If j=3 then echo ",yaxis:'y4axis'";	       	          	    	       	   
+	       	   echo '}';
+	       	   	
+	           if  j<length(FIdxs)-1 then
+	            	echo ",";
+	      end;//-----循环系列--begin---
+	      if kLine_static then begin
+	        echo ',{showLine:false}';
+	        echo ',{showLine:false,markerOptions:{style:"dash"}}';
+	      end;
+	?> 
+			 ],
+	 <?tsl
+		  	if(38 in FGraphType) or(39 in FGraphType)  then   //k线图
+		  	begin
+		  			echo "cursor:{ zoom:true,tooltipOffset: 10,tooltipLocation: 'nw'},";
+						echo "highlighter: {showMarker:false,ooltipAxes: 'xy',yvalues: 4,formatString:'<table class=\"jqplot-highlighter\"><tr><td>",FXfieldName,":</td><td>%s</td></tr><tr><td>",b[0],":</td><td>%s</td></tr><tr><td>",b[1],":</td><td>%s</td></tr><tr><td>",b[2],":</td><td>%s</td></tr><tr><td>",b[3],":</td><td>%s</td></tr></table>'},";
+		  	end;
+  ?>
+  
+    axesDefaults:{ useSeriesColor: true ,  tickRenderer: $.jqplot.CanvasAxisTickRenderer  },
+    
+    grid:{
+           <?tsl  drawGrid(); ?> 
+        },
+	  axes:
+	  {
+	    xaxis:
+	    {
+	      <?tsl
+	      
+			    if not isEmpty(FXLabel) then echo 'label:"',FXLabel,'",labelRenderer: $.jqplot.CanvasAxisLabelRenderer,';
+			    if  not isEmpty(FXfieldName) then begin	
+				      if not NeedTicks and FXfieldType="时间" then
+				      begin
+			             echo "renderer:$.jqplot.DateAxisRenderer, 
+			             			 tickOptions:{formatString:'%Y/%#m/%#d'}";
+			             if FXfieldMark<>'' then 
+		                    echo ",tickInterval:'",FXfieldMark,"'";
+		                 else 
+		               	    echo ",tickInterval:'auto'";
+			        end 
+			        else  if not NeedTicks and FXfieldType="文本" then 
+			          	echo "renderer:$.jqplot.CategoryAxisRenderer" //
+			        else if  FXfieldType="文本" then 
+			            echo "renderer:$.jqplot.CategoryAxisRenderer"; 
+			        else echo 'a:1';  
+				        
+				      if  NeedTicks then begin
+	 					 	    ticks:=sselect [FXfieldName] from Fdata end;
+	 					 	    //ticks:=sselect thisrow  from ticks where thisrowIndex mod 50=0 end;
+	 					 	    //update ticks set thisrow=' ' where not(thisrowindex%5 =0)  end;
+	 					 	    //ticks[1]:=' ';
+	 					 	    //ticks[2]:=' ';
+	 					 	    //ticks[3]:=' ';
+	 					 	    //ticks[4]:=' ';
+	 					 	    //ticks[5]:=' ';
+	 					  	  
+	 					  	  echo ',ticks:',class(TDataConverter).array2json(ticks); 					  	  
+	 				    end;
+		            
+		          echo ",tickRenderer: $.jqplot.CanvasAxisTickRenderer";	      
+		          
+		          echo ',tickOptions: { maxVisibleTicks:',FMaxVisibleTicks;
+			        if FXfieldDegree<>'' then			          
+			            echo ',angle: ',FXfieldDegree,' , fontSize: "10pt" ';
+			        echo '}';
+			        //    echo ',tickOptions: {fontSize: "10pt",maxVisibleTicks:6} '; 
+			         
+			        //echo ',ticks:["","2011-12-26",null,"","","","","","","","","","","","","","","2012-03-29"]';
+			        
+			        //echo ',numberTicks:"10"';  
+			        //echo ',tickInterval:"1 day"';   
+			        
+			        
+			        
+			        
+			             
+			    end  
+	     ?>
+	     }
+	      
+	        <?tsl
+	       
+			        axisName:='';
+			          
+			         if not istable(FAxisHash) then FAxisHash:=array('左轴':());
+			          
+					     for  n in FAxisHash do
+					     begin
+					     		 case n  of
+						       	    	'左轴':
+						       	    	axisName:='yaxis';
+						       	    	'右轴':
+						       	    	axisName:='y2axis';
+						       	    	'第三轴':
+						       	    	axisName:='y3axis';
+						       	    	'第四轴':
+						       	    	axisName:='y4axis';
+						   			end;	 
+						      //dolog("tsbinderGraph_numberTicks",tostn(FAxisHash));
+						      tmpYLabel:= '';
+						      if not isEmpty(FAxisHash[n]['轴名']) then tmpYLabel:= FAxisHash[n]['轴名'];
+					     		  echo  ",", axisName,":{label:'",tmpYLabel,"',tickRenderer:$.jqplot.AxisTickRenderer";
+					     		          if istable(FAxisHash[n]) then 
+					     		          begin
+					     		            if FAxisHash[n]['轴名'] and isEmpty(FAxisHash[n]['轴名']) then 
+					     		            		echo ',label:"',FAxisHash[n]['轴名'],'",labelRenderer: $.jqplot.CanvasAxisLabelRenderer';
+						     		          
+						     		          if FAxisHash[n]['主要刻度']='' then 
+						     		          		echo " ,tickOptions:{showGridline:true,suffix: '",FAxisHash[n]['Y轴显示单位']?:'',"'}"
+							     		      	else  if FAxisHash[n]['主要刻度']<>'' then 
+							     		      			echo " ,tickOptions:{formatString:'",FAxisHash[n]['小数位数'],"',showGridline:true,suffix: '",FAxisHash[n]['Y轴显示单位']?:'',"'}";
+							     		        
+							     		        if FAxisHash[n]['角度']<>'' then echo ',tickRenderer: $.jqplot.CanvasAxisTickRenderer ,tickOptions: {  angle: ',FAxisHash[n]['角度'],' , fontSize: "10pt"} ';				     		 
+							     		        if FAxisHash[n]['小数位数']<>'' then echo ",numberTicks:", FAxisHash[n]['主要刻度'];		     		     		     		     
+						     		          if FAxisHash[n]['最大值']<>'' then  echo ',max:', FAxisHash[n]['最大值'];
+						     		          if FAxisHash[n]['最小值']<>'' then  echo ',min:', FAxisHash[n]['最小值'];		     		  	     		     		     		
+						     		        	
+						     		        end;  
+				     		    echo " }";
+			         end;	
+	    		?> 
+  }
+});
+  
+  
+  
+<?tsl  
+  if  length(FGraphType)=1 and( FGraphType[0]=40) then   // or FGraphType[0]=27
+  begin 
+    echo 'var colorArr =$.jqplot.config.defaultColors;';
+    echo '$.each(';
+        
+               for j:=0 to length(FIdxs)-1 do
+               begin
+                   if  j=length(FIdxs)-1 then
+                       echo 'line_',0,'_',j;
+                  else   echo 'line_',0,'_',j,',';
+              end;
+        echo ', function(index, val) { $("#chartTable_'+tostring(Fnum)+'").append("<tr><td><div style=\'width:20px;height:10px;background-color:"+colorArr[(index>15?(index-16):index)]+"\'></div></td><td>"+val[3]+"</td><td>"+val[2]+"</td></tr>");});';
+  end;
+?>
+    
+ // });
+  </script>  
+   
+ <?tsl
+  
+   end;
+
+
+function _calBarWidth(FData,CountSerial);
+begin
+
+		tmpBarMargin:='null';
+		tmpBarWidth:='null';  
+		if CountSerial then
+			LL:=mcols(FData)*length(FData);
+		else
+			LL:=length(FData);
+		if LL>100 then begin
+			tmpBarMargin:='1';
+		end if LL>80 then begin
+			tmpBarMargin:='1';
+		end else if LL>40 then begin
+			 tmpBarMargin:='2';
+		end else if LL>30 then begin
+			 tmpBarMargin:='3';		 
+		end else if LL>=20 then begin	       	   		     		 
+			tmpBarMargin:='4';
+		end else if LL>=15 then begin	       	   		     		 
+			tmpBarMargin:='7';	       	   		     		
+		end else if LL>=10 then begin	       	   		     		 
+			tmpBarMargin:='8';
+		end else if LL>5 then begin
+			tmpBarMargin:='10';
+		
+		end else begin
+			tmpBarWidth:='15';
+			//tmpBarMargin:='15';
+			//tmpBarMargin:='10';
+		end; 		 
+		tmpBarWidth:='15';
+		return array('BarWidth':tmpBarWidth,'BarMargin':tmpBarMargin);
+end;	       	   		    
+
+function TWebsiteGraph.drawBoxChart();
+begin
+	if isEmpty(FXfieldName) then raise '9宫图必须指定X轴';
+	obj:=CreateObject("TSBoxChart");
+	
+	Obj.FHeight:=FHeight;
+	obj.FWidth:=FWidth	;	
+	obj.FXLabel:= FXLabel;
+	if  Fconf['图形属性']['X轴']['坐标']<>nil then
+	    obj.FXAxisLables:=Fconf['图形属性']['X轴']['坐标'];	
+	if  Fconf['图形属性']['Y轴']['左轴']['坐标']<> nil then
+	    obj.FYAxisLables:=Fconf['图形属性']['Y轴']['左轴']['坐标'];
+	if  Fconf['图形属性']['Y轴']['左轴']['轴名']<> nil then
+	    obj.FYLabel:= Fconf['图形属性']['Y轴']['左轴']['轴名'];
+	
+	newData:=array();
+	for i:=0 to length(FData)-1 do
+	begin	  		
+			newData[i][0]:=FData[i][FXfieldName];
+			a:=str2array(FIdxs[0]);
+			newData[i][1]:=FData[i][a[0]];
+			if length(a)>1 then
+				newData[i][2]:=FData[i][a[1]];
+	end;
+	 
+	obj.FData:=newData;
+
+	echo obj.Draw();
+end;
+
+
+function TWebsiteGraph.drawGrid();
+begin
+    <?tslx>
+        drawBorder:<?=FGridDrawBorder?>,
+        borderWidth:<?=FGridBorderWidth?>,
+        borderColor:'<?=FGridBorderColor?>',
+        
+        drawGridlines:<?=FGridLineType?>,
+        //drawGridlines:1,
+        gridLineColor:'<?=FGridLineColor?>',
+        gridLineWidth:<?=FGridLineWidth?>,
+        
+        background:'#fffdf6',
+        shadow:<?=FGridShadowType?>,
+        shadowColor: '<?=FGridShadowColor?>',
+        shadowWidth: <?=FGridShadowWidth?>,
+        shadowDepth: <?=FGridShadowDepth?>,
+        shadowOffset: 3
+   <?tsl                 
+end;
+
+
+function TWebsiteGraph.drawBubble(); ///*[x, y, radius, <label or object>]. 冒泡图数据格式  */
+begin
+ 
+end;
+
+function TWebsiteGraph.drawRadar(); //2013/5/2 雷达图
+begin
+   echo '<div  class="comContainer"  id="chart_',Fnum,'" style=" width:',tostring(Fwidth),'; height:', tostring(Fheight) ,';"></div>',FTmpDownload;
+	 N:=Fnum;
+ <?tslx>
+  <script  type="text/javascript">
+  $(document).ready(function(){
+  	 $.jqplot.config.enablePlugins = true;
+     <?tsl
+     for i:=0 to length(FIdxs)-1 do
+		 begin		
+          if isEmpty(FXfieldName) then begin
+    	  		r:=  sselect [FIdxs[i]] from FData  end;
+    	  	    echo '\n var line_',n,'_'+tostring(i)+'='+class(TDataConverter).array2JSON(r)+';'; 	
+    	  	end else begin
+    	  		r:=  select [FXfieldName],[FIdxs[i]] from FData order by [FXfieldName] end;
+    	      echo '\r\n var line_',n,'_'+tostring(i)+'='+class(TDataConverter).Table2JSON(r,0)+';';   
+    	    end;  
+    	end;
+    	?>
+       plot1 = $.jqplot('chart_<?=n?>', [
+          <?tsl
+             for j:=0 to length(FIdxs)-1 do
+			       begin
+			           if  j=length(FIdxs)-1 then
+			               echo 'line_',n,'_',j;
+			          else   echo 'line_',n,'_',j,',';
+			       end;
+					?>
+			], {
+		legend: {
+              //renderer: $.jqplot.EnhancedLegendRenderer,
+	            show: true,
+	            location: '<?=Flocation?>',
+	            rendererOptions:{
+               numberColumns:2
+              }
+          },
+	  series:[
+	    <?tsl
+			       for j:=0 to length(FIdxs)-1 do
+			       begin
+			           if  j=length(FIdxs)-1 then
+			               echo "{label:'",FIdxs[j],"'}";
+			          else  echo "{label:'",FIdxs[j],"'},";
+			      end;
+			?> 
+	  ],
+    seriesDefaults:{  
+						renderer:$.jqplot.RadarRendererer,
+						trendline:{show:false},
+						rendererOptions: {padding: 0,fill:false,showDataLabels:true,dataLabels:"label&value",drawRayLines:true}},
+	   grid:{}  
+        });
+    });
+ </script>
+ <?tsl
+end;

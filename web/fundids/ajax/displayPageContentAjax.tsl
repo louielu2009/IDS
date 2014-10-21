@@ -1,0 +1,444 @@
+httpSetHeadString("Content-Type:text/html; charset=gb2312;\r\n\r\n") ;
+HttpSetHeadString("Cahce-Control: no-cache;\r\n");
+HttpSetHeadString("Cahce-Control: no-store;\r\n");
+
+Ctype := utf8toansi(urltotext(httpGetQueryValueByName('Ctype')));
+//********获取当前登录用户*******//
+request := createObject('TWebRequest');
+TStrings := request.CookieFields;
+Uid := TStrings.Values('SecUserId');
+//*********输出模板配置页面********//
+if Ctype = 'model' then
+begin
+		html:= '';   	   	       
+	   TID := utf8toansi(urltotext(httpGetQueryValueByName('TID')));	   
+	   if TID then
+	   begin	   		  
+	   		  TComBox := createObject('TComBox');
+	   		  html := TComBox.genTemplate(TID);	     
+	   end
+	   else begin
+					queryData2 := array();
+					queryData2['Table'] := 'TS_RTemplateType';
+					queryData2['QueryStr'] := "";//"USERID='"+tostring(UID)+"'";
+					r2 := class(ExecuteSql).query(queryData2);     
+					
+					tg := CreateObject("TTree") ;
+					tg.Data := array(
+					("name":"QDII型","group":"定期报告"),
+					("name":"保本型","group":"定期报告"),
+					("name":"股票型","group":"定期报告"),
+					("name":"货币型","group":"定期报告"),
+					("name":"理财型","group":"定期报告"),
+					("name":"偏股型","group":"企业年金"),
+					("name":"债券型","group":"招募说明"),
+					("name":"指数型","group":"招募说明"),
+					("name":"封闭式","group":"法律文书"),
+					("name":"偏股型","group":"审批报告"));
+					treeHtml:= tg.GainHtml() ;
+					
+					
+					html :='<div class="left_nav">'+treeHtml;
+					for i:=0 to length(r2)-1 do 
+					begin
+					  //html +='<button class="EM_telabel">'+r2[i]['NAME']+'</button>';
+					end;
+					html +='</div>';
+					     
+					html +='<div class="main_content"><div class="EM_RightBox_SearchContent">';  
+					data := array();
+					data['Table'] := 'TS_RTemplateConf';
+					data['QueryStr'] := "";//"USERID='"+tostring(UID)+"'";
+					r := class(ExecuteSql).query(data);
+					if not istable(r)  then html+='您尚无报告模板，<a href="javascript:void(0)" class="Model_CreateTemplate">创建</a>.';
+					html+= '<table class="underlineTable modelMgrTable">';
+					for i:= 0 to length(r) -1 do begin
+							statusStr:= '启用';
+							if r[i]['STATUS'] then statusStr:= '<span style="color:rgb(204, 17, 17);">禁用</span>';
+							html+= '<tr tid="'+r[i]['TID']+'" status="'+tostring(r[i]['STATUS'])+'"><td>'+tostring(r[i]['TNAME']?:'--')+'</td><td>'+dateTimeToStr(r[i]['CREATEDDATE'])+'</td><td style="width:280px;text-align:left;">'+(r[i]['USERID']?:"admin")+'</td><tr/>';
+					end;
+					html+= '</table></div></div>';
+		end;
+	   return echo html;
+end;
+
+//*********元素配置***********//
+if ctype = 'element' then
+begin
+	   EID := utf8toansi(urltotext(httpGetQueryValueByName('EID')));	   	  
+	   EList := '';
+	   queryData := array();
+	   queryData['Table'] := 'ts_rtemplateelement';
+	   queryData['QueryStr'] := "USERID='"+tostring(UID)+"'";
+	   r := class(ExecuteSQL).query(queryData);
+	   if ifArray(r) and length(r) then
+	   begin
+	   	    for i := 0 to length(r)-1 do
+	   	    begin
+	   	    	   EList += '<li><a href="javascript:void(0)" onclick="EM_EditElement(this)" value="'+tostring(r[i]['EID'])+'">'+tostring(r[i]['NAME'])+'</a></li>';
+	   	    end;
+	   end;
+	   leftContent := '<div class="EM_LeftBox">'+EList+'</div>';
+	   rightContent := '<div class="EM_RightBox"></div>';
+	   if EID then
+	   begin
+	   		        
+	   end
+	   else
+	   begin
+	   	    html := '';	   	    	      
+	   end;	    
+	   return echo html;
+end;
+
+//***********元素管理**********//
+if ctype = 'EM' then
+begin     
+     TComBox:= createObject('TComBox');	
+     arr := TComBox.ElementConf();
+     result := array();
+     queryData := array();
+     queryData['Table'] := 'ts_rtemplateelement';
+     queryData['QueryStr'] := "USERID='"+tostring(UID)+"' order by CREATEDDATE DESC";        
+     r := class(ExecuteSql).query(queryData);     
+     queryData2 := array();
+     queryData2['Table'] := 'TS_DataRight';          
+     r2 := class(ExecuteSql).query(queryData2);      
+     //***审核人、编辑人***//
+     data := array();
+     for i := 0 to length(r)-1 do
+     begin
+     	     data['Auditors'] := '';
+     	     data['Editors'] := '';
+     	     Auditors := select ['USERID'] from r2 where ['EID'] = r[i]['EID'] and ['TYPE'] = 2 end;
+           Editors := select ['USERID'] from r2 where ['EID'] = r[i]['EID'] and ['TYPE'] = 1 end;
+           Auditors := (`Auditors)['USERID'];
+           Auditors := ifArray(Auditors)?Auditors:array();
+           Auditors := array2Str(Auditors);
+           Editors := (`Editors)['USERID'];
+           Editors := ifArray(Editors)?Editors:array();
+           Editors := array2Str(Editors); 
+           r[i]['Auditors'] := Auditors;
+           r[i]['Editors'] := Editors;
+     end;
+     //******************//  
+     html :='<div class="left_nav">';          
+	   html += TComBox.genLabels('',1);  
+     html +='</div>'; 
+     html +='<div class="main_content">';  
+     html += '<div class="SearchContent">
+              <div class="Search_div"><input type="text" class="txt_search" /><button class="btn_search">搜索</button></div>
+             <button class="EM_Button_AddElement">+添加元素</button></div>';  
+     html+='<div class="EM_CheckBox">
+           <span class="span_checkbox"><label><input type="checkbox" name="EM_with" id="with_products" checked="checked" value="产品相关"/>产品相关</label>
+                 <label><input type="checkbox" name="EM_with" id="with_Rpt" checked="checked" value="报告期相关"/>报告期相关</label></span>
+           <span class="span_radio"><label><input type="radio" name="EM_type" id="EM_All" checked="checked" value="All"//>全部</label>
+                 <label><input type="radio" name="EM_type" id="EM_Table" value="Table"/>表格</label>
+                 <label><input type="radio" name="EM_type" id="EM_Pic" value="Pic"/>图形</label>
+                 <label><input type="radio" name="EM_type" id="EM_Txt" value="Txt"/>文本</label>
+           </span></div>';      
+     if not ifArray(r) or not length(r) then html += '<span class="EM_NoData">没有相关元素信息!</span>'
+     else
+     begin     
+		     for i := 0 to length(r)-1 do
+		     begin
+		     	    checked := '';
+		     	    if r[i]['FLAG'] <> 1 then
+		     	    checked := 'checked=true';
+		     	    r[i]['FLAG']  := '<select class="EM_ChangeFlag"><option value=1>启用</option><option value=0 '+checked+'>禁用</option></select>';     	         	    
+		          r[i]['EDIT'] := '<a href="###" class="EM_EditElement" value="'+tostring(r[i]['EID'])+'">编辑</a>';		         
+		          r[i]['DM']  := '<a href="/fundids/dataMgr/index.tsl?type=DM&uid=admin&eid='+tostring(r[i]['EID'])+'" class="EM_DataMaintain">维护</a>';    
+		     end;
+		      data := select ['EID'],['LABELS']as '标签',['NAME'] as '名称' , ['TIP2'] as '产品相关',['TIP1'] as '报告期相关',['Auditors'] ,['Editors'] from r end;
+		      data2 :=select (['CONF'] ? STM(['CONF']):array()) as 'Conf' from r end;		     
+		      html+='<table class="elements_table">'; 
+		      html+='<thead><th class="EM_thead_name">名称</th><th class="EM_thead_product">产品相关</th><th class="EM_thead_Rpt">报告期相关</th><th class="EM_thead_dis">显示方式</th><th class="EM_thead_audit">审核人</th><th class="EM_thead_maint">维护人</th></thead>';
+		      html+='<tbody>';
+		      for i:=0 to length(data)-1 do 
+		      begin
+		      		 tname:=data[i]['名称'];      		 
+		           tag:=data[i]['标签'];
+				     	 product := data[i]['产品相关']=1.00 ? '是':'否'; 	
+				       Rpt := data[i]['报告期相关']=1.00 ? '是':'否'; 		     	
+				     	 html+='<tr class="EM_table_tr" eid="'+data[i]['EID']+'" Provalue="'+tostring(data[i]['产品相关'])+'" Rptvalue="'+tostring(data[i]['报告期相关'])+'" Typevalue="'+tostring(data2[i]["Conf"]["Type"])+'">';
+				     	 html+='<td class="EM_table_name searchTag"  tags="'+tag+'">'+tname+'</td>';
+				       html+='<td class="EM_table_product withTag">'+product+'</td>';
+				       html+='<td class="EM_table_Rpt withTag" >'+Rpt+'</td>';				       
+				       html+='<td class="EM_table_dis">'+tostring(arr[data2[i]["Conf"]["Type"]])+'</td>';
+				       html+='<td class="EM_table_audit searchTag">'+tostring(data[i]["Auditors"])+'</td>';
+				       html+='<td class="EM_table_maint searchTag">'+tostring(data[i]["Editors"])+'</td></tr>';  			        
+			 	end;
+		    html+='</tbody></table>';        
+     end;
+    html +='</div></div>';     
+    return echo html;
+end;
+
+//*********输出模板管理**********//
+if Ctype = 'manage' then
+begin
+	    if not UID then return;	    
+	    data := array();
+	    data['Table'] := 'TS_RTemplateConf';
+	    data['QueryStr'] := "USERID='"+tostring(UID)+"'";
+	    ModelList := class(ExecuteSql).query(data);
+	    if not ifArray(ModelList) then return ;	  
+	    Search:= '<select class="Manage_SearchType"><option value="date">日期</option><option value="name">名称</option></select>
+	             <input type="text" class="Manage_SearchStr" /><button class="Manage_Search">查询</button>';      
+ 	    Manage_EditDialog := '<div class="Manage_EditDialog">
+	                         <div>名称：<input type="text" class="Manage_EditDialog_TName" /></div>                           
+                           <input type="hidden" class="Manage_EditDialog_TID" />
+                           </div>';	  
+ 	    arr := array(); 	       
+ 	    for j := 0 to length(ModelList)-1 do
+ 	    begin 	    	    	    	   
+           TID := tostring(ModelList[j]['TID']);
+ 	    	   ModelList[j]['CREATEDDATE'] := ModelList[j]['CREATEDDATE']? datetimetostr(ModelList[j]['CREATEDDATE']):'';
+ 	    	   ModelList[j]['OP'] := '<a href="/fundids/index.tsl?type=model&tid='+TID+'">编辑</a>'; 	    	   
+ 	         if ModelList[j]['STATUS'] then
+ 	         ModelList[j]['STATUS'] := '<select class="Manage_TStatus" TID="'+tostring(ModelList[j]['TID'])+'"><option selected="true" value="1">启用</option><option value="0">禁用</option></select>'
+ 	         else
+ 	         ModelList[j]['STATUS'] := '<select class="Manage_TStatus" TID="'+tostring(ModelList[j]['TID'])+'"><option value="1">启用</option><option selected="true" value="0">禁用</option></select>';           
+           ModelList[j]['MODIFYDATE'] := ModelList[j]['MODIFYDATE'] ? datetimetostr(ModelList[j]['MODIFYDATE']):''; 	        
+ 	    end; 	   
+      data := select ['TNAME'] as '名称',['USERID'] as '创建人',['CREATEDDATE'] as '创建时间',['MODIFYDATE'] as '修改日期',['MODIFIER'] as '修改人',['STATUS'] as '状态',['OP'] as '操作' from modelList end;
+      dg := createObject('DataGrid');
+      dg.Data := data;
+      dg.RowHeight:=6;
+      html := dg.GainHtml();
+      html := '<div class="Manage_TemplateList">'+tostring(html)+'</div>';
+      return echo Search+html+Manage_EditDialog;	  
+end;
+
+//**********输出模板分类管理内容***********//
+if Ctype = 'group' then
+begin
+	   if not UID then return;
+	   data := array();
+	   data['Table'] := 'TS_RTemplateType';
+	   data['QueryStr'] := "USERID='"+tostring(UID)+"'";
+	   GroupList := class(ExecuteSql).query(data);	   
+	   if not ifArray(GroupList) then return;
+	   button := '<button class="Group_Add">添加</button>';
+     SearchType := '<select class="Group_SearchType"><option value="GName">名称</option><option value="CDate">创建日期</option></select>';
+     search := '<span>'+SearchType+'<input type="text" class="Group_SearchStr" /><button class="Group_SearchButton">查询</button></span>';
+     divStr := '<div>'+search+button+'</div>';
+     Group_EditDialog := '<div class="Group_EditDialog">
+                <div>名称：<input type="text" class="Group_EditDialog_GName" /></div>
+                <div>模板</div>
+                <div class="Group_EditDialog_ModelList">
+                
+                </div>
+                <input type="hidden" class="Group_EditDialog_Group" />
+                </div>';
+     divStr+= Group_EditDialog;
+     if not length(GroupList) then return echo divStr+'<div class="Group_GroupList"></div>';
+	   if not length(GroupList) then return echo '没有相关组信息！';	   
+	   for i := 0 to length(GroupList)-1 do
+	   begin
+	   	    if GroupList[i]['STATUS'] then
+	   	    GroupList[i]['STATUS'] := '<select class="Group_Status" value="'+tostring(GroupList[i]['GID'])+'"><option value=1 selected="true">启用</option><option value=0>禁用</option></selected>'
+	        else
+	        GroupList[i]['STATUS'] := '<select class="Group_Status" value="'+tostring(GroupList[i]['GID'])+'"><option value=1>启用</option><option value=0 selected="true">禁用</option></selected>';	        
+	        GroupList[i]['CREATEDDATE'] := datetimetostr(GroupList[i]['CREATEDDATE']);
+	        GroupList[i]['MODIFYDATE'] := GroupList[i]['MODIFYDATE'] ? datetimetostr(GroupList[i]['MODIFYDATE']):'';
+	        GroupList[i]['EDIT'] := '<a href="javascript:void(0);" value="'+tostring(GroupList[i]['GID'])+'" class="Group_Edit">编辑</a>';
+	   end;
+	   GroupList := select ['NAME'] as '名称',['CREATEDDATE'] as '创建日期',['MODIFYDATE'] as '修改日期',['STATUS'] as '状态',['EDIT'] as '操作' from GroupList end;    
+     dg := createObject('DataGrid');
+     dg.data := GroupList;
+     dg.RowHeight:=6;
+     html := dg.gainHTML();
+     html := '<div class="Group_GroupList">'+tostring(html)+'</div>';     
+     return echo  divStr+html;
+end;
+
+//*********输出系统日志内容**********//
+if Ctype = 'SysLog' then
+begin
+     topBar := '';
+     topBar := '<div><span>用户：<input type="text" class="SysLog_searchUser" />&nbsp;&nbsp;&nbsp;&nbsp;</span><span>日期：<input type="text" class="SysLog_searchDate" />&nbsp;&nbsp;</span><span><button class="SysLog_searchButton">查询</button></span></div>';     
+     data := array();
+     data['Table'] := 'TS_RTLog';
+     data['QueryStr'] := '';
+     SysLog := class(ExecuteSql).query(data);     
+     SysLog := select ['USERID'] as '用户',['TYPE'] as  '类型',['INFO'] as '详情',(['CREATEDDATE'] ? datetimetostr(['CREATEDDATE']):'') as '时间' from SysLog end;
+     dg := createObject("DataGrid");
+     dg.data := SysLog;     
+     html := topBar+'<div class="SysLog_SysLogList">'+tostring(html)+'</div>';
+     return echo html;
+end;
+
+
+
+//*********报告***********//
+if Ctype= "report" then
+begin
+		html :='<div class="main_content">';  
+      html+='<table class="underlineTable report-list-table">';  
+      html+='<thead><th class="rep_thead_name">报告名称</th><th class="rep_thead_date">披露时间</th><th class="rep_thead_dataplan">数据进度</th><th class="rep_thead_auditplan">审核进度</th><th class="rep_thead_btn"></th></thead>';
+      html+='<tbody>';
+      	r:= class(TgenReport).getReportInfoByUserID(Uid);
+      	if istable(r) then
+				for i:= 0 to length(r)-1 do 
+       begin      		
+          //获取数据进度
+      	  param:=array();
+      	  param['RID']:=r[i]['ID'];
+      	  ReportMgr:=createObject('ReportMgr');	
+      	  Status:=ReportMgr.getReportStatus(param);
+      	  //数据进度
+      		var dataplan:=Status['DataC'];
+      		var sumplan:=Status['Count'];
+      		var className := Status['AuditC']=Status['Count']? ' rpt-tr-finished':'';
+      		var data_plan:=dataplan/sumplan;
+      		var sum:=tostring(formatfloat('0.00',data_plan*100));
+      		html+='<tr class="reportTable_tr'+tostring(className)+'"><td class="rep_name">'+tostring(r[i]['报告名称'])+'</td>';
+      		html+='<td class="rep_date">'+r[i]['披露时间']+'</td>';
+      		if data_plan < 1 then
+      		begin
+      		    html+='<td class="rep_dataplan"><div class="rep_plan"><div style="width:'+sum+'%"><span class="repspan_plan">'+formatfloat('0',dataplan)+'</span>/<span class="repspan_sumplan">'+tostn(sumplan)+'</span><span class="repspan_sum">'+sum+'%</span></div></div></td>'; 
+      		end
+      		else
+      		   html+='<td class="rep_dataplan"><div class="rep_finish">已完成</div></td>';
+      	 //审核进度
+      	  var auditplan:=Status['AuditC'];
+      		var auditsum:=Status['Count'];
+      		var audit_plan:=auditplan/auditsum;
+      		var sum1:=tostring(formatfloat('0.00',audit_plan*100));
+      		if audit_plan < 1 then
+      		begin
+      				html+='<td class="rep_auditplan"><div class="rep_plan"><div style="width:'+sum1+'%"><span class="repspan_plan">'+formatfloat('0',auditplan)+'</span>/<span class="repspan_auditsum">'+tostn(auditsum)+'</span><span class="repspan_sum">'+sum1+'%</span></div></div></td>';	  	
+      		end
+      		else
+      		   html+='<td class="rep_auditplan"><div class="rep_finish">已完成</div></td>';
+      	
+       	html+='<td class="rep_btn" rid="'+r[i]['ID']+'"></td></tr>';
+	 	 end;
+     html+='</tbody></table></div>';   		
+		return echo html;
+end;
+
+{
+if Ctype = "RData" then
+begin	  
+	   RID := utf8toansi(urltotext(httpGetQueryValueByName('RID')));	  
+	   queryData := array();
+	   queryData['Table'] := 'TS_ReportInfo';
+	   r  := class(ExecuteSQL).Query(queryData);
+	   ulList := '';
+	   liStr := '';
+	   for i := 0 to length(r)-1 do
+	   begin
+	   	    liStr += '<li><a href="/fundids/index.tsl?type=TData&uid=admin&TID='+tostring(r[i]['ID'])+'" class="TData_Template">'+tostring(r[i]['TITLE'])+'</a></li>';
+	   end;
+	   ulList := '<ul class="LeftBox_ItemList">'+liStr+'</ul>';
+	   leftContent := '<h1 class="LeftBox_Title">模板</h1>';
+	   leftContent += '<div><input type="text" class="LeftBox_SearchContent"><button class="LeftBox_SearchButton">搜索</button></div>';
+	   leftContent += '<div class="LeftBox_Items">'+ulList+'</div>'; 
+	   leftContent := '<div class="left_nav">'+leftContent+'</div>';
+	   ElementData := createObject('ElementData');
+	   if TID then
+	  		 rightContent := ElementData.genElementData(RID)
+	   else
+	 		  rightContent := ElementData.genAllElementData(UID);
+	  		rightContent := rightContent?rightContent:'无相关记录！';
+	  		rightContent := '<div class="main_content">'+rightContent+'</div>';	   	   
+	   		html := leftContent+rightContent;	   	   
+	   return echo html;
+end;
+}
+
+//*********输出数据维护内容**********//
+if Ctype = 'DM' then
+begin     
+   //  Search:='<div class="Search_div"><input type="text" class="txt_search" /><button class="btn_search">搜索</button></div>';
+	   RID := utf8toansi(urltotext(httpGetQueryValueByName('RID')));	  
+	   queryData := array();
+	   queryData['Table'] := 'TS_ReportInfo';
+	   r  := class(ExecuteSQL).Query(queryData); 
+	   
+	   ElementData := createObject('ElementData');
+	   leftContent := '';
+	   if RID then
+	  		  rightContent := ElementData.genElementData(RID);
+	   else
+	   begin
+   		    Data := ElementData.getAllElementData(UID);   		    
+   		    RightContent := ElementData.genAllElementData(Data);   		    
+   		    Funds := ElementData.getMatchFunds(Data);
+		     // FundList := ElementData.genFundList(Funds);
+		     ModelList := ElementData.genMatchedTemplates(Data);
+		      option:='<option class="ProductValue" value="all">全部产品</option>';
+		      for i:=0 to length(Funds)-1 do
+		      begin
+		        option+='<option value="'+Funds[i]["代码"]+'">'+Funds[i]["名称"]+'</option>';
+		      end;
+		      //上部工具栏
+		      TopContent:='<div class="Top_SearchContent"><div class="SearchTop">
+				      						<span class="span_checkbox"><label><input type="checkbox" class="with_NotPro" />隐藏产品无关数据</label>
+		                      <label><input type="checkbox" class="with_NotRpt"  />隐藏报告期无关数据</label></span>
+		                      <span ><Select class="AllProductText TextContent">'+option+'</select></span>
+		                      <span class="span_radio">
+		                         <label><input type="radio" checked="checked" name="DM_radio" value="all"/>全部</label>
+		                         <label><input type="radio" name="DM_radio" value="1"/>未处理</label>
+		                         <label><input type="radio" name="DM_radio" value="2"/>未提交</label>
+		                 				 <label><input type="radio" name="DM_radio" value="3"/>待审核</label>
+		                         <label><input type="radio" name="DM_radio" value="5"/>已驳回</label>
+		                      </span>
+		                      <span class="span_searchbox">
+		                      	<input type="text" class="DM_TopBox_SearchContent TextContent" /><button class="DM_TopBox_SearchButton SearchButton">搜索</button>
+		                      </span>
+                      </div></div>'; 
+          //左边模板    
+		      leftContent := '<div class="left_nav"><div><h1>模板</h1></div><div><input type="text" class="DM_LeftBox_SearchContent TextContent" /><button class="DM_LeftBox_SearchButton SearchButton">搜索</button></div><div class="DM_LeftBox_Items">'+tostring(ModelList)+'</div></div>';
+	   	end;
+	   	rightContent := rightContent?rightContent:'无相关记录！';			
+			rightContent := '<div class="main_content">'+rightContent+'</div>';	   	   
+			html := TopContent+leftContent+rightContent;	   	   
+	   return echo html;
+end;
+//****部门责权关系*****//
+if Ctype = 'DR' then
+begin	
+	obj:= createObject("TWSMemberDB",-1);
+	departInfo:= obj.GetDepartmentByUserID(UID);
+	if not istable(departInfo) then DepartmentName :='【无效部门】'
+  	else DepartmentName := departInfo[0]['RoleName']+' 责权关系';//'财务部责权关系';
+  html := '<div class="main_content" roleid="'+departInfo[0]['RoleId']+'">';  
+  html += '<h1>'+DepartmentName+'</h1>';  
+  RID := utf8toansi(urltotext(httpGetQueryValueByName('RID')));	  
+  queryData := array();
+  queryData['Table'] := 'TS_ReportInfo';
+  r  := class(ExecuteSQL).Query(queryData); 
+  
+  ElementData := createObject('ElementData');
+  RightContent := ElementData.getDataRight(UID);
+  rightContent := rightContent?rightContent:'无相关记录！';		   	   
+  html+=rightContent;  
+  html+='</div>';
+  return echo html;   
+end;
+
+(*
+if Ctype = 'permission' then
+begin
+	setsysparam('ConfigClassName','TWebsiteConfig');
+	Manager := CreateObject('TWSMemberManager',-1);
+	Manager.Init();
+	echo '
+	<div class="dotweb-sec-members">
+		<div class="panel">
+			<div class="left-panel">';
+	manager.InitNav();
+	echo '
+			</div>
+			<div class="content-panel">';
+	Manager.EchoMemberManager();
+	echo '</div>
+			<div style="clear:both"></div>
+		</div>';
+	Manager.InitEditMemberForm();
+	echo '</div>';
+	return ;
+end;*)

@@ -1,0 +1,18 @@
+type ReportInfo = class
+class function selectAll();
+class function query(condition);
+end;
+
+class function ReportInfo.selectAll();
+begin
+	
+end;
+
+class function ReportInfo.query(condition);
+begin
+	   sql := "select from TS_ReportInfo where "+tostring(condition);
+	   if execSql(class(TWebFundIDSConfig).getDBAlia(),sql,r) then
+	   return r
+	   else
+	   return 0;
+end;

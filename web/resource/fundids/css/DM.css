@@ -1,0 +1,117 @@
+.main_content{margin-left:280px;}
+ul li{list-style:none;}
+.DM_LeftBox_Items{height:375px;overflow-y:scroll;margin-top:10px;}
+/**ÐÂ°æCSS**/
+/*.Data_Element_Item{border-bottom:2px solid #74B0DD;color:#74B0DD;padding-left:30px;}*/
+.dialog-inputs-menu{padding:10px 3px 10px 10px;text-align: right;}
+.dialog-inputs-menu select{padding: 3px 6px;width: 100px;vertical-align: bottom;}
+.dialog-inputs-menu button,.dialog-inputs-menu select{margin-left: 5px;}
+
+/*.DM_dialogText{width:650px;margin:5px 10px 5px 10px;height:300px;border:1px solid #BFBFBF;}*/
+.btn_submit,.btn_save,.btn_cancel,.btn_pass,.btn_back,.btn_sure,btn_reload{margin:10px 5px 0px 5px;cursor:pointer;}
+.btn_cancel,.btn_cancelreload{width:60px;background-color:#fff;color:#000;}
+.btn_cancelreload{margin-left:10px;}
+.underlineTable tr td {padding: .2em 2em;text-align: center;}
+.underlineTable tr th:nth-child(2) {padding: .2em 2em;text-align:left;}
+.underlineTable tr td:nth-child(2) {text-align:left;}
+.DM_PreData,.DM_DataVersion,.DM_Reload{border:1px solid #BFBFBF;cursor:pointer;}
+/*Rewritten by Louie*/
+
+.Data_Element_Item{border-bottom: 1px solid #0070C0;color:#0070C0;padding:0.2em 1em;font-size: 14px;font-weight: normal;margin: 0.5em;}
+.DM_dialogText,.DM_ReloadText{height:300px;border:1px solid #BFBFBF;width:645px;margin:5px;overflow-y: auto;}
+.DM_DataText,.DM_dialogC{height:310px;width:100%;}
+.DM_dialogC{border: 1px solid #BFBFBF;overflow:auto;}
+/**布局**/
+.left_nav,.main_content{margin-top:60px;}
+/*****Top搜索菜单栏*****/
+.Top_SearchContent{height:45px;width:100%; margin: 0 auto;background-color:#fff;border:1px solid #BFBFBF;
+	position: absolute;margin-top:-4px;overflow:hidden;}
+.SearchTop{padding:10px;min-width:980px;}
+.SearchTop label{margin-right:20px;}
+.SearchTop span{margin-left:20px;}
+
+/******搜索框********/
+h1{margin:10px;}
+.TextContent{ border: 1px solid #e0e0e0; height: 23px; width: 188px;}
+.SearchButton{height:25px;width:50px;border:1px solid #E0E0E0;}
+.AllProductText{width:250px;}
+/*******Êý¾Ý¹ÜÀí********/
+/*.data_table_col1{width:109px}
+.data_table_col2{width:110px}
+.data_table_col3{width:79px}
+.data_table_col4{width:79px}
+.data_table_col5{width:109px}
+.data_table_col6{width:162px}
+.data_table_col7{width:91px}
+.data_table_col8{width:71px}
+*/
+.data_table_col2{width:25%;}
+.data_table_col1{width:10%;}
+.data_table_col3{width:10%;}
+.data_table_col4{width:10%;}
+.data_table_col5{width:15%;}
+.data_table_col6{width:15%;}
+.data_table_col7{width:10%;}
+.data_table_col8{width:10%;}
+
+/*.main_content{margin:20px auto;width:980px;float:none;}*/
+
+.report-reader{
+	font-family: "SimSun";
+	font-size: 14px;
+	line-height: 2em;
+}
+
+.report-reader p{
+	text-indent: 2em;
+}
+
+/*注，备注，注释*/
+.report-reader p.remark{
+	text-indent:0;	
+}
+
+/*金额单位*/
+.report-reader p.amount_unit{
+	text-align: right;
+}
+
+.report-reader table.default{
+	font-size: 1em;
+	border-collapse:collapse;
+	border:1px solid black;
+	width: 100%;
+}
+
+.report-reader table.default th{
+	padding:2px 5px;
+	background: #e8e8e8;
+	text-align:center;
+	border: 1px solid black;
+}
+
+.report-reader table.default td{
+	padding:0px 5px;
+	vertical-align:top;
+	border: 1px solid black;
+}
+
+/*数字表格单元*/
+.report-reader table.default td.num{
+	text-align:right;
+}
+
+/*证券代码，证券名称*/
+.report-reader table.default td.security{
+	text-align:right;
+}
+
+/*表格章节单元，表格合计行的单元*/
+.report-reader table.default td.caption,.report-reader table.default td.summation{
+	font-weight: bold;
+}
+
+/*小字体表格*/
+.report-reader table.small_font{
+	font-size:9px;
+}

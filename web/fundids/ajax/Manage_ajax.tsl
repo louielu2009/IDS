@@ -1,0 +1,33 @@
+httpSetHeadString("Content-Type:text/html; Charset=gb2312;\r\n\r\n") ;
+
+dowhat := utf8toansi(urltotext(httpGetQueryValueByName('dowhat')));
+
+if dowhat= 'changeTStatus' then
+begin
+	   TID := utf8toansi(urltotext(httpGetQueryValueByName('TID')));
+	   Status := utf8toansi(urltotext(httpGetQueryValueByName('Status')));
+	   data := array();
+	   arr := array(('QueryStr':"TID= '"+tostring(TID)+"'",'Data':(('Field':'STATUS','Type':'Number','Value':strToIntDef(Status,1)))));
+	   data['Table'] := 'TS_RTEMPLATECONF';
+	   data['Conf'] := arr;
+	   r := class(ExecuteSql).Update(data);	   
+	   if r then
+	   return echo 1
+	   else
+	   return;
+end;
+
+if dowhat = 'EditModel' then
+begin
+	   TID := utf8toansi(urltotext(httpGetQueryValueByName('TID')));	  
+	   if not TID then return;
+	   data := array();	   
+	   data['Table'] := 'TS_RTEMPLATECONF';
+	   data['QueryStr'] := "TID='"+tostring(TID)+"'";	   
+	   model := class(ExecuteSql).query(data);	  	   	   
+	   if not ifArray(model) then return ;	   
+	   r := array();
+	   r['Manage_EditDialog_TName']:=  model[0]['TNAME'];	   
+	   jsonStr := class(TStool).Arr2Json(r);
+	   return echo jsonStr;
+end;

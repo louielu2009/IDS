@@ -1,0 +1,79 @@
+httpSetHeadString("Content-Type:text/html; Charset=gb2312;\r\n\r\n") ;
+
+dowhat := utf8toansi(urltotext(httpGetQueryValueByName('dowhat')));
+
+if dowhat= 'ElementContent' then
+begin
+	   EID := utf8toansi(urltotext(httpGetQueryValueByName('EID')));
+	   result := array();
+	   UserRight := class(ExecuteSql).query(array('Table':'TS_DataRight','QueryStr':"EID='"+tostring(EID)+"' and USERID='"+tostring(UID)+"'"));
+	   if not ifArray(UserRight) or not length(UserRight) then return;
+	   Right := array():
+	   for i := 0 to length(UserRight)-1 do
+	   begin
+	   	    if UserRight[i]['TYPE'] = 1 then
+	   	    Right['Editor'] := 1;
+	   	    if UserRight[i]['TYPE'] = 2 then
+	   	    Right['Auditor'] := 1;
+	   end;
+	   queryData := array();
+	   queryData['Table'] := 'ts_rtemplateelement';
+	   queryData['QueryStr'] := "EID='"+tostring(EID)+"'";
+	   r := class(ExecuteSql).query(queryData);
+	   if not ifArray(r) or not length(r) then
+	   result['Err'] := '没有相关信息！'; 
+	   param := '';
+	   if r[0]['TIP1'] then
+     param += '<span>产品：<input type="text" class="DM_Param_Product"	 /></span>';
+     if r[0]['TIP2'] then
+     param += '<span>报告期：<input type="text" class="DM_Param_ReportDate" /></span>';
+     
+     param += param ? '<button class="DM_Param_Query">查询</button>':'';
+     if param then
+     result['Content'] := '<div class="DM_Param">'+param+'</div>'
+     else
+     begin          
+	        conf := array('EID':EID,'UserRight':UserRight);
+	        result['Content'] := class(ElementData).outDMContent(conf);
+	   end;
+	   jsonStr := class(TSTool).arr2json(result);
+	   return echo jsonStr;
+end;
+
+if dowhat = 'queryData' then
+begin
+	   	Param_ReportDate := utf8toansi(urltotext(httpGetQueryValueByName('Param_ReportDate')));
+	   	Param_Product := utf8toansi(urltotext(httpGetQueryValueByName('Param_Product')));
+	   	EID := utf8toansi(urltotext(httpGetQueryValueByName('EID')));
+	   	UserRight := class(ExecuteSql).query(array('Table':'TS_DataRight','QueryStr':"EID='"+tostring(EID)+"' and USERID='"+tostring(UID)+"'"));
+	    if not ifArray(UserRight) or not length(UserRight) then return;
+	    Right := array():
+	    for i := 0 to length(UserRight)-1 do
+	    begin
+	   	    if UserRight[i]['TYPE'] = 1 then
+	   	    Right['Editor'] := 1;
+	   	    if UserRight[i]['TYPE'] = 2 then
+	   	    Right['Auditor'] := 1;
+	    end;
+	   	queryData := array();
+	   	queryData['Table'] := 'TS_RFormalData';
+	   	queryData['QueryStr'] := "EID='"+tostring(EID)+"' ";
+	   	if Param_ReportDate then
+	   	queryData['QueryStr'] += " and TIP1='"+tostring(Param_ReportDate)+"' ";
+	   	if Param_Product then
+	   	queryData['QueryStr'] += " and TIP2='"+tostring(Param_Product)+"' ";
+	   	queryData['QueryStr'] += " and STATUS <> 0";
+	   	Data := class(ExecuteSql).query(queryData);
+	   	result := array();
+	   	DField := '';
+	   	if not ifArray(Data) or not length(Data) then
+	   	result['Err'] := '没有相关信息！'
+	   	else
+	    begin
+	    	   conf := array('EID':EID,'Param_ReportDate':Param_ReportDate,'Param_Product':Param_Product,'UserRight':right);
+	    	   DField := class(ElementData).outDMContent(conf);
+	    end;
+	    result['Content'] := DField;
+	    jsonStr := class(TSTool).arr2json(result);
+	    return echo jsonStr;
+end;

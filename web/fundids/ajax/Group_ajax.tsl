@@ -1,0 +1,125 @@
+httpSetHeadString("Content-Type:text/html; Charset=gb2312;\r\n\r\n") ;
+
+//**********2014-06-23-获取当前登录用户***********//
+reqObj := CreateObject('TWebRequest') ;
+UID := reqObj.CookieFields.Values('FundIDS_LoginName');
+if not UID then return;
+//***************END*************//
+dowhat := utf8toansi(urltotext(httpGetQueryValueByName('dowhat')));
+if dowhat ="GroupManage" then
+begin          
+     GName := utf8toansi(urltotext(httpGetQueryValueByName('GName')));
+     GroupID := utf8toansi(urltotext(httpGetQueryValueByName('GroupID')));
+     ModelList := utf8toansi(urltotext(httpGetQueryValueByName('ModelList')));
+     data := array();
+     if GroupID then
+     begin     	   
+          data['Table'] := 'ts_rtemplatetype';
+          updateData := array(('QueryStr':"GID="+tostring(GroupID),'Data':(('Field':'TEMPLATE','Value':tostring(ModelList),'Type':'String'),
+                                                                           ('Field':'NAME','Value':tostring(GName),'Type':'String'),
+                                                                           ('Field':'MODIFYDATE','Value':now(),'Type':'DateTime'),
+                                                                           ('Field':'MODIFIER','Value':tostring(UID),'Type':'String')
+                                                                           )));	
+          data['Conf'] := updateData;
+          r := class(ExecuteSql).update(data);
+          if r then return echo 1
+          else
+          return;
+     end
+     else
+     begin     	    
+     	    insertData := array(('NAME':GName,'USERID':UID,'TEMPLATE':tostring(ModelList)));
+     	    data['Table'] := 'ts_rtemplatetype';
+     	    data['Data'] := insertData;
+     	    r := class(ExecuteSql).insert(data);     	         	  
+     	    if r then return echo 1
+     	    else
+     	    return;
+     end;
+end;
+
+if dowhat = "EditGroup" then
+begin	   
+	   GroupID := utf8toansi(urltotext(httpGetQueryValueByName('GroupID')));
+	   data := array();
+	   queryStr := 'GID='+GroupID;
+	   data['Table'] := 'ts_rtemplatetype';
+	   data['QueryStr'] := QueryStr;
+	   r := class(ExecuteSql).query(data);	   
+	   if not ifArray(r) then return ;
+	   modelList := str2Array(r[0]['TEMPLATE']);
+	   data['Table'] := 'TS_RTEMPLATECONF';
+	   data['QueryStr'] := '';
+	   model := class(ExecuteSql).query(data);
+	   listStr := '';
+	   state := '';
+	   for i := 0 to length(model)-1 do
+	   begin
+	   	    if model[i]['TID'] in modelList then
+	   	    state := ' checked="true" '
+	   	    else
+	   	    state := '';
+	   	    listStr += '<tr><td><input '+state+'type="checkbox" value="'+tostring(model[i]['TID'])+'"/></td><td>'+tostring(model[i]['TNAME'])+'</td></tr>';
+	   end;
+	   listStr := '<table>'+listStr+'</table>';
+	   listStr += '<div><input type="checkbox" class="Group_EditDialog_SelectALL" />全选&nbsp;&nbsp;&nbsp;&nbsp;<input type="checkbox" class="Group_EditDialog_UnSelectALL" />反选</div>';
+	   result := array();
+	   result['GName'] := r[0]['NAME']; 
+	   result['ModelList'] := listStr;
+	   jsonStr :=  class(TStool).Arr2Json(result);
+	   return echo jsonStr;
+end;
+
+if dowhat="searchGroup" then
+begin
+	   QType := utf8toansi(urltotext(httpGetQueryValueByName('Type')));
+	   Content := utf8toansi(urltotext(httpGetQueryValueByName('SearchStr')));
+	   data := array();
+	   if QType = 'CDate' then
+	   begin
+	   	    Content1 := strtoDate(Content);
+	   	    Content2 := Content1+1;	   	    
+	   	    QueryText := "CREATEDDATE>=to_Date('"+datetostr(Content1)+"','yyyy-mm-dd') and "+"CREATEDDATE<to_Date('"+datetostr(Content2)+"','yyyy-mm-dd') and USERID='"+tostring(UID)+"'";
+	   end
+	   else
+	        QueryText := "NAME like '%"+tostring(Content)+"%' and USERID='"+tostring(UID)+"'";
+	   data['Table'] := 'ts_rtemplatetype';
+	   data['QueryStr'] := QueryText;
+	   GroupList := class(ExecuteSql).query(data);
+	   if not ifArray(GroupList) or not length(GroupList) then
+	   return ;
+	   for i := 0 to length(GroupList)-1 do
+	   begin
+	   	    if GroupList[i]['STATUS'] then
+	   	    GroupList[i]['STATUS'] := '<select class="Group_Status" value="'+tostring(GroupList[i]['ID'])+'"><option value=1 selected="true">启用</option><option value=0>禁用</option></selected>'
+	        else
+	        GroupList[i]['STATUS'] := '<select class="Group_Status" value="'+tostring(GroupList[i]['ID'])+'"><option value=1>启用</option><option value=0 selected="true">禁用</option></selected>';	        
+	        GroupList[i]['CREATEDDATE'] := datetimetostr(GroupList[i]['CREATEDDATE']);
+	        GroupList[i]['MODIFYDATE'] := GroupList[i]['MODIFYDATE'] ? datetimetostr(GroupList[i]['MODIFYDATE']):'';
+	        GroupList[i]['EDIT'] := '<a href="javascript:void(0);" value="'+tostring(GroupList[i]['ID'])+'" class="Group_Edit">编辑</a>';
+	   end;
+	   GroupList := select ['NAME'] as '名称',['CREATEDDATE'] as '创建日期',['MODIFYDATE'] as '修改日期',['STATUS'] as '状态',['EDIT'] as '操作' from GroupList end;
+     dg := createObject('DataGrid');
+     dg.data := GroupList;
+     html := dg.gainHTML();
+     return echo html;
+end;
+
+if dowhat = 'changeStatus' then
+begin
+	   GroupID := utf8toansi(urltotext(httpGetQueryValueByName('GroupID')));
+	   Status := utf8toansi(urltotext(httpGetQueryValueByName('Status')));
+	   data := array();
+	   data['Table'] := 'ts_rtemplatetype';
+	   updateData := array(('QueryStr':"ID="+GroupID,'Data':(('Field':'STATUS','Type':'Number','Value':strToIntDef(Status,1)),
+	                                                       ('Field':'MODIFIER','Type':'String','Value':UID),
+	                                                       ('Field':'MODIFYDATE','Type':'Date','Value':now()),
+	                                                       )
+	                                                       
+	                ));
+	   data['Conf'] := updateData;
+	   r := class(ExecuteSql).update(data);
+	   if r then return echo 1
+	   else
+	   return ;
+end;

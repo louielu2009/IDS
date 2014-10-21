@@ -1,0 +1,81 @@
+.dotWebLeftFloatToolBar{
+	  position : fixed ;
+    top : 30px ;
+    left : 0 ;
+	  z-index : 100 ;
+	  margin : 10px 0 0 10px ;
+}
+
+.dotWebLeftFloatToolBar > button{
+   margin-bottom : 2px ;
+}
+
+.dotWebToolBar{
+    z-index : 100;
+}
+
+.dotWebItemEditToolBar{
+   position : absolute ;
+   z-index : 999 !important ;
+   display : none ;
+}
+
+.dotWebFloatEditorBar{
+   position : absolute ;
+   z-index : 99;
+   display : none ;
+}
+
+.dotWebItemEditToolBar .dotWebToolBarButton{
+   display : inline-block ;
+   margin : 2px ;
+   cursor : pointer ;
+}
+
+.dotWebFloatEditorBar .dotWebToolBarButton{
+   display : inline-block ;
+   margin : 2px ;
+   cursor : pointer ;
+}
+
+.dotWebContentEditorPanel{
+  font-size : 12px ;
+  z-index : 1000 !important ;
+}
+
+.dotWebContentOpBar .barButton{
+	 width : 20px ;
+   height : 20px ;
+   display : inline-block ;
+   cursor : pointer ;
+}
+
+.dotWebContentOpBar .barButton .ui-icon{
+   margin : 2px 0 0 2px ;
+}
+
+.dotWebContentEditorPanel .formToolButton *{
+  vertical-align : middle ;
+}
+
+.dotWebContentEditorPanel .formToolButton{
+  padding : 5px 6px 0 0 ;
+  border-top : none ;
+  border-left : none ;
+  border-right : none ;
+}
+
+.dotWebContentEditorPanel .formToolButton .buttonItem{
+  cursor : pointer ;
+  margin-left : 6px ;
+  padding : 1px 5px 0 2px ;
+}
+
+.dotWebContentEditorPanel .formToolButton .ui-icon{
+	 display : inline-block ;
+}
+
+.dotwebDataGridAdvancedCol{
+  position : absolute ;
+  z-index : 20001 !important ;
+}

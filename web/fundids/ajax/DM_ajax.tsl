@@ -1,0 +1,208 @@
+
+class(TpageTool).setAjaxHeader();
+dowhat:= httpGetQueryValueByName("dowhat");
+setSysParam("ConfigClassName","TWebFundIDSConfig");
+//********获取当前登录用户*******//
+request := createObject('TWebRequest');
+TStrings := request.CookieFields;
+Uid := TStrings.Values('SecUserId');
+
+//***编辑***//
+if dowhat ="edit" then
+begin 
+    param:=Array();
+    param['UID'] := UID;
+    param['EID']:= httpGetQueryValueByName("eid");
+    param['Product']:= httpGetQueryValueByName("product");
+    param['Role']:= httpGetQueryValueByName("role");
+    param['Status']:= httpGetQueryValueByName("statu");
+    param['ReportDate']:= httpGetQueryValueByName("reportdate");        
+    ElementData := createObject('ElementData');	
+    disp:=ElementData.outEditElement(param); 
+    EID:=param['EID'];
+    FundID:=param['Product'];
+    rpt:=param['ReportDate']; 
+    Version:=ElementData.genDataVersion(EID,FundID,rpt);
+		str:='<div class="dialog-inputs-menu">';
+		str+= '<button class="DM_Reload btn">重载数据</button>'
+        + PreDataSelect()
+        + Version
+		    + '</div>';
+	  str+='<div class="DM_DataText">'+tostring(disp)+'</div>';
+	  str+='<button class="btn_submit btn btn-primary">保存&提交</button><button  class="btn_save btn btn-primary">保存</button><button class="btn_cancel btn">取消</button>';
+	  return echo str;
+end;
+
+//***重载数据***//
+if dowhat ="reload" then
+begin
+		param:=Array();
+    param['EID']:= httpGetQueryValueByName("eid");
+    param['FundID']:= httpGetQueryValueByName("fundid");
+    param['ReportDate']:= httpGetQueryValueByName("rpt");
+    ElementData := createObject('ElementData');	
+    disp:= ElementData.genReloadData(param);
+    data:= ElementData.reloadData(param);
+    if not disp then 
+    begin
+      return 0;
+    end
+    else
+    	begin
+	       str:='<div class="DM_ReloadText" FName="'+tostring(data["FileName"])+'">'+tostring(disp)+'</div>';
+	       str+='<button class="btn_reload btn btn-primary">重载</button><button class="btn_cancelreload btn">取消</button>';
+         return echo str;
+      end
+end;
+if dowhat ="replace" then
+begin 
+	param:=Array();
+    param['EID']:= httpGetQueryValueByName("eid");
+    param['FundID']:= httpGetQueryValueByName("fundid");
+    param['ReportDate']:= httpGetQueryValueByName("rpt");    
+    param['FileName']:= httpGetQueryValueByName("fileName");
+    ElementData := createObject('ElementData');	
+    disp:= ElementData.replaceData(param);
+    
+    return echo disp;
+end;
+
+//***保存***//
+if dowhat ="save" then
+begin    
+    param:=Array();
+    param['EID']:= httpGetQueryValueByName("eid");
+    param['Product']:= httpGetQueryValueByName("product");
+    param['Role']:= httpGetQueryValueByName("role");
+    param['Status']:= httpGetQueryValueByName("statu");
+    param['Status'] := strtointDef(param['Status'],1);
+    param['ReportDate']:= httpGetQueryValueByName("reportdate");    
+    param['Data']:=utf8toansi(urltotext(httpGetQueryValueByName('txt')));   
+    param['UID']:=uid;    
+    ElementData := createObject('ElementData');
+    DMsave:=ElementData.saveData(param);     
+    DMSave := ifString(DMSave) ? DMSave:'';
+    return echo DMsave;     
+end;
+//****查看****//
+if dowhat ="check" then
+begin 
+    param:=Array();
+    param['EID']:= httpGetQueryValueByName("eid");
+    param['Product']:= httpGetQueryValueByName("product");
+    param['Role']:= httpGetQueryValueByName("role");
+    param['Status']:= httpGetQueryValueByName("statu");
+    param['ReportDate']:= httpGetQueryValueByName("reportdate");
+    ElementData := createObject('ElementData');	
+    disp:=ElementData.outEditElement(param);
+    EID:=param['EID'];
+    FundID:=param['Product'];
+    rpt:=param['ReportDate']; 
+    Version:=ElementData.genDataVersion(EID,FundID,rpt);  
+		str:='<div class="dialog-inputs-menu">'+PreDataSelect()+Version+'</div>';
+	  str+='<div class="DM_DataText report-reader">'+tostring(disp)+'</div>';
+	  str+='<button class="btn_sure btn btn-primary">确定</button>';
+	 return echo str;
+end;
+
+//**审核**//
+if dowhat ="audit" then
+begin 
+    param:=Array();
+    param['EID']:= httpGetQueryValueByName("eid");
+    param['Product']:= httpGetQueryValueByName("product");
+    param['Role']:= httpGetQueryValueByName("role");
+    param['Status']:= httpGetQueryValueByName("statu");
+    param['ReportDate']:= httpGetQueryValueByName("reportdate");
+    param['UID']:= Uid;
+    ElementData := createObject('ElementData');	
+    disp:=ElementData.outEditElement(param);   
+    EID:=param['EID'];
+    FundID:=param['Product'];
+    rpt:=param['ReportDate']; 
+    Version:=ElementData.genDataVersion(EID,FundID,rpt);
+		str:='<div class="dialog-inputs-menu">'+PreDataSelect()+Version+'</div>';
+	  str+='<div class="DM_DataText report-reader">'+tostring(disp)+'</div>';
+	  str+='<button class="btn_pass btn btn-primary">通过审核</button><button  class="btn_back btn btn-primary">驳回</button><button class="btn_cancel btn">取消</button>';
+	 return echo str;
+end;
+//**通过、驳回审核**//
+if dowhat ="auditpass" then
+begin
+    param:=Array();
+    param['EID']:= httpGetQueryValueByName("eid");
+    param['Product']:= httpGetQueryValueByName("product");
+    param['UID']:= Uid;
+    param['Status']:= httpGetQueryValueByName("statu");
+    param['Status'] := strtointDef(param['Status'],2);
+    param['ReportDate']:= httpGetQueryValueByName("reportdate");        
+    ElementData := createObject('ElementData');	
+    audit:=ElementData.changeElementStatus(param);
+    audit := ifString(audit) ? audit:'';
+    return echo audit;    
+end;
+//****过滤*****//
+if dowhat ="modelfilter" then
+begin
+	  param:=Array();
+	  param['TID']:= httpGetQueryValueByName("tid");
+	  param['SType'] := 'Model';
+	//  param['Type']:="Report"; 
+    ElementData := createObject('ElementData');	
+    temp:=ElementData.getSortRptData(param);
+   
+    temp2:=ElementData.genAllElementData(temp);
+    echo tostn(temp);
+    return echo temp2;		
+end;
+//******选择过滤********//
+if dowhat="checkfilter" then 
+begin
+	  param:=Array();
+    param['UID']:= Uid;
+	  param['FundID']:= httpGetQueryValueByName("fundid");
+	  param['Ref_Fund']:= httpGetQueryValueByName("pro");
+	  param['Ref_ReportDate']:= httpGetQueryValueByName("rpt");
+	  param['Status']:= httpGetQueryValueByName("statu");	
+	  param['TID']:= httpGetQueryValueByName("tid"); 
+	   
+    ElementData := createObject('ElementData');	
+   // 
+   if not param['TID'] then
+   	temp:=ElementData.getMatchedElementData(param);
+   else
+   	 temp:=ElementData.getSortRptData(param);
+   	
+    temp2:=ElementData.genAllElementData(temp);
+    return echo temp2;		
+end;
+
+
+function PreDataSelect(eid,fundid);
+begin
+  html := '<select class="DM_PreData" >
+								 <option  class="DM_PreData_value">往期数据</option>
+								 <option  class="DM_PreData_value">往期数据1</option>
+								 <option  class="DM_PreData_value">往期数据2</option>
+				  </select>';
+  return html;          
+end;
+{
+function DataVersionSelect(EID,FundID,rpt);
+begin
+  param:=Array();
+  param['EID']:=EID;
+  param['Product']:=FundID;
+  param['ReportDate']:=rpt;
+  ElementData := createObject('ElementData');	
+  disp:= ElementData.getDataVersion(EID,FundID,rpt);
+ 
+  html := '<select class="DM_DataVersion" >';
+  for i:=length(disp)-1 downto 0 do 
+	begin
+			html+='<option  class="DM_DataVersion_value">本期版本'+tostring(disp[i]["VERSION"])+'</option>';	  
+	end				 	
+ html+= '</select>';
+  return html ;
+end;
+}

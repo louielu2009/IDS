@@ -1,0 +1,179 @@
+.dotWebTopToolBarContainer{
+   font-family : Microsoft Yahei ;
+   font-size : 13px ;
+   width : 100% ;
+   background : #FFFFFF ;
+}
+
+.dotWebTopToolBarPosition{
+	 position : fixed ;
+   top : 0 ;
+   z-index : 100000 ;
+}
+
+.dotWebTopToolBarContainer .topToolBarLayOutTable{
+   width : 100% ;
+   height:28px;
+}
+
+.dotWebTopToolBarContainer .topToolButtonList{
+    float: left ;
+    list-style: none outside none ;
+    margin:0px;
+}
+
+.dotWebTopToolBarContainer .topToolButtonList li{
+	 float : left ;
+}
+
+.dotWebTopToolBarContainer .topToolButtonList li a{
+    color : #E6E6E6 ;
+    display: block;
+    padding: 0px 12px 12px 12px;
+    text-decoration: none;
+    cursor : pointer ;
+}
+
+.activeTopBarTab{
+    color : #E3635C !important;	
+}
+.leftTopToolBar .activeTopBarTab{
+	background : #FFFFFF;
+}
+
+.dotWebTopToolBarContainer .topToolButtonList li a:hover{
+    color : #E3635C ;
+}
+
+.dotWebTopToolBarContainer .topToolButtonActionZone{
+	  display : none ;
+	  _position : relative ;
+	  height : 100px ;
+	  text-align : left ;
+	  width : 100% ;
+	  overflow : auto ;
+	  border : 1px solid gray ;
+	  border-top : none;
+}
+
+
+/*=======功能菜单：设置、样式、页面、元素=的弹出窗口样式设置=============================================================================*/
+/*leftTopToolBar*/
+.topToolButtonActionLeftZone{
+	background: #ffffff ;
+	width : 302px ;
+  display : none ;
+	position : fixed ;
+	height : 541px;
+  border-right : 1px solid gray;
+  border-bottom : 1px solid gray;
+	z-index : 10000 !important; 
+}
+
+.topToolButtonActionLeftZone .ui-widget-content{
+	border:none;
+	}
+	
+/*设置*/
+.dotWebMainSetorPanel{
+	position : absolute ;
+  height:541px;
+	overflow:auto;
+	z-index : 1000 !important ;
+}
+
+/*样式*/
+.setwebsitetheme{
+	width:350px;
+	margin:0 auto;
+	line-height:24px;
+}
+.setwebsitetheme p{
+	 font-size: 14px;
+	 font-weight: 900;
+	 line-height:20px;
+	 margin-top:10px;
+	 color:#795E80;
+}
+.setwebsitetheme_li:hover{
+	background : #E3635C;
+}
+
+/*页面*/
+.pageTemplateThumbContainer{
+	padding : 10px 0 1px 26px;
+	height:412px;
+	width:376px;
+	text-align:left;
+	overflow:auto;
+	}
+.pageTemplateThumb{
+	  margin : 4px ;
+   	padding : 2px ;
+   	cursor : pointer ;
+}
+.layout1_title{
+		font-size : 14px ;
+    font-weight : 900 ;
+    padding : 10px 0 1px 12px ;
+    color:#795E80;
+	}
+	.actionListlayOutTable td{
+    text-align : left ;	
+}
+
+.pageTemplateThumb:hover{
+    /*background : #DAEBFC ;*/
+   background : #E3635C;
+}
+
+/*元素*/
+.dotWebPageComType{
+		width:300px;
+  	height:541px;
+  	overflow:auto;
+		margin:0 auto;
+	  position : absolute ;
+	  z-index : 1000 !important ;
+}
+.dotWebPageComType li{
+	color:#536981;
+	cursor:pointer;	
+}
+.hover_comType:hover{
+	background : #E3635C;
+}
+.graph_comType:hover{
+	background : #E3635C;
+}
+
+.dotWebPageComType>div{
+	
+	padding : 10px ;
+  overflow:auto;
+	padding-left : 25px ;
+	padding-right : 25px ;
+	}
+.dotWebPageComType>div ul{
+	padding-left : 30px ;
+	}
+.choose_comType{
+	color:#795E80;
+	cursor:pointer;
+	font-size: 14px;
+  font-weight: 900;
+  margin-top:10px;   
+  margin-top:6px;
+}
+
+/*=========================tform====================================*/
+.tsFormTextAlignRight div .formRow .form_input_txt,
+.tsFormTextAlignRight div .formRow .form_select_txt,
+.tsFormTextAlignRight div .formRow .form_autocomplete_txt,
+.tsFormTextAlignRight div .formRow .form_datepicker_txt,
+.tsFormTextAlignRight div .formRow .form_textarea_txt,
+.tsFormTextAlignRight div .formRow .form_file_txt,
+.tsFormTextAlignRight div .formRow .form_colorpicker_txt{
+    float: right;
+	  line-height:28px;
+}

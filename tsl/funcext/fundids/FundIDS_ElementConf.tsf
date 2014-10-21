@@ -1,0 +1,72 @@
+type FundIDS_ElementConf = class
+
+class function saveConf(data);
+end;
+
+class function FundIDS_ElementConf.saveConf(data);
+begin	   
+	   conf := array();	   
+	   if not ifArray(data) then return 0;
+	   updateConf := data['updateConf'];
+	   ifCommon := updateConf['ifCommonUse'];
+     ifProductRelation := updateConf['ifProductRelation'];
+     ifReportDate := updateConf['ifReportDate'];
+     conf['Type'] := updateConf['HiddenInfo']['dispWay'];
+	   conf['DataSource']['From'] := updateConf['select'];	   
+	   if conf['DataSource']['From']='model' then
+	   begin
+	   	    conf['DataSource']['ModelName'] := updateConf['ELement_ModelName'];
+	   	    conf['DataSource']['Field'] := updateConf['Element_FieldName'];	   	  
+	   end;	
+	   case conf['Type'] of
+		 'Txt':
+			   begin			        
+			        conf['Conf']['Name'] := updateConf['Element_Style'];			        			        
+			        r := update sqlTable 'ts_rtemplateelement' of class(TWebFundIDSConfig).getDBAlia() set ['TIP3'] = ifCommon,['TIP2'] = ifProductRelation,['TIP1']= ifReportDate,['CONF'] = tostm(conf),['ORIGINCONF'] = tostm(conf) where ['EID'] = updateConf['HiddenInfo']['ComEID'] end;			        			        
+			   end;
+		 'Pic':
+			   begin
+				   		gSeries:= updateConf['图形属性']['图表类型和坐标轴'];
+						  newSeries:= array();
+						  
+						  if istable(gSeries) then begin
+						  	 for i:=0 to length(gSeries)-1 do begin
+						  	 	  if not istable(gSeries[i]) then continue; 
+						  	 	  if isEmpty(gSeries[i]['图形属性']) then continue;
+						  	 	  if not ifInt(gSeries[i]['图形属性']) then continue;
+						  	 	  gIdx:= getAllIndexs(gSeries[i]);
+						  	 		for j:=0 to length(gIdx)-1 do begin
+						  	 			if gIdx[j]<>'系列名' then newSeries[gSeries[i]['系列名']][gIdx[j]]:= gSeries[i][gIdx[j]];
+						  	 		end;
+						  	 end;
+						  end;
+						  updateConf['图形属性']['图表类型和坐标轴']:= newSeries;
+						  
+						  //对Y轴进行组装处理
+							y_Axis:=  updateConf['图形属性']['Y轴'];
+							nes_y_Axis:= array();
+							if istable(y_Axis) then begin
+								y_Axis:= `y_axis;
+								idxs:= getAllIndexs(y_Axis);
+								for i:= 0 to length(idxs)-1 do begin
+								     tmpA:= y_Axis[idxs[i]];
+								     if istable(tmpA) then
+								         nes_y_Axis[idxs[i]]:= tmpA[getAllindexs(tmpA)[0]];
+								end;
+								updateConf['图形属性']['Y轴']:= nes_y_Axis;
+							end;
+							
+			   end;
+	   'Table':
+			   begin
+			   	    conf['Conf']['Name'] := updateConf['Element_TableStyle'];			   	    
+			   	    r := update sqlTable 'ts_rtemplateelement' of class(TWebFundIDSConfig).getDBAlia() set ['TIP3'] = ifCommon,['TIP2'] = ifProductRelation,['TIP1']= ifReportDate,['CONF'] = tostm(conf),['ORIGINCONF']= tostm(conf) where ['EID'] = updateConf['HiddenInfo']['ComEID'] end;			   	    
+			   end;
+		 else
+			   r := 0;
+	   end;
+	   DeleteIndex(updateConf,"orginalDataSource");
+  	 DeleteIndex(updateConf,"HiddenInfo");
+  	 
+	   return r;	  
+end;

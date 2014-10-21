@@ -1,0 +1,104 @@
+type TSBoxChart=class
+    FXLabel;//XÖáÖáÃû
+    FYLabel;//YÖáÖáÃû
+	FXAxisLables;
+	FYAxisLables;
+	FWidth;
+	FHeight;
+	FData;
+	FColors;
+	function Create();
+	function Draw();
+end;
+
+function TSBoxChart.Create();
+begin
+    
+    FColors:=array("#4bb2c5", "#EAA228", "#c5b47f", "#579575", "#839557", "#958c12");	
+    
+  {    FData:=array(
+		);
+	
+	FHeight:="200px"	;
+	FWidth:="200px"	;
+	
+	FXAxisLables:=array('','','');	
+	FYAxisLables:=array('','','');	
+   
+   }
+    
+
+
+end;
+
+
+function TSBoxChart.draw();
+begin		 
+
+		if ifnumber(FWidth) then FWidth:=tostring(Fwidth)+'px';
+		if ifnumber(FHeight) then FHeight:=tostring(FHeight)+'px';
+		SEQ:=0;
+		if istable(FXAxisLables) then
+		    XNum:=length(FXAxisLables);
+		else XNum:=3;
+		if istable(FYAxisLables) then
+		YNum:=length(FYAxisLables);
+		else  ynum:=mrows(FData);
+		
+		tableStr:='';
+		for i:=0 to YNum-1 do
+		begin
+		    tdStr:='';
+				for kk:=0 to XNum-1 do
+				begin
+					Row:=select * from FData Where [0]=kk and [1]=i end;
+					if istable(Row) then begin
+					    Row:=Row[0];
+					    if ifnil(row[2]) then
+					       t:='&nbsp;&nbsp;'
+					    else
+					       t:=row[2];				     
+						thisColor:=Fcolors[seq];      
+						Seq++;           
+					end else begin
+					    t:='&nbsp;&nbsp;';
+					    thisColor:='';
+					end;	
+					
+					if thiscolor<>'' then 
+					    style:='style="background-color:'+thiscolor+'"';
+					else
+					    style:='';
+					if style<>'' then
+					    style:=' '+style+' ';    
+					    
+					tdStr+='<td'+style+'>'+t+'</td>';											
+				end;
+				if istable(FYAxisLables) then
+				      tdStr+='<th width=70>'+FYAxisLables[i]+'</th>';
+				tableStr+='<tr>'+tdStr+'</tr>';
+			end;
+		
+		tdStr:='';;
+		if istable(FXAxisLables) then
+		begin
+			for kk:=0 to XNum-1 do begin
+			    tdStr+='<th width=70>'+FXAxisLables[kk]+'</th>';
+			end
+		end;
+		
+		xAxisTr:='';
+		yAxisTr:='';
+		xAxisTr:= '<th style="border:none;font-weight:bold;">'+FXLabel+'</th>';
+		yAxisTr:='<tr style="border:none;"><td style="border:none;" colspan="'+tostring(XNum)+'"></td><th style="font-weight:bold;">'+tostring(FYLabel)+'</th></tr>';
+		//echo '---------',FYLabel,'------';
+		tableStr+='<tr>'+tdStr+xAxisTr+'</tr>';
+		rd:=tostring(round(random()*1000));
+		style:=' 
+		<style>		
+		    .tsBoxChat'+rd+' tr td{border:solid 1px black;padding:0px;margin:0px;border-collapse:collapse;text-align:center;vertical-align:center}
+		    .tsBoxChat'+rd+' tr th{font-size:12px;font-weight:normal;border:none}
+		</style>';
+		return  style+'<table cellpadding="0" cellspacing="0" class="tsBoxChat tsBoxChat'+rd+'" style="width:'+tostring(FWidth)+';height:'+tostring(FHeight)+'">'+yAxisTr+tableStr+'</table>';
+		 
+end; 

@@ -1,0 +1,87 @@
+
+Frame := CreateObject("TWebFrame","TWebFundIDSHeader");
+Frame.outHeader("信息披露系统");
+
+Ctype := utf8toansi(urltotext(httpGetQueryValueByName('type')));
+eid := httpGetQueryValueByName('eid');
+r:= class(TFIDSDataManager).getElementInfo(eid);
+uid:= 'admin';
+//return echo tostn(r);
+//disp:=class(TFIDSDataManager).dispElement(conf,data,viewType);//显示
+
+	    
+<?tslx>
+<script type="text/javascript">
+		var pageAction = {};
+		pageAction['disAble'] = 1;;
+		
+</script>
+<div class="main_content ">
+	<div class="Title_head">
+			<div class="Title_head_name">XX产品基金管理人</div>
+	</div>
+	<div class="DM_menu">
+			
+			<input type="text" class="products_model" value="数据被引用模板(如:XX产品招募说明书)">
+		  
+			<input type="button" class="DM_Products" data_flag="products"  value="产品选择" />
+					
+			<input type="button" class="DM_Audit" value="审核" />		 
+			
+			<?tsl
+					 //往期数据
+ 						versionArr:= class(TFIDSDataManager).getRpt(eid,5);//根据元素ID获取往期报告期
+				    tArr:= array(("reportDate":"往期数据"));
+				  	tArr&= versionArr;
+				  	echo class(HTML).MakeSelect(tArr,'class="DM_PreData"','','reportDate','reportDate');
+				  	//本期数据
+				  	versionArr:= class(TFIDSDataManager).getDataVersionNum(eid,5);//根据元素ID、个数获取版本号
+				  	tArr:= array(("VERSION":"本期版本"));
+				  	tArr&= versionArr;
+				  	echo class(HTML).MakeSelect(tArr,'class="DM_DataVersion"','','VERSION','VERSION');
+			 ?>
+					 
+				  
+			<input type="button" class="DM_Reload" value="重载数据" />
+						
+			<input type="button" class="DM_Edit" value="编辑" style="display:block"/>	
+			<input type="button" class="DM_Save" id="DM_Save" value="保存" style="display:none" />	
+			<input type="button" class="DM_Commit" value="取消"style="display:none" />	
+					
+		</div>
+		
+		<div class="DM_content">
+			 	
+				<div class="DM_Text" readonly>
+					<!--	<?tsl echo class(TFIDSDataManager).dispElement(conf,data,"Table");?> -->
+					<?tsl 
+					echo(eid);
+					echo class(TFIDSDataManager).getProductionInfo(eid);?>
+				         数据内容&编辑控件
+			  </div>
+	  </div>
+	
+		<!--Dialog弹出框 -->
+		<!--审核-->
+	  <div class="DM_Audit_div" title="元素名称+产品代码">	
+	  	
+	  </div>
+	  <!--重载数据-->
+	  <div class="DM_Reload_div" title="元素名称+产品代码">
+	  		<div class="DM_div_Reload"></div>
+	  		<input type="button" class="btn_Reload" value="应用数据"/>
+	  </div>
+	  <!--本期版本-->
+	   <div class="DM_DataVersion_div" title="元素名称+产品代码+版本号">	
+	  
+	  </div>
+	  <!--往期数据-->
+	   <div class="DM_PreData_div" title="元素名称+产品代码+报告期">	
+	  	
+	  </div>
+	  <!--产品选择-->
+	  <div class="DM_Products_div" title="产品选择">	
+	  
+	  </div>
+	  
+</div>

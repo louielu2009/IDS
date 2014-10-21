@@ -1,0 +1,1252 @@
+
+//2014-1-26 zhangwei@tinysoft.com.cn
+//修正bug:(1)背景grid线无效；(2)图边框：默认去除
+
+//2013.12.24 方洁 更新k线蜡烛图数据配置列，数据配置的系列为高开低收，图配置的系列为高低开收
+//2013.12.3 方洁 更新x，y轴可以为空，x轴为空时默认第一列数据为x轴
+//               Y轴为空时默认从第二列至最后一列为y轴数据列
+
+type TWebsiteJQGraph = class
+
+    FOK;
+    FMsg;
+    FData;
+    FCData;    
+    FConf;
+    FGraphType;
+    FLegendPostion;
+    FWidth;
+    FHeight;
+    FTitle;
+    FChartID;
+    //FFontSize;
+    //FFontColor;    
+    FIdxs;
+    FXfieldName;
+    FMaxVisibleTicks;//X轴主标记个数：为防止X轴数目过多设置，如大量时间
+    FXLabel;    
+    FYfieldUnit;
+    FSerials;
+    FSerialFields;
+    FAxisHash;
+    //FSide;
+    FDataIndex;    
+    FBlineStyle;//边框样式  
+    FBGLine; //背景网格线 
+    
+    FExportData;
+    FTmpDownload;
+    FExportPic;
+    
+
+    
+    //FLocation; //n:
+    FYconf;
+    FYLocation;
+    FYfieldOrigin ;
+    FXfieldDegree;
+    FXfieldMark ;
+    FXfieldType;
+    FYfieldLeft ; 
+    FYfieldRight ;
+    FYfieldThird ;
+    FYfieldForth ;
+    FYfieldMin ;
+    FYfieldMax ;
+    F2YfieldMax; 
+    F2YfieldMin ;
+    F3YfieldMax;
+    F3YfieldMin ;
+    F4YfieldMax;
+    F4YfieldMin ;
+    FAxesArr;//坐标轴数组
+    FSname; //y轴名，与系列名对应
+    
+    FYLLabel; 
+    FYRLabel;
+    FYTLabel;
+    FYFLabel;
+    Fsuffix;
+    FAxesNum; 
+    
+    FTooltips; //提示框
+    FlegendStyle;//图例
+    FCrosshairs; //动画-十字准线
+    FBackGrid;//背景网格
+    
+    FBackground;//背景颜色
+    
+    static FNum;
+    fFill;  //线图是否被填充做为面积图
+    FComFileName;
+    
+    //======画图事件========
+    FdataPointMouseEnter;
+		FdataPointMouseLeave;
+		FdataPointMouseMove;
+		FdataPointMouseDown;
+		FdataPointMouseUp;
+		FtooltipFormat;
+		FdataHighlighting;
+
+		function Create(data,conf);overload;
+		function Create(data,conf,comfilename);overload;
+		function Draw();
+		function GraphConf();
+		function GraphSeries();
+		function SetGraphAxis(AxesArr);
+		function SetGraphTitle();//设置标题属性
+		function SetGraphBorder();//设置边框属性
+		function SetGraphLegend(); //设置图例
+		function SetGraphBackground();
+		function SetGraphchartAreaBackground();
+		function SetGraphMarkers(maker);
+		function SetGraphLabels();
+		function SetGraphtooltips();
+		function SetGraphCrosshairs();
+		function SetGraphlinearGradient();
+		function SetGraphPaletteColors();
+		function SetWaterMark();
+		function SetAnimation();
+		function GraphJSEventCode();
+		function findGraphType(ID);
+		function GraphTypeList();
+		function drawBoxChart(); //宫图
+
+end;
+function TWebsiteJQGraph.Create(data,conf,comfilename);overload;
+begin
+	FComFileName:=comfilename;
+	Create(data,conf);	
+end;
+
+function TWebsiteJQGraph.Create(data,conf);overload;
+begin	  
+	 //echo tostn(conf);
+	 FOK:=1;
+    FMsg:='';            
+    if not istable(data) or length(getIntIndexs(Data))=0 then
+    data:=array();
+    FConf:=conf;
+    FData:=data;
+    FCData:=array();     
+    FAxesArr:=array();
+    FGraphType:=array();     
+    //2011.12.5 --是否可导出数据--begin---    
+    FExportData:= 0; //2011.12.5 默认值 为不可导出数据
+    FTmpDownload:='';
+    if Fconf['可导出数据']= 0 or Fconf['可导出数据']= 1 then 
+        FExportData:=Fconf['可导出数据'];
+////2011.12.5 ----end---   
+    FExportPic:= 1;//2011.12.20 默认可导出图片
+    if  Fconf['可导出图片']= 0 or Fconf['可导出图片']= 1 then 
+        FExportPic:=Fconf['可导出图片'];
+    
+		if FExportData= 1 then
+		begin
+		    dg:=createObject("tsgrid",FData);
+		    class(TDataGridBL).enableDownload(dg); 
+		    dg.genData();
+		    downloadURL:= dg.MakeDownloadURL(-1);
+		    //echo downloadURL;
+		    downloadURL:= class(TDataGridBL).getDownloadURL(downloadURL,"图形-所有数据");
+		    //echo tostn(downloadURL),'------------';
+		    //echo downloadURL+'tttttt'+dg.genHtml();	
+		    FTmpDownload:= '<a href="'+downloadURL +'" style="float:right;clear:both;"><img  style="vertical-align:middle;border:0;margin-right:5px" src="/Resource/website/images/excel.jpg">导出数据</a>';
+		end;
+		
+		
+		//对图高、图宽的判断//1旧版本是传入字符串：250px或100% 2 新版本传入数字
+    Fheight:= Fconf['height'];
+		if not isEmpty(Fheight) then 
+		begin
+				if ifNumber(Fheight) then
+						Fheight:='height:'+tostring(Fheight)+'px;'
+				else if pos('px',lowercase(Fheight))>0 then 
+					  Fheight:='height:'+tostring(Fheight)+';'
+			  else Fheight:= '';//程序自动处理加入高度
+		end else 
+				Fheight:= 'height:250px;';
+       
+    Fwidth:= Fconf['width'];
+    //echo fwidth;
+    if not isEmpty(Fwidth) then 
+		begin
+				if ifNumber(Fwidth) then
+						Fwidth:='width:'+tostring(Fwidth)+'px;'
+				else if pos('px',lowercase(Fwidth))>0 then 
+					  Fwidth:='width:'+tostring(Fwidth)+';'
+			  else Fwidth:= '';//程序自动处理宽度为100%
+		end else 
+				Fwidth:= '';
+        
+       //---------数据精度  by fangjie-----------------------    
+      	//Fdecimal := (Fconf['数据精度']?Fconf['数据精度']:2)*(-1);
+      	//Fdata ::= ifnumber(mcell)?roundto(mcell,Fdecimal):mcell;
+      	//---------------------------------------------------
+        //FFontSize:=Fconf['字体大小'];
+        //FFontColor:=Fconf['字体颜色'];       
+                    
+        FdataPointMouseEnter:="";
+				FdataPointMouseLeave:="";
+				FdataPointMouseMove:="";
+				FdataPointMouseDown:="";
+				FdataPointMouseUp:="";
+				FtooltipFormat:="";
+				FdataHighlighting:="";
+				
+				if istable(FConf['图形属性']['动作事件']) then  begin
+					 if not isempty(FConf['图形属性']['动作事件']['移入']) then 
+					    FdataPointMouseEnter:=FConf['图形属性']['动作事件']['移入'];
+					    
+					 if not isempty(FConf['图形属性']['动作事件']['离开']) then 
+					    FdataPointMouseLeave:=FConf['图形属性']['动作事件']['离开'];
+					    
+					 if not isempty(FConf['图形属性']['动作事件']['移动']) then 
+					    FdataPointMouseMove:=FConf['图形属性']['动作事件']['移动'];
+					    
+					 if not isempty(FConf['图形属性']['动作事件']['点击']) then 
+					    FdataPointMouseDown:=FConf['图形属性']['动作事件']['点击'];
+					    
+					 if not isempty(FConf['图形属性']['动作事件']['释放']) then 
+					    FdataPointMouseUp:=FConf['图形属性']['动作事件']['释放'];
+					    
+					 if not isempty(FConf['图形属性']['动作事件']['提示框']) then
+					    FtooltipFormat:=FConf['图形属性']['动作事件']['提示框'];
+					    
+					 if not isempty(FConf['图形属性']['动作事件']['高亮']) then 
+					    FdataHighlighting:=FConf['图形属性']['动作事件']['高亮'];					    					
+				end;
+        //-----------背景网格总控------------    
+            
+        if istable(FConf['图形属性']['背景网格']) and FConf['图形属性']['背景网格']['是否画网格线'] then
+           FBGLine:=1;
+        else FBGLine:=0;
+				//---------标题------------------------     
+				if istable(FConf['图形属性']['标题']) then 
+				   FTitle:=FConf['图形属性']['标题'];
+				else FTitle:= Fconf['名称'];
+				//----------背景颜色--------------------
+				if not isEmpty(FConf['图形属性']['背景颜色']) then 
+				   FBackground:=FConf['图形属性']['背景颜色'];
+				else FBackground:="";
+				
+        //----------提示框----------------------
+        if istable(FConf['图形属性']['提示框'])then
+           FTooltips:=FConf['图形属性']['提示框'];
+        else FTooltips:='';
+        //----------图形边框----------------
+          if istable(FConf['图形属性']['图形边框']) then begin 
+          	 FBlineStyle:=FConf['图形属性']['图形边框'];      	           	
+        end else FBlineStyle:='';
+        
+        //----------图例格式---------------
+         if istable(FConf['图形属性']['图例格式']) then begin 
+          	 FlegendStyle:=FConf['图形属性']['图例格式'];      	           	
+        end else FlegendStyle:="";
+        //----------背景网格--------------
+         if istable(FConf['图形属性']['背景网格']) then begin
+         	   FBackGrid:=FConf['图形属性']['背景网格'];         
+         end else FBackGrid:="";
+         
+         //---------动画效果--------------
+         FCrosshairs:= array();
+         if istable(FConf['图形属性']['动画']) then  begin
+             Fanimation:=FConf['图形属性']['动画'];
+             FCrosshairs:=FConf['图形属性']['动画']['十字准线'];//十字准线 
+         end else Fanimation:="";
+         
+        // ----------X轴属性----------------
+        if istable(Fconf['图形属性']['X轴']) then begin
+            FXfieldType :=Fconf['图形属性']['X轴']['类型']; //类型（0:文本；1：数字；2：时间）
+                          
+            if isempty(Fconf['图形属性']['X轴']['X轴列名']) or Fconf['图形属性']['X轴']['X轴列名']='*' then begin 
+            	  indexs:=mcols(FData,1);            	  
+            	  if istable(indexs) and not isempty(indexs[0]) then  begin            	  	
+                   FXfieldName:=indexs[0];
+                   //FComFileName 临时文件名                   
+                   newConf := class(fileOperate).reportImportFile(FComFileName);                                                      
+                   if istable(newConf) then begin
+                       newConf['conf']['browseView']['图形属性']['X轴']['X轴列名']:=FXfieldName;                        
+                       class(fileOperate).reportExportFile(FComFileName,newConf);
+                   end;  
+                end;
+            end else FXfieldName :=Fconf['图形属性']['X轴']['X轴列名'];
+            //update Fdata set [FXfieldName]= leftStr([FXfieldName],16) end;
+        
+            if not isEmpty(Fconf['图形属性']['X轴']['主标记个数']) then  begin
+                FMaxVisibleTicks:= Fconf['图形属性']['X轴']['主标记个数'];
+                if FMaxVisibleTicks>0 then FMaxVisibleTicks+=1;
+            end;
+            if Fconf['图形属性']['X轴']['轴名'] and Fconf['图形属性']['X轴']['轴名']<>'' then FXLabel:= Fconf['图形属性']['X轴']['轴名']
+            else FXLabel:='';
+            
+            FXfieldMark :=Fconf['图形属性']['X轴']['刻度'];
+            FXfieldDegree :=Fconf['图形属性']['X轴']['角度'];
+        end;
+        
+         //--------再次判断x轴数据类型---------------
+          {                           
+            Xonedata:=FData[0][FXfieldName];
+            Xdatatype:= DataType(Xonedata);
+            
+            if Xdatatype=0 then begin  
+                 LXfieldType:='数字';                 
+            end else if Xdatatype=1 then 
+                 LXfieldType:='时间';  
+            else LXfieldType:='文本';  
+            
+            if FXfieldType<>LXfieldType then begin
+	            	  if FXfieldType='时间' and LXfieldType='数字' then begin
+	            	  	  for k:=0 to length(FData)-1 do 
+	            	  	  	 FData[k][FXfieldName]:=datetostr(inttodate(FData[k][FXfieldName]));            	  	              	  
+	            	  end else if FXfieldType='文本' and LXfieldType='数字' then  begin
+	            	  	  for k:=0 to length(FData)-1 do 
+	            	  	  	 FData[k][FXfieldName]:=inttostrdef(FData[k][FXfieldName],0);
+	            	  end else if FXfieldType='文本' and LXfieldType='时间' then  begin
+	            	  	  for k:=0 to length(FData)-1 do 
+	            	  	  	 FData[k][FXfieldName]:=datetostr(FData[k][FXfieldName]);
+	            	  end else 
+	            	      FXfieldType:= LXfieldType; 
+            end 
+          }                            
+        //-----------Y轴属性------------------
+        
+        FSerials:=Fconf['图形属性']['图表类型和坐标轴'];           
+				FIdxs:=getStrIndexs(FSerials);  				  	             	
+
+		if istable(FConf['图形属性'])  and istable(FConf['图形属性']['Y轴']) then begin
+		    FAxisHash:=FConf['图形属性']['Y轴'];
+		    if istable(FAxisHash['左轴']) then 
+		        FYfieldLeft:= FConf['图形属性']['Y轴']['左轴']
+		end else
+			  FAxisHash:=array();
+		   
+        //FYfieldOrigin := Fconf['图形属性']['Y轴']['数据最低点作为原点'];  //0:无；1：是；2：否
+        //-------------图表类型和坐标属性--------
+        //c:=Fconf['图形属性']['图表类型和坐标轴'];        
+        
+        //--------所有系列同种图时用"*"表示的情况-begin---
+        //======= 处理Y轴数据列名为空时数组======== 
+        if istable(FIdxs) and isempty(FIdxs[0])then  begin        	
+        	 LFSerials:=array();
+        	 FIdxs[0]:='*';  //未填写y轴数据类名，默认为为*
+           LFSerials['*']:=FSerials[''];
+           FSerials:=LFSerials;
+        end; 
+         
+        {if length(FIdxs)= 1 and  FIdxs[0]= '*' then begin
+           FDataIndex:=fieldnames(FData);
+           Larr:=array();
+           CC:=FConf['图形属性']['图表类型和坐标轴'][FIdxs[0]];           
+           for kk:=1 to length(FDataIndex)-1 do begin
+           	   Larr[FDataIndex[kk]]:= CC;          	 
+           end;
+           newConf := class(fileOperate).reportImportFile(FComFileName);                                                      
+           if istable(newConf) then begin
+               newConf['conf']['browseView']['图形属性']['图表类型和坐标轴']:=Larr;                        
+               class(fileOperate).reportExportFile(FComFileName,newConf);
+           end;           
+        end;
+        }
+  			if 0 and  length(FIdxs)= 1 and  FIdxs[0]= '*' then //只有1个* //111
+        begin
+            		FDataIndex:=fieldnames(FData);
+    				    delete from FDataIndex where thisrow=FXfieldName;    				
+        				a:=FSerials['*'];
+        				newFSerials:=array();
+        				for i:=0 to length(FDataIndex)-1 do
+        				begin
+        				   newFSerials[FdataIndex[i]]:=a;    
+        				end;
+        				FSerials:=newFSerials;
+        		    FIdxs:=getStrIndexs(FSerials);				
+        end else begin //111                	
+            			notTransIdxs:=array();
+            	    multiFields:=array();
+            			regIdxsHash:=array(); 
+            			for kk:=0 to length(FIdxs)-1 do
+            			begin        			 		
+    	        			 		if FIdxs[kk] like 'regex:' then begin
+    	        			 				ttt:=FIdxs[kk];
+    	        			 			 	regIdxsHash[ttt[7:length(ttt)]]:=Fidxs[kk];	        			 			 		 
+    	        			 		end else if FIdxs[kk] like '\\*' then begin
+    	        			 				ttt:=replaceStr( FIdxs[kk],'*','(\\w\\W)*');	        			 				
+    	        			 				regIdxsHash[ttt]:=Fidxs[kk];	
+    							      end else begin        			 			
+    									        NotTransIdxs[length(NotTransIdxs)]:=Fidxs[kk];
+    									        if length(str2array(Fidxs[kk],';'))>1 then begin
+    									                multiFields&=str2array(Fidxs[kk],';');
+    									        end;
+    	        			 		end;	        	        			 		
+            			end;
+            			//echo tostn(notTransIdxs);
+            			 newFSerials:=array();
+            			 if istable(notTransIdxs) then begin
+            			    for kk:=0 to length(notTransIdxs)-1 do
+            			        newFSerials[notTransIdxs[kk]]:=FSerials[notTransIdxs[kk]];
+            			    
+            			 end;   
+            			    
+            			 if length(notTransIdxs )<length(FIdxs) then begin //333            			      
+                			 	 
+                			 	 FDataIndex:=fieldnames(FData);
+                			 	 delete from FDataIndex where thisrow=FXfieldName;
+        	        			 
+        	        			 
+        	        			 
+        	        			 for kk:=0 to length(FDataIndex)-1 do
+        	        			 begin
+        	        			 		if  FDataIndex[kk] in notTransIdxs then begin
+        	        			 				newFSerials[FDataIndex[kk]]:=FSerials[FDataIndex[kk]];
+        	        			 				continue;
+        	        			 		end;
+        	        			 		
+        	        			 		//echo tostn(Fserials);
+        	        			 		//echo 'aaaaaaaaaaaa'+tostn( FDataIndex[kk]);
+        	        			 		//if tostring(FDataIndex[kk]) like ';' (*pos(';',FDataIndex[kk])>0*) then continue;//2012-05-14
+        	        			 		 
+        	        			 		
+        	        			 		for nn in regIdxsHash do begin	        			 			  
+        	        			 		    if FDataIndex[kk] in multiFields then continue;
+        	        			 				if FDataIndex[kk] like nn then
+        	        			 					newFSerials[FDataIndex[kk]]:=FSerials[  regIdxsHash[nn] ];	        			 				
+        	        			 		end;	        			 		
+        	        			 		//if FIdxs[kk] like 'regex:' then begin    	        			 		 
+        	        			 end;
+        	        			 FSerials:=newFSerials;
+        		         	   FIdxs:=getStrIndexs(FSerials);				        			 	
+            			end;//3333            			
+        end;//111           			 
+           			        
+        //---------------------end----------------------
+        			{//-----------画图基本类型格式-------------
+ array(
+        "modelName":"432",
+        "dispWay":1,
+        "width":423,
+        "height":400,
+        "名称":"",
+        "数据":"",
+        "图形属性": (
+                 "图例格式": ("内外":"外部 ","位置":"s","类型":"简要"),
+                 "X轴": ("类型":"文本","X轴列名":"","刻度":"","角度":""),
+                 "Y轴": (
+                           "左轴": ("Y轴显示单位":"34","最大值":"","最小值":"","主要刻度":"43","小数位数":"","数据最低点作为原点":"无")
+                            ),                 
+                 "图表类型和坐标轴": ("系1": ("图形属性":1,"坐标轴":0,"标识类型":"+","大小":"15","空值是否连续":"no"),
+                                      "系2": ("图形属性":1,"坐标轴":0,"标识类型":"+","大小":"15","空值是否连续":"no"),
+                                      "第3": ("图形属性":1,"坐标轴":0,"标识类型":"+","大小":"15","空值是否连续":"no"))));
+} 
+        //==================图形轴设置==================   
+             
+        if not istable(FConf['图形属性']) then
+			     FAxisHash:=array()
+				else begin													  
+				 	q:=0;
+				 	axesarr:=array();
+				 		
+				 	//if FAxesNum=1 then begin
+				 	(*
+				 	if length(FIdxs) = 1 then begin
+					 	   if Fserials[FIdxs[0]]['坐标轴']=0 then begin              	 
+			            	 FAxesArr[0]['location']:="left";
+			            	 if istable(Fconf['图形属性']['Y轴']['左轴']) then
+			               begin  
+			               	  FAxesArr[0]['minimum']:= Fconf['图形属性']['Y轴']['左轴']['最小值'];
+			               	  FAxesArr[0]['maximum']:= Fconf['图形属性']['Y轴']['左轴']['最大值']; 
+			               	  FAxesArr[0]['title']:= Fconf['图形属性']['Y轴']['左轴']['轴名'];                    	  				              	 
+				             end
+				              FAxesArr[0]['name']:="y"+tostring(Fserials[FIdxs[0]]['坐标轴']); 
+				              FAxesArr[0]['labels']['angle']:="";
+				              FAxesArr[0]['labels']['stringFormat']:=Fconf['图形属性']['Y轴']['左轴']['Y轴显示单位'];				                            
+				              FAxesArr[0]['type']:='linear'; 
+				              FAxesArr[0]['maker']:=Fserials[FIdxs[0]]['标识类型']; 				              
+					 	    end;
+					 end else begin
+					 echo '---111----',tostn(fconf),'---',length(FIdxs);
+					 *)
+					 					 
+					 hasAx:=array();
+					 ax:=array("左轴","右轴","第三轴","第四轴");
+					 ax2:=array("left","right","right","right");
+					 FYconf:=Fconf['图形属性']['Y轴'];
+					 //echo '===',tostn(Fconf);
+					 if istable(FYconf)then begin
+							 for j:=0 to length(FIdxs)-1 do
+				       begin
+				          	  axes:=Fserials[FIdxs[j]]['坐标轴'];	
+				          	  	          	  
+				          	  if Fserials[FIdxs[j]]['图形属性']=21 or Fserials[FIdxs[j]]['图形属性']=45  then continue;//return FAxesArr:=array() ;
+				          	  if axes in axesarr then continue;
+				          	  interval:=0; 				          	  	          	           	  		          	  		          	  
+				          	  if ax[axes] in hasAx then continue;
+				          	  else hasAx[length(hasAx)]:=ax[axes];	
+				          	  // echo tostn(FYconf);          	           	  
+				          	  if Fserials[FIdxs[j]]['图形属性']=8 then
+				              	      FAxesArr[q]['location']:="bottom"; 		              	             	 
+			              	else if FYconf[ax[axes]]['位置']in array("left","right") then
+			              	        FAxesArr[q]['location']:=FYconf[ax[axes]]['位置'];
+			              	else if Fserials[FIdxs[j]]['坐标轴']in array(0,1,2,3) then 
+			              	        FAxesArr[q]['location']:=ax2[Fserials[FIdxs[j]]['坐标轴']];			              	
+			              	else    FAxesArr[q]['location']:='left';
+			              	 //echo tostn(Fserials[FIdxs[j]]);
+		               	               	                       	  	                     	  	                     	                     	  				              	 			            
+					            FAxesArr[q]['name']:="y"+tostring(axes); 
+				              FAxesArr[q]['labels']['angle']:="";
+				             
+				              
+				              FYfieldType:=FYconf[ax[axes]]['类型']?FYconf[ax[axes]]['类型']:'数字';	
+				              	              	              
+				              if not isempty(FYfieldType) then begin
+										  	 if FYfieldType="时间"  then begin
+											  	 	valuetype:="时间";
+											  	    type:="dateTime";
+											  	    if not isempty(FYfieldType) then
+											  	        stringFormat:=FYfieldType; 
+											  	    else stringFormat:="mm/dd/yyyy";
+										  	 end else if FYfieldType="数字" then begin
+										  	 	  valuetype:="数字";
+											  	  type:="linear";
+											  	  stringFormat:=FYconf[ax[axes]]['单位'];											  	  
+										  	 end else if FYfieldType="文本" then begin
+										  	 	  valuetype:="文本";
+											  	  type:="category"; 
+											  	  stringFormat:=FYconf[ax[axes]]['单位'];						  	  				  	  											  
+										  	 end else begin
+										  	 	  valuetype:="数字";
+										  	 	  type:="linear"; 
+											  	  stringFormat:="";											  	  
+										  	 end;
+										  end;	
+										  FAxesArr[q]['labels']['valuetype']:=valuetype;
+										  FAxesArr[q]['labels']['stringFormat']:=stringFormat;
+										  FAxesArr[q]['type']:=type;										  
+				              FAxesArr[q]['maker']:=Fserials[FIdxs[j]]['标识类型'];	
+				              FAxesArr[q]['interval']:=FYconf[ax[axes]]['主要刻度']; 		
+				              FAxesArr[q]['minimum']:=FYconf[ax[axes]]['最小值'];
+		               	  FAxesArr[q]['maximum']:=FYconf[ax[axes]]['最大值']; 
+		               	  FAxesArr[q]['title']:= FYconf[ax[axes]]['轴名'];		               	  
+		               	  FAxesArr[q]['颜色']:= FYconf[ax[axes]]['轴颜色'];
+		               	  FAxesArr[q]['轴宽度']:= FYconf[ax[axes]]['轴宽度'];
+		               	  
+		               	  if istable(FYconf[ax[axes]]['主要刻度']) then begin
+				               	  FAxesArr[q]['主要刻度']['颜色']:= FYconf[ax[axes]]['主要刻度']['颜色'];
+				               	  FAxesArr[q]['主要刻度']['线宽']:= FYconf[ax[axes]]['主要刻度']['线宽'];
+				               	  FAxesArr[q]['主要刻度']['长度']:= FYconf[ax[axes]]['主要刻度']['长度'];
+				               	  FAxesArr[q]['主要刻度']['间隔']:= FYconf[ax[axes]]['主要刻度']['间隔'];
+		               	  end;
+		               	  if istable(FYconf[ax[axes]]['次要刻度']) then begin
+				               	  FAxesArr[q]['次要刻度']['颜色']:= FYconf[ax[axes]]['次要刻度']['颜色'];
+				               	  FAxesArr[q]['次要刻度']['线宽']:= FYconf[ax[axes]]['次要刻度']['线宽'];
+				               	  FAxesArr[q]['次要刻度']['长度']:= FYconf[ax[axes]]['次要刻度']['长度'];
+				               	  FAxesArr[q]['次要刻度']['间隔']:= FYconf[ax[axes]]['次要刻度']['间隔'];
+		               	  end;
+		               	  if istable(FYconf[ax[axes]]['主要网格线']) then begin
+				               	  FAxesArr[q]['主要网格线']['颜色']:= FYconf[ax[axes]]['主要网格线']['颜色'];
+				               	  FAxesArr[q]['主要网格线']['线宽']:= FYconf[ax[axes]]['主要网格线']['线宽'];		               	  
+				               	  FAxesArr[q]['主要网格线']['间隔']:= FYconf[ax[axes]]['主要网格线']['间隔'];
+		               	  end;
+		               	  if istable(FYconf[ax[axes]]['次要网格线']) then begin
+				               	  FAxesArr[q]['次要网格线']['颜色']:= FYconf[ax[axes]]['次要网格线']['颜色'];
+				               	  FAxesArr[q]['次要网格线']['线宽']:= FYconf[ax[axes]]['次要网格线']['线宽'];		               	  
+				               	  FAxesArr[q]['次要网格线']['间隔']:= FYconf[ax[axes]]['次要网格线']['间隔'];
+		               	  end;	          	                         
+				              
+				              q++;
+				             	              		                       	       	            	     
+				          end;
+				       end;
+		    end;
+		    			  
+				l:=length(FAxesArr);
+				if Fserials[FIdxs[0]]['图形属性']=21 then begin
+					FAxesArr:=array();								  
+				end
+			  else if Fserials[FIdxs[0]]['图形属性']=45 then
+						FAxesArr := array();
+				else if istable(Fconf['图形属性']['X轴']) then begin	
+				  FXconf:=Fconf['图形属性']['X轴'];			
+				  
+					FAxesArr[l]['name']:='';
+					if Fserials[FIdxs[j]]['图形属性']=8 then
+		           FAxesArr[l]['location']:="left";
+					else FAxesArr[l]['location']:='bottom';
+					FAxesArr[l]['minimum']:='';
+					FAxesArr[l]['maximum']:='';
+					FAxesArr[l]['title']['text']:=FXfieldName;					
+				  if not isempty(FXfieldType) then begin
+				  	(*
+				  	 if FXfieldType="时间"  then begin
+				  	    type:="dateTime";
+				  	    valuetype:="时间";
+				  	    if not isempty(FXfieldMark) then
+				  	        stringFormat:=FXfieldMark; 
+				  	    else stringFormat:="mm/dd/yyyy";
+				  	    interval:=FMaxVisibleTicks;				  	    
+				  	 end else *)
+				  	 if FXfieldType="数字" then begin
+					  	  type:="linear";
+					  	  valuetype:="数字";
+					  	  stringFormat:="";
+					  	  if FMaxVisibleTicks>0 then 
+					  	    interval:=length(FData)div(FMaxVisibleTicks-1)+1;
+				  	 end else  begin// if FXfieldType="文本" then
+					  	  type:="category"; 
+					  	  valuetype:="文本";
+					  	  stringFormat:="";						  	 
+					  	  if FMaxVisibleTicks>0 then 
+					  	     interval:=length(FData)div(FMaxVisibleTicks-1)+1;
+					  	  else if length(Fdata)>60 then 
+					  	     interval:=length(FData)div 20;
+					  	   else interval:=0;					  	 
+				  	 {end else begin
+				  	 	  valuetype:="时间";
+				  	 	  type:="linear"; 
+					  	  stringFormat:="";
+					  	  interval:=0;}
+				  	 end;
+				  end;				  
+				  FAxesArr[l]['interval']:=interval;
+				  FAxesArr[l]['labels']['stringFormat']:=stringFormat;
+				  FAxesArr[l]['labels']['angle']:=FXfieldDegree;
+				  FAxesArr[l]['labels']['valuetype']:=valuetype;
+					FAxesArr[l]['type']:=type;
+					FAxesArr[l]['title']:=FXconf['轴名'];
+		      FAxesArr[l]['颜色']:= FXconf['颜色'];
+		      FAxesArr[l]['轴宽度']:= FXconf['轴宽度'];
+		      FAxesArr[l]['单位']:= FXconf['单位'];
+		      FAxesArr[l]['valuetype']:= 'x';
+					
+					if istable(FXconf['主要刻度']) then begin
+           	  FAxesArr[l]['主要刻度']['颜色']:= FXconf['主要刻度']['颜色'];
+           	  FAxesArr[l]['主要刻度']['线宽']:= FXconf['主要刻度']['线宽'];
+           	  FAxesArr[l]['主要刻度']['长度']:= FXconf['主要刻度']['长度'];
+           	  FAxesArr[l]['主要刻度']['间隔']:= FXconf['主要刻度']['间隔'];
+       	  end;
+       	  if istable(FXconf['次要刻度']) then begin
+           	  FAxesArr[l]['次要刻度']['颜色']:= FXconf['次要刻度']['颜色'];
+           	  FAxesArr[l]['次要刻度']['线宽']:= FXconf['次要刻度']['线宽'];
+           	  FAxesArr[l]['次要刻度']['长度']:= FXconf['次要刻度']['长度'];
+           	  FAxesArr[l]['次要刻度']['间隔']:= FXconf['次要刻度']['间隔'];
+       	  end;       	  
+       	  if istable(Fxconf) and istable(Fxconf['主要网格线']) then begin       	  	  
+           	  FAxesArr[l]['主要网格线']['颜色']:= FXconf['主要网格线']['颜色'];
+           	  FAxesArr[l]['主要网格线']['线宽']:= FXconf['主要网格线']['线宽'];		               	  
+           	  FAxesArr[l]['主要网格线']['间隔']:= FXconf['主要网格线']['间隔'];
+       	  end;
+       	  if istable(Fxconf['次要网格线']) then begin
+           	  FAxesArr[l]['次要网格线']['颜色']:= FXconf['次要网格线']['颜色'];
+           	  FAxesArr[l]['次要网格线']['线宽']:= FXconf['次要网格线']['线宽'];		               	  
+           	  FAxesArr[l]['次要网格线']['间隔']:= FXconf['次要网格线']['间隔'];
+       	  end;	
+			  end;	
+        //==================end===========================
+        
+        //FLocation:=Fconf['图形属性']['图例格式']['位置'] ;
+        //FSide:=Fconf['图形属性']['图例格式']['内外'] ;
+        //FSerialFields:=getStrIndexs(FSerials);
+        FFill:=0;  //1是面积图，0是线图
+        if ifnil(FNum) then
+          FNum:=0;      
+        else FNum:=Fnum+1;
+        chartTypes:=array();
+        chartGrid:=array() ;
+                 
+         for n in FSerials do
+         begin                             
+              if   not( Fserials[n]['图形属性'] in chartTypes) then              
+                      chartTypes[length(chartTypes)]:= Fserials[n]['图形属性'] ;                                 
+         end;
+        for m in FSerials do
+           begin                             
+                if   not( Fserials[m]['坐标轴'] in chartGrid) then                
+                        chartGrid[length(chartGrid)]:= Fserials[m]['坐标轴'] ;                                   
+           end;
+        FGraphType:=chartTypes;
+        FGraphGrid:=chartGrid ;  //坐标轴 0:左轴 ；1 :右轴 ;2 :第三轴 ；3 ：第四轴 ；
+        
+end;
+
+function TWebsiteJQGraph.GraphSeries(); //数据列
+begin	  
+ 
+     //return array( ("title":"开盘价(万科A)","type":"line","data": ( ("时间":"2013-05-02","开盘价(万科A)":10.88), ("时间":"2013-05-03","开盘价(万科A)":11.35), ("时间":"2013-05-06","开盘价(万科A)":11.39), ("时间":"2013-05-07","开盘价(万科A)":11.27), ("时间":"2013-05-08","开盘价(万科A)":11.72), ("时间":"2013-05-09","开盘价(万科A)":11.69), ("时间":"2013-05-10","开盘价(万科A)":11.58), ("时间":"2013-05-13","开盘价(万科A)":11.77), ("时间":"2013-05-14","开盘价(万科A)":11.59), ("时间":"2013-05-15","开盘价(万科A)":11.32), ("时间":"2013-05-16","开盘价(万科A)":11.18), ("时间":"2013-05-17","开盘价(万科A)":11.68), ("时间":"2013-05-20","开盘价(万科A)":12.2), ("时间":"2013-05-21","开盘价(万科A)":11.99), ("时间":"2013-05-22","开盘价(万科A)":11.99), ("时间":"2013-05-23","开盘价(万科A)":12.1), ("时间":"2013-05-24","开盘价(万科A)":12.05), ("时间":"2013-05-27","开盘价(万科A)":11.84), ("时间":"2013-05-28","开盘价(万科A)":11.81), ("时间":"2013-05-29","开盘价(万科A)":12.36), ("时间":"2013-05-30","开盘价(万科A)":12.2), ("时间":"2013-05-31","开盘价(万科A)":12.31))));       
+     if not istable(FSerials) then return array();      
+     dac := array();     
+     FChartType := array();
+     FDataIndex := getAllIndexs(`FData);  //取得数据数组的下标     
+     tmpArr := getAllIndexs(FSerials); //取得系列配置数组的下标     
+     if not istable(tmpArr) then return '';              
+     xSeries:=FXfieldName;                   
+     if length(tmpArr)=1 and tmpArr[0] = '*' then  begin 
+     	  tmpArr:=FDataIndex;
+     	  stype:="*";            
+     end else if isempty(tmpArr[0]) then begin
+     	  tmpArr:=FDataIndex;
+     	  stype:="";
+     end
+     k:=0;   
+     
+     for i:=0 to length(tmpArr)-1 do begin         	  
+     	  if tmpArr[i]=xSeries then continue;
+     	  
+     	  if isempty(FSerials[tmpArr[i]]) and istable(FSerials[stype]) then begin     	  	
+     	  	 typeID:=FSerials[stype]['图形属性'];
+     	  end else typeID:= FSerials[tmpArr[i]]['图形属性'];   
+     	  
+     	   FChartID:=typeID;
+     	   dac[k]['title']:=tmpArr[i];
+     	   dac[k]['type']:=findGraphType(typeID);
+     	   if tostring(tmpArr[i]) like ';' then begin
+ 	           stmparr:=str2array(tmpArr[i],';');
+ 	           b:=array();
+ 	           if not ifNIL(xSeries) then
+ 	           	   b[0]:=xSeries;
+ 	           if  FChartID=38 or FChartID=39 then  begin
+ 	           	   b[1]:=stmparr[1] ;
+ 	           	   b[2]:=stmparr[2] ;
+ 	           	   b[3]:=stmparr[0] ;
+ 	           	   b[4]:=stmparr[3] ;     	   	       
+     	       end else begin 
+		 	           for jj:=0 to length(stmparr)-1 do  	           	 
+		 	               b[length(b)]:=stmparr[jj] ;
+ 	           end;
+ 	           dac[k]['data']:= FData[:,b]; 
+     	   end else begin
+     	       if not isEmpty(xSeries) then dac[k]['data']:= FData[:,array(xSeries,tmpArr[i])];
+     	   end;
+     	   k++;    	 
+     end;  
+     
+       
+     FCData:=dac;                 
+     //return dac;    	   	   
+end;
+
+function TWebsiteJQGraph.Draw();
+begin	  
+		if not isEmpty(FMsg) then return Fmsg;
+	  GraphSeries();		   
+	  Gstr := "";	  	
+	  if length(FGraphType)=1 and( 44  in FGraphType) then   //宫图
+	  	  return FTmpDownload+'<div  class="comContainer"  id="chart_'+tostring(Fnum)+'" style="clear:both;'+tostring(Fwidth)+tostring(Fheight)+'">'+drawBoxChart()+'</div>';	          	        
+    
+	   Gstr += "<script type='text/javascript'>\r\n";
+	   
+		  Gstr +='$(function(){\r\n';
+		  Gstr += "var conf={title:"+tostring(SetGraphTitle())+"\r\n" ;		
+		  Gstr += ",border:"+tostring(SetGraphBorder())+"\r\n" ;
+		  Gstr += ",legend:"+tostring(SetGraphLegend())+"\r\n" ;
+		  Gstr += ",animation:"+tostring(SetAnimation())+"\r\n" ;
+		  if not isEmpty(FBackground) then
+		      Gstr += ",background:"+tostring(SetGraphBackground())+"\r\n" ;
+		  Gstr += ",tooltips:"+tostring(SetGraphtooltips())+"\r\n" ;
+		  Gstr += ",crosshairs:"+tostring(SetGraphCrosshairs())+"\r\n" ;
+		  
+		  ss := "" ;
+		  if istable(FAxesArr) then begin		      
+	        for kk:=0 to length(FAxesArr)-1 do begin			               
+	             if istable(FAxesArr[kk]) then 
+	                ss+=(ss?',\r\n':'')+SetGraphAxis(FAxesArr[kk]);
+	        end;
+	    end;
+	    Gstr += ",axes:["+tostring(ss)+"]";
+		  Gstr += "};";
+		  
+		  Gstr += GraphConf() ;
+		  Gstr += 'var chart_obj = $("#chart_'+tostring(Fnum)+'") \r\n;' ;
+		  if isempty(fwidth) then begin
+		  	 Gstr += 'if($(chart_obj).parents(".tabs:first").length){\r\n'
+  							+'	conf.width = $(chart_obj).parents(".tabs:first").find(".comContainer:first").innerWidth()-10;\r\n'
+								+'}\r\n'
+								+'else \r\n'
+								+'conf.width = chart_obj.parents(\'div:first\').innerWidth();\r\n';			  	 
+		  end;	 
+		  gstr += "try{chart_obj.jqChart(conf);}catch(err){return alert('【ERROR】配置错误，请修改配置!');}";
+		  //----------加载JS代码--------------         
+		  Gstr += GraphJSEventCode();    		   
+		  Gstr +='           });\r\n';		 	  
+	  Gstr += '</script>';	  	
+	  Gstr += FTmpDownload+'\r\n<div  class="comContainer"  id="chart_'+tostring(Fnum)+'" style="clear:both;'+tostring(Fwidth)+tostring(Fheight)+'"></div>';	   	   
+	  return Gstr;
+end;
+
+function TWebsiteJQGraph.GraphConf();
+begin	  	  
+	  Confstr:="";	
+	  //if not istable(FCData) then return '';
+	  series:="";	    
+	  for k:=0 to length(FCData)-1 do begin
+	  	  if not istable(FCData[k]['data']) then continue;	  	  
+	  	  if not isempty(Fconf['图形属性']['图表类型和坐标轴'][FCData[k]['title']]['图例别名']) then begin
+	  	       Ltitle:=Fconf['图形属性']['图表类型和坐标轴'][FCData[k]['title']]['图例别名'];
+	  	  	  	                            	     
+	  	  end else begin
+	  	  	   Ltitle:=FCData[k]['title'];
+	  	  end;
+	  	  lineColor:="";	
+	  	  lineWidth:=Fconf['图形属性']['图表类型和坐标轴'][FCData[k]['title']]['线宽']?:2;
+	  	  if not isempty(Fconf['图形属性']['图表类型和坐标轴'][FCData[k]['title']]['颜色']) then 
+             lineColor:=Fconf['图形属性']['图表类型和坐标轴'][FCData[k]['title']]['颜色'];
+	  	  
+	  	  series += series ? ',{':'{';	
+			  series+='title:"'+tostring(Ltitle)				           	          
+			           +'",type:"'+tostring(FCData[k]['type'])
+			           +'",lineWidth:'+tostring(lineWidth?:2)			           
+                 +',axisY:"y'+tostring(Fserials[FCData[k]['title']]['坐标轴']);
+                 
+                // +'",labels:'+SetGraphLabels()
+        //echo k,'==',tostn(FCData[k]['data']);
+        if not isempty(lineColor)  then 
+           series+='",strokeStyle:"'+tostring(lineColor);        
+      //时间类型在画图时处理有问题，先暂时屏蔽，2014-02-14
+       { if FXfieldType="时间" then  begin
+        	       xindexarr:=mcols(FData,1); 
+        	       for n in xindexarr do  
+        	           if xindexarr[n]=FXfieldName then        	               
+                          series+='",data:'+class(TDataConverter).Table2JSON(FCData[k]['data'],0,n);
+        end else
+        }  
+                 series+='",data:'+class(TDataConverter).Table2JSON(FCData[k]['data'],0);
+			           //+',fillStyle:'+SetGraphlinearGradient();	
+			  
+        if FChartID in array(27) then 
+			        series+=',markers:'+tostring(SetGraphMarkers('circle'));
+			  else  if (Fserials[FCData[k]['title']]['标识类型']='none') and FChartID in array(2,3,43,9,40)  then 			       
+			        series+=''; 			   
+			  else  series+=',markers:'+tostring(SetGraphMarkers(Fserials[FCData[k]['title']]['标识类型']));
+        series+='}'; 
+        					  			          		  
+	  end;  
+	  Confstr+='conf.series = ['+series+'];';	
+	  //echo confstr;		    	  
+	  return Confstr;
+end;
+
+function TWebsiteJQGraph.SetGraphAxis(AxesArr);
+begin	        
+    //echo datatype(FBGLine);       
+    if AxesArr['interval']>0 then 
+         interval:=int(AxesArr['interval']);
+    else interval:='undefined';	
+
+		axisOptions:="";		                  	 
+	  axisOptions+= "{
+       title:{
+					  text: '"+tostring(AxesArr['title'])+"',
+					  fillStyle:'"+tostring(AxesArr['颜色'])+"'				  
+					}, 
+      name:\'"+tostring(AxesArr['name'])+"\',
+      type : '"+tostring(AxesArr['type'])+"', 
+      location : '"+tostring(AxesArr['location'])+"',
+      zoomEnabled: false,";
+      if AxesArr['type']='dateTime' then 
+          axisOptions+="skipEmptyDays: true,";
+   
+     axisOptions+="interval:"+tostring(interval)+",                
+     strokeStyle:'"+tostring(AxesArr['颜色'])+"'";
+    if not isempty(AxesArr['轴宽度']) then 
+      axisOptions+=",lineWidth:"+tostring(AxesArr['轴宽度']);
+    if not isempty(AxesArr['间隔']) then 
+      axisOptions+=",interval:"+tostring(interval);
+    if not isempty(AxesArr['minimum']) then 
+      axisOptions+=",minimum:"+tostring(AxesArr['minimum']); 
+    if not isempty(AxesArr['maximum']) then 
+      axisOptions+=",maximum:"+tostring(AxesArr['maximum']);  
+      valuetype:="";
+      axisOptions+="\r\n,labels : {\r\n";
+					      if AxesArr['labels']['valuetype']="时间" then					                  
+					            axisOptions+="stringFormat: '"+tostring(AxesArr['labels']['stringFormat'])+"'"; 
+					      else if not (isempty(AxesArr['labels']['valuetype']) and isempty(AxesArr['labels']['stringFormat'])) then begin
+					      
+					         if AxesArr['labels']['valuetype']='数字' then begin 					             
+					              valuetype:='%s';					               
+					         end else if AxesArr['labels']['valuetype']='文本' then
+					              valuetype:='%s'; 					              
+					         axisOptions+="stringFormat:'"+tostring(valuetype)+tostring(AxesArr['labels']['stringFormat'])+"'";
+					      end else axisOptions+="stringFormat:'%s'";
+					      
+					      axisOptions+=",angle:'"+tostring(AxesArr['labels']['angle'])+"'}\r\n";
+					  
+		 if istable(AxesArr['主要刻度']) and not isempty(AxesArr['主要刻度']['线宽']) and AxesArr['location']<>'bottom'  then 
+		   axisOptions+=",majorTickMarks: {
+              lineWidth:"+tostring(strtointdef(AxesArr['主要刻度']['线宽'],1))
+              +",strokeStyle:'"+tostring(AxesArr['主要刻度']['颜色'])
+              +"',length : "+tostring(AxesArr['主要刻度']['长度']?:1)
+              +"}";     
+     if istable(AxesArr['次要刻度']) and not isempty(AxesArr['主要刻度']['线宽']) and AxesArr['location']<>'bottom' then
+        axisOptions+=",minorTickMarks: {
+              lineWidth:"+tostring(strtointdef(AxesArr['次要刻度']['线宽'],0))
+              +",strokeStyle:'"+tostring(AxesArr['次要刻度']['颜色'])
+              +"',length :"+tostring(AxesArr['次要刻度']['长度']?:1)
+          +"}";
+     if FBGLine then begin
+		     if istable(AxesArr['主要网格线']) and  AxesArr['location']<>'bottom' then begin                       
+		        axisOptions+=axisOptions?"":","+"majorGridLines: {
+		              lineWidth:"+tostring(AxesArr['主要网格线']['线宽'])
+		              +",strokeStyle:'"+tostring(AxesArr['主要网格线']['颜色'])
+		              +"interval:"+tostring(AxesArr['主要网格线']['间隔'])
+		          +"'}";
+		     end;		     	                           
+		     if istable(AxesArr['次要网格线']) and not isempty(AxesArr['次要网格线']['线宽']) and AxesArr['location']<>'bottom' then
+			        axisOptions+=axisOptions?"":","+"minorGridLines: {
+			              lineWidth:"+tostring(strtointdef(AxesArr['次要网格线']['线宽'],0))
+			              +",strokeStyle: '"+tostring(AxesArr['次要网格线']['颜色'])
+			          +"'}"; 
+	   end else // AxesArr['location']<>'bottom' then begin
+    	    axisOptions+=",majorGridLines: {lineWidth:0}";
+    //end;
+    axisOptions+='}'; 
+   return axisOptions;
+end;
+ 
+function TWebsiteJQGraph.SetGraphTitle();//设置标题属性
+begin	
+   
+  if not istable(Ftitle) then return "{text: '"+tostring(FTitle)+"'}";
+  if isempty(FFontColor) then  FFontColor:=""; 
+	titleStr:="{
+	              text: '"+tostring(FTitle['内容'])+"'";
+	if not isempty(FTitle['字体']) and not isempty(FTitle['大小']) then
+	          titleStr+=",font:'"+tostring(FTitle['大小'])+"px "+tostring(FTitle['字体'])+"'";
+	if not isempty(FTitle['颜色']) then  
+	          titleStr+=",fillStyle:'"+tostring(FTitle['颜色'])+"'";
+	if not isempty(FTitle['边框宽度']) then 
+						titleStr+=",lineWidth: '"+tostring(FTitle['边框宽度']?:1)+"'";
+						titleStr+=",strokeStyle : '"+tostring(FTitle['字边框色'])+"'";
+	if not isempty(FTitle['字边距']) then 
+						titleStr+=",margin: "+tostring(FTitle['字边距']);
+						titleStr+="}";
+	 return titleStr;
+	         
+end;
+function TWebsiteJQGraph.Setgraphborder();//设置边框属性
+begin
+  if not istable(FBlineStyle) then return '{}';  
+	borderStr:="{	              
+								strokeStyle:'"+tostring(FBlineStyle['颜色'])+"',
+							  lineWidth:"+tostring(0)+",
+							  cornerRadius: "+tostring(FBlineStyle['角类型'])+",
+							  padding: "+tostring(FBlineStyle['内边距']?:12)+"
+						}";
+						
+	return borderStr;
+end;
+
+function TWebsiteJQGraph.SetGraphLegend();//标签设置
+begin	
+  //echo tostn(Flegendstyle);  
+  if not istable(Flegendstyle) then return '{visible:true}'; 
+  FSide:=Flegendstyle['可见'];   
+  if FSide=0 then return '{visible:false}'; 
+  else visible:="true"; 
+  FLocation:=Flegendstyle['位置']; 
+  if FLocation in array('top','bottom','left','right') then Location:=FLocation;
+  else if FLocation="n" then Location:="top"
+  else if FLocation="s" then Location:="bottom"
+  else if FLocation="w" then Location:="left"
+  else if FLocation="e" then Location:="right"
+  else Location:="top";
+  //echo tostn(Flegendstyle);
+  
+	Legend:="{visible : "+tostring(visible)+", 
+						location : '"+tostring(Location)+"'"; 
+																	
+	if istable(Flegendstyle['名称']) and not isempty(Flegendstyle['名称']['名称内容']) then begin
+  	 Legend+=",title: {text:'"+tostring(Flegendstyle['名称']['名称内容'])
+						       +"',fillStyle:'"+tostring(Flegendstyle['名称']['颜色'])
+						  +"'}";
+  end;
+  				  
+	if istable(Flegendstyle['边框'])then begin
+		  Legend+=",border: {";
+			Legend+="lineWidth:"+tostring(Flegendstyle['边框']['宽度']?:0);
+			Legend+=",padding:"+tostring(Flegendstyle['边框']['内边距']?:10);
+			if not isempty(Flegendstyle['边框']['颜色']) then
+			      Legend+=",strokeStyle:'"+tostring(Flegendstyle['边框']['颜色'])+"'";
+			if not isempty(Flegendstyle['边框']['角类型']) then
+			      Legend+=",cornerRadius:"+tostring(Flegendstyle['边框']['角类型']?:0);
+			Legend+="}";
+	end;
+	
+	if not isempty(Flegendstyle['字体']) then begin	
+	  //if not isempty(Flegendstyle['字体']) then 		
+	    // Legend+=",font: '"+tostring(Flegendstyle['大小'])+" "+tostring(Flegendstyle['字体'])+"'";
+		if not isempty(Flegendstyle['字体颜色']) then
+		  Legend+=",textFillStyle:'"+tostring(Flegendstyle['字体颜色'])+"'";
+		if not isempty(Flegendstyle['字体线条宽度']) then
+		  Legend+=",textLineWidth:'"+tostring(Flegendstyle['字体线条宽度'])+"'";
+		if not isempty(Flegendstyle['字体边框颜色']) then
+		  Legend+=",textStrokeStyle :'"+tostring(Flegendstyle['字体边框颜色'])+"'";
+	end;
+	
+ if not isempty(Flegendstyle['背景颜色']) then 
+	  Legend+=",background:'"+tostring(Flegendstyle['背景颜色'])+"'"; // legend background
+ if not isempty(Flegendstyle['外边距']) then 
+	  Legend+=",margin:"+tostring(Flegendstyle['外边距']);// legend margings
+	  
+	Legend+="}";
+	return Legend;
+end;
+
+function TWebsiteJQGraph.SetGraphBackground();//图背景颜色
+begin
+  if not isEmpty(FBackground) then 
+	    Background:="'"+tostring(FBackground)+"'";
+	else Background:="{}";
+	return Background;
+end;
+
+function TWebsiteJQGraph.SetGraphchartAreaBackground(); //图区域背景颜色
+begin		
+		ABackground:='undefined';
+		return ABackground;
+end;
+
+function TWebsiteJQGraph.SetGraphMarkers(maker);
+begin	  	            
+   if maker='none' then return '{visible:false}';
+       
+   if maker in array("circle","rectangle","diamond","triangle","plus","line","triangle","image","none")=0 then  
+      maker:="none";
+  
+   if maker="line" then begin 
+   	   strokeStyle:="red"; 
+   	   lineWidth:=2;
+   end else begin
+   	  strokeStyle:="";
+   	  lineWidth:=1;
+   end; 
+	 markerOptions:=" {	          
+			      //fillStyle: 'red', // fill style of marker
+			      //strokeStyle: '"+strokeStyle+"', // marker border line color
+			      //lineWidth: "+tostring(lineWidth)+", // marker border line width
+			      //size: 10, // marker diameter
+			      type:'"+maker+"' // marker type - circle | rectangle | diamond|triangle|plue|line|triangle|image|none
+       }";
+   return markerOptions;
+end;
+
+function TWebsiteJQGraph.SetGraphLabels();
+begin
+	 labelsOptions:="{
+      stringFormat: undefined,
+      fillStyle: undefined,
+      strokeStyle: undefined,
+      lineWidth: undefined,
+      font: undefined,
+      valueType: undefined
+     }";
+   return labelsOptions;
+end;
+
+function TWebsiteJQGraph.SetGraphtooltips();
+begin	
+  //echo tostn(FTooltips);  
+  if not istable(FTooltips) then return tooltipsOption:= "{disabled : false,type:'normal'}";
+  if not FTooltips['可见'] then return tooltipsOption:= "{disabled :false}";
+  if isempty(FTooltips['提示框区域面积']) then FTooltips['提示框区域面积']:=27 ;   
+  tooltipsOption:="{
+		  type:'share',
+		  background : '"+tostring(FTooltips['背景颜色'])+"', 
+		  borderColor: '"+tostring(FTooltips['边框颜色'])+"', 
+		  snapArea: "+tostring(FTooltips['提示框区域面积'])+", 
+		  highlighting:true 		   
+		  //highlightingStrokeStyle:undefined		      
+}";
+
+return tooltipsOption;
+end;
+
+function TWebsiteJQGraph.SetGraphCrosshairs();
+begin	 	    
+	 if not istable(FCrosshairs) then return '{}';
+	 if not FCrosshairs['可见'] then return "{enabled:false}";	
+	 if (FCrosshairs['可见'])  then enable:="true" else enable:="false";
+	 if FCrosshairs['数据点'] then Dataenable:="true" else Dataenable:="false";
+	 if (FCrosshairs['可见'] and FCrosshairs['水平线可见']) then  henable:='true' else henable:='false';
+	     hColor:=FCrosshairs['水平线颜色'];
+	 if (FCrosshairs['可见'] and FCrosshairs['垂直线可见']) then  venable:="true" else venable:="false";
+	     vColor:=FCrosshairs['垂直线颜色'];
+	 
+
+	 crosshairsOptions := "{
+		  enabled: "+tostring(enable)+", 
+		  snapToDataPoints: "+tostring(Dataenable);
+		if henable then 
+		  crosshairsOptions+=",hLine:{ visible: "+tostring(henable)+",strokeStyle: '"+tostring(hColor)+"' }";
+	  if venable then 	 
+		  crosshairsOptions+=",vLine:{ visible: "+tostring(venable)+",strokeStyle:'"+tostring(vColor)+"' }";
+
+	  crosshairsOptions+="}";
+	
+   return crosshairsOptions;
+end
+
+function TWebsiteJQGraph.SetGraphlinearGradient();
+begin 
+	 //注意Radial Gradients未完成
+  linearGradient := "{
+		  type: 'linearGradient',
+		  x0: 0,
+		  y0: 0,
+		  x1: 0,
+		  y1: 1,
+		  colorStops: [{ offset: 0, color: '#eea151' },
+		               { offset: 1, color: '#e06818'}]
+		}";
+	return  linearGradient;
+end;
+
+function TWebsiteJQGraph.SetGraphPaletteColors(); //调色盘
+begin 
+	 paletteColors:="
+      {
+          type: 'customColors',
+          customColors:['#D2691E','#8B0000','#CD853F']
+      }";
+	return  paletteColors;
+end;
+
+function TWebsiteJQGraph.SetWaterMark();
+begin
+	  watermark:=" {                    
+                    text: 'sdfasdf',
+                    fillStyle: 'red',
+                    font: '16px sans-serif',
+                    hAlign: 'right',
+                    vAlign: 'bottom'
+                }";
+    return watermark;
+end;
+
+function TWebsiteJQGraph.SetAnimation();
+begin
+	 if not istable(Fanimation) or Fanimation['是否']=0  then return "{ enabled:false}";	 
+	 Animation:="{enabled:true";
+	 if not isempty(Fanimation['延迟']) then 
+      Animation+=",delayTime:"+tostring(Fanimation['延迟']);
+   if not isempty(Fanimation['速度']) then 
+      Animation+=",duration:"+tostring(Fanimation['速度']);            
+	 Animation+="}";
+	 return Animation;
+end;
+
+function TWebsiteJQGraph.GraphJSEventCode();
+begin
+		//FtooltipFormat:="alert('sss')";
+		jsCode:="";   
+		if not isempty(FdataPointMouseEnter) then 
+		  jsCode+="$('#chart_"+tostring(FNum)+"').bind('dataPointMouseEnter', function (e, data){"+tostring(UTF8ToAnsi(UrlToText(FdataPointMouseEnter)))+"});" ;
+		
+		if not isempty(FdataPointMouseLeave) then 
+		  jsCode+="$('#chart_"+tostring(FNum)+"').bind('dataPointMouseLeave', function (e, data){"+tostring(FdataPointMouseLeave)+"});" ;
+		
+		if not isempty(FdataPointMouseMove) then 
+		  jsCode+="$('#chart_"+tostring(FNum)+"').bind('dataPointMouseMove', function (e, data){"+tostring(FdataPointMouseMove)+"});" ;
+		  
+		if not isempty(FdataPointMouseDown) then 
+		  jsCode+="$('#chart_"+tostring(FNum)+"').bind('dataPointMouseDown', function (e, data){"+tostring(FdataPointMouseDown)+"});" ;
+		  
+		if not isempty(FdataPointMouseUp) then 
+		  jsCode+="$('#chart_"+tostring(FNum)+"').bind('dataPointMouseUp', function (e, data){"+tostring(FdataPointMouseUp)+"});" ;
+		  
+		if not isempty(FtooltipFormat) then
+		  jsCode+="$('#chart_"+tostring(FNum)+"').bind('tooltipFormat', function (e, data){"+tostring(UTF8ToAnsi(UrlToText(FtooltipFormat)))+"});" ;
+		  
+		if not isempty(FdataHighlighting) then 
+		  jsCode+="$('#chart_"+tostring(FNum)+"').bind('dataHighlighting', function (e, data){"+tostring(FdataHighlighting)+"});" ;		
+		return jsCode;
+		
+end;
+
+function TWebsiteJQGraph.drawBoxChart();
+begin
+	if isEmpty(FXfieldName) then raise '9宫图必须指定X轴';
+	obj:=CreateObject("TSBoxChart");
+	
+	Obj.FHeight:=FHeight;
+	obj.FWidth:=FWidth	;	
+	obj.FXLabel:= FXLabel;
+	if  not isEmpty(Fconf['图形属性']['X轴']['坐标']) then
+	    obj.FXAxisLables:=Fconf['图形属性']['X轴']['坐标'];	
+	if  not isEmpty(Fconf['图形属性']['Y轴']['左轴']['坐标']) then
+	    obj.FYAxisLables:=Fconf['图形属性']['Y轴']['左轴']['坐标'];
+	if  not isEmpty(Fconf['图形属性']['Y轴']['左轴']['轴名']) then
+	    obj.FYLabel:= Fconf['图形属性']['Y轴']['左轴']['轴名'];
+	
+	newData:=array();
+	for i:=0 to length(FData)-1 do
+	begin	  		
+			newData[i][0]:=FData[i][FXfieldName];
+			a:=str2array(FIdxs[0]);
+			newData[i][1]:=FData[i][a[0]];
+			if length(a)>1 then
+				newData[i][2]:=FData[i][a[1]];
+	end;
+	obj.FData:=newData;
+	return obj.Draw();
+end;
+
+function TWebsiteJQGraph.findGraphType(ID);
+begin	  
+	  TypeData:=GraphTypeList();
+	  type:=vselect ['type'] from TypeData where ['ID']=ID END;
+	  return type;	   
+end;
+Function TWebsiteJQGraph.GraphTypeList();
+Begin
+	   ChartTypeArr :=array(
+	   ("ID":1,"type":"column","title":"簇状柱形图"),
+	   ("ID":2,"type":"stackedColumn","title":"堆积柱形图"),
+	   ("ID":3,"type":"stackedColumn","title":"百分比堆积柱形图"),
+	   ("ID":4,"type":"column","title":"三维簇状柱形图"),
+	   ("ID":5,"type":"stackedColumn","title":"三维堆积柱形图"),
+	   ("ID":6,"type":"stackedColumn","title":"三维百分比堆积柱形图"),
+	   ("ID":7,"type":"column","title":"三维柱形图"),
+	   ("ID":8,"type":"bar","title":"簇状条形图"),
+	   ("ID":9,"type":"stackedBar","title":"堆积条形图"),
+	   ("ID":10,"type":"stackedBar","title":"百分比堆积条形图"),
+	   ("ID":11,"type":"bar","title":"三维簇状条形图"),
+	   ("ID":12,"type":"bar","title":"三维堆积条形图"),
+	   ("ID":13,"type":"stackedBar","title":"三维百分比堆积条形图"),
+	   ("ID":14,"type":"line","title":"折线图"),
+	   ("ID":49,"type":"spline","title":"平滑线图"),
+	   ("ID":15,"type":"line","title":"堆积折线图"),
+	   ("ID":16,"type":"line","title":"百分比堆积折线图"),
+	   ("ID":17,"type":"line","title":"数据点折线图"),
+	   ("ID":18,"type":"line","title":"堆积数据点折线图"),
+	   ("ID":19,"type":"line","title":"百分比堆积数据点折线图"),
+	   ("ID":20,"type":"line","title":"三维折线图"),
+	   ("ID":21,"type":"pie","title":"饼图"),
+	   ("ID":22,"type":"pie","title":"三维饼图"),
+	   ("ID":23,"type":"pie","title":"复合饼图"),
+	   ("ID":24,"type":"pie","title":"分离型饼图"),
+	   ("ID":25,"type":"pie","title":"分离型三维饼图"),
+	   ("ID":26,"type":"pie","title":"复合条饼图"),
+	   ("ID":27,"type":"scatter","title":"散点图"),
+	   ("ID":27,"type":"scatter","title":"平滑线散点图"),
+	   ("ID":27,"type":"scatter","title":"无数据点平滑线散点图"),
+	   ("ID":27,"type":"scatter","title":"折线散点图"),
+	   ("ID":27,"type":"scatter","title":"无数据点折线散点图"),
+	   ("ID":32,"type":"area","title":"面积图"),
+	   ("ID":33,"type":"area","title":"堆积面积图"),
+	   ("ID":34,"type":"area","title":"百分比堆积面积图"),
+	   ("ID":35,"type":"area","title":"三维面积图"),
+	   ("ID":36,"type":"area","title":"三维堆积面积图"),
+	   ("ID":37,"type":"area","title":"三维百分比堆积面积图"),
+	   ("ID":38,"type":"candlestick","title":"K线蜡烛图"),
+	   ("ID":39,"type":"stock","title":"K线图"),
+	   ("ID":40,"type":"bubble","title":"冒泡图"),
+	   ("ID":41,"type":"area","title":"区域图"),
+	   ("ID":42,"type":"pie","title":"环形饼图"),
+	   ("ID":43,"type":"rangeColumn","title":"幅度柱形图"),
+	   //("ID":44,"type":"table","title":"宫图"),
+	   ("ID":45,"type":"radarArea","title":"雷达面积图"),
+	   ("ID":46,"type":"radarLine","title":"雷达线图"),
+	   ("ID":47,"type":"radarSplineArea","title":"雷达曲线面积图"),
+	   ("ID":48,"type":"radarSpline","title":"雷达曲线图"),
+	   );
+     return ChartTypeArr;              
+End;

@@ -1,0 +1,16 @@
+h1{padding:10px;}
+.Data_Element_Item{border-bottom: 1px solid #0070C0;color:#0070C0;padding:0.2em 1em;font-size: 14px;font-weight: normal;margin: 0.5em;}
+/*.btn_AddAudit,.btn_AddDm{height:25px;width:70px;color:#fff;margin:10px 0px 10px 10px;background-color:#4672C4;border:1px solid #BFBFBF;}*/
+.DRtd1,.DRtd2,.DRtd3,.DRtd5{width:3em;}
+/*.DRtd4{width:60%;}*/
+
+.DRtd5 .btn{margin-right: 5px;}
+.btns-container{margin-top:10px;margin-bottom:10px;}
+.btns-container .btn{margin-right: 15px;}
+
+.layout-row{margin-bottom:20px;}
+.layout-row .btns-container{padding:0.5em 0 0 1.5em;}
+.container-products{
+  height:200px;
+  overflow-y:auto;
+}

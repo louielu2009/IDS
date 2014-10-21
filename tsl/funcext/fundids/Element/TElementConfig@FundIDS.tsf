@@ -1,0 +1,27 @@
+type TElementConfig = class
+
+class function outElementTypeConf();overload;
+class function outElementTypeConf(field);overload;
+end;
+
+class function TElementConfig.outElementTypeConf();overload;
+begin
+	   conf := array('Base':(('Type':'Txt'),
+	                         ('Type':'Table'),
+	                         ('Type':'Pic'),
+	                         ('Type':'WordFile')
+	                        ),
+	                 'Layout':(('Type':'Title'),
+	                           ('Type':'Newline'),
+	                           ('Type':'PageBreak'),
+	                           ('Type':'Category'),
+	                          )
+	                 );
+	    return conf;
+end;
+
+class function TElementConfig.outElementTypeConf(field);overload;
+begin
+	   conf := class(TElementConfig).outElementTypeConf();
+	   return conf[field];
+end;

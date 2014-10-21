@@ -1,0 +1,996 @@
+type OutForm = class
+function getElementConfig();
+function getElementEditFormConfig(data);
+function outElementEditForm(data);
+//********获取模板创建配置********//
+function getTemplateFormConfig(data);
+//********输出模板创建窗口********//
+function outTemplateForm(data);
+function outElementType();
+function outUserCom(data);
+
+
+//********输出目录编辑窗口********//
+function getCategoryFormConfig(data);
+//********输出标题编辑窗口********//
+function getTitleFormConfig(data);
+//********输出普通编辑窗口********//
+function getCommonFormConfig(data);
+//********输出样式编辑窗口*******//
+function outStyleForm(data);
+function outTableForm(data);
+function outTxtForm(data);
+function outPicForm(data);
+end;
+
+function OutForm.outUserCom(data);
+begin
+     html := '';
+     if not ifArray(data) or not length(data) then
+     html := '没有相关业务元素!'
+     else
+     begin
+     	    list := '';
+     	    for  i := 0 to length(data) do
+          list += '<li class="comType" comID="'+tostring(data[i]['EID'])+'" c_type="ComboBox">'+data[i]['Name']+'</li>';
+          list := '<ul>'+list+'</ul>';
+          html := list;
+     end;
+     return html;     
+end;
+
+function OutForm.getElementConfig();
+begin
+	   conf := array();
+	   conf['Base'] := array(('Txt':'文本','Value':'Txt'),
+	                         ('Txt':'表格','Value':'Table'),
+	                         ('Txt':'图','Value':'Pic')
+	                        );
+	   conf['Layout'] := array(('Txt':'标题','Value':'Title'),
+	                           ('Txt':'换行','Value':'Newline'),
+	                           ('Txt':'分页符','Value':'PageBreak'),
+	                           ('Txt':'目录','Value':'Category')
+	                          );
+	   conf['TitleLevel'] :=  array(('txt':'一级','Txt':'一级标题','Value':1),
+	                           ('txt':'二级','Txt':'二级标题','Value':2),
+	                           ('txt':'三级','Txt':'三级标题','Value':3),
+	                           ('txt':'四级','Txt':'四级标题','Value':4),
+	                           ('txt':'五级','Txt':'五级标题','Value':5),
+	                           ('txt':'六级','Txt':'六级标题','Value':6)
+	                           //('txt':'七级','Txt':'七级标题','Value':7),
+	                           //('txt':'八级','Txt':'八级标题','Value':8),
+	                           //('txt':'九级','Txt':'九级标题','Value':9)	                           
+	                          );	   
+	   return conf;
+end;
+
+function OutForm.outStyleForm(data);
+begin
+	   html := '';
+	   if not ifArray(data) then
+	   return html;
+	   case data['Type'] of
+	   'Table':html := outTableForm(data);
+	   'Txt':html := outTxtForm(data);
+	   'Pic':html := outPicForm(data);	   
+	   end;
+	   return html;
+end;
+
+function OutForm.getTitleFormConfig(data);
+begin	    
+	    EName := data['NAME']?data['NAME']:'';
+	    EID := data['EID']?data['EID']:'';
+	    op := data['op'];
+	    conf := data['Conf'];
+	    subConf := conf['Conf'];
+	    wordTools := createObject('WordTools');
+	    Styles := wordTools.getStyles();
+	    options1 := array();
+	    options2 := array();
+	    options3 := array();
+	    if ifArray(Styles) then
+	    begin	    	   
+	    	   Styles := Styles['Txt'];
+	    	   for i := 0 to length(Styles['Base'])-1 do
+	    	   begin	    	       
+	    	        options1[i] := array('txt':Styles['Base'][i]['txt'],'value':Styles['Base'][i]['value']);
+	              if subConf['Name'] = Styles['Base'][i]['value'] then
+	              options1[i]['selected'] := "true";
+	         end;
+	         for j := 0 to length(Styles['UserDefined'])-1 do
+	         begin
+	         	    len := length(options2);
+	         	    options2[len] := array('txt':Styles['UserDefined'][j]['txt'],'value':Styles['UserDefined'][j]['value']);
+	              if subConf['Name'] = Styles['UserDefined'][j]['value'] then
+	              options2[len]['selected'] := "true";
+	         end;
+	    end
+	    else
+	    Styles := array();	    
+	    TitleLevel := getElementConfig()['TitleLevel'];	    
+	    for k := 0 to length(TitleLevel)-1 do
+	    begin
+	    	   len := length(options3);
+           if ifArray(subConf) and TitleLevel[k]['Value'] = subConf['Level'] then	
+           options3[len] := array('txt':TitleLevel[k]['txt'],'value':TitleLevel[k]['Value'],'selected':'true')
+           else   
+	    	   options3[len] := array('txt':TitleLevel[k]['txt'],'value':TitleLevel[k]['Value']);
+	    end;	    
+	    titleForm := array(
+	                      {("Content":((("type":"input","txt":"元素名称","attr":("property":"Element_Name"),"value":EName)	                                                                   
+                                   ))),
+                         }
+                         ("Content":((
+                         ("type":"input","txt":"标题","attr":("property":"Element_Title_Content","css":("width":"300px")),"value":conf['Content']?conf['Content']:''),
+                         ("type":"select","txt":"等级","attr":("property":"Element_Title_Level"),"options":options3)
+                         ))),
+                         {
+                         ("Content":((("type":"selectgroup","txt":"样式名称","attr":("property":"Element_Style"),"optgroup":(("label":"基础样式","options":options1),
+                                                                                                                             ("label":"用户自定义","options":options2)))	                                                                   
+                                   ))),                        
+                         }
+                         ("Content":((
+                         	("type":"hidden","txt":"Group","value":"Layout","attr":("property":"Element_Group")),
+                         	("type":"hidden","txt":"EType","value":conf["Type"]?conf['Type']:'',"attr":("property":"Element_ElementType")),
+                         	("type":"hidden","txt":"EID","value":EID,"attr":("property":"Element_EID")),
+                         	("type":"hidden","txt":"op","value":op,"attr":("property":"Element_op")),
+                                   )))
+
+                        );      
+      return titleForm;     
+end;
+
+function OutForm.getCommonFormConfig(data);
+begin
+	    EName := data['NAME']?data['NAME'] :'';
+	    EID  := data['EID']?data['EID']:'';
+	    conf := data['Conf']?data['Conf'] :'';
+	    op := data['op'];
+	    commonForm := array(
+	    				 ("Content":((("type":"input","txt":"元素名称","attr":("property":"Element_Name"),"value":EName)	                                                                   
+						))),                    
+                          ("Content":((
+                          			("type":"hidden","txt":"Group","value":"Layout","attr":("property":"Element_Group")),
+                          			("type":"hidden","txt":"EType","value":conf["Type"],"attr":("property":"Element_ElementType")),
+                          			("type":"hidden","txt":"EID","value":EID,"attr":("property":"Element_EID")),
+                          			("type":"hidden","txt":"op","value":op,"attr":("property":"Element_op"))
+                          )))      
+                         );
+      return commonForm;              
+end;
+
+function OutForm.getCategoryFormConfig(data);
+begin
+	   EName := data['NAME']?data['NAME'] :'';
+	   EID := data['EID'] ? data['EID'] :'';
+	   conf := data['Conf'] ? data['Conf']:'';
+	   wordTools := createObject('WordTools');
+	   {
+	   Styles := wordTools.getStyles();
+	   Style := data['Style'] ? data['Style']:array();
+	   TitleLevel := getElementConfig()['TitleLevel'];
+	   TitleLevel := select ['Value'] as 'value',['Txt'] as 'txt' from TitleLevel end;
+	   Level := array();
+	   if length(Style) then
+	   begin
+			   for i := 0 to length(Style)-1 do
+			   begin
+			   	    len := length(Level);
+			   	    Level[len] := array();
+			   end;
+	   end
+	   else
+	   Level := array(("type":"select","txt":"等级","attr":("property":"Levels:Element_Category_Level0"),options:TitleLevel),
+	                  ("type":"select","txt":"类型","attr":("property":"Levels:Element_Category_Font_Name0"),options:TitleLevel),
+	                  ("type":"select","txt":"大小","attr":("property":"Levels:Element_Category_Font_Size0"),options:TitleLevel),
+	                  ("type":"checkbox","txt":"加粗","attr":("property":"Levels:Element_Category_Font_Bold0"),options:TitleLevel),
+	                 );
+	   Level &= array(("type":"button","txt":"添加","attr":("class":"Element_Category_Add"),'onclick':'Element_Category_Add(this)'));
+	   LevelForm := array(('ItemName':'样式设置',"Content":(Level)));
+	   CategoryForm &= LevelForm;
+	   }
+	   CategoryForm := array(("Content":((("type":"hidden","txt":"目录","attr":("property":"Element_Name"),"value":'目录')	                                                                   
+                                   ))),                      
+                           ("Content":((("type":"hidden","txt":"Group","value":"Layout","attr":("property":"Element_Group"))	                                                                   
+                                   ))),  
+                           ("Content":((("type":"hidden","txt":"EType","value":conf["Type"],"attr":("property":"Element_ElementType"))	                                                                   
+                                   ))),
+                           ("Content":((("type":"hidden","txt":"EID","value":EID,"attr":("property":"Element_EID"))	                                                                   
+                                   )))
+                          );    
+     return CategoryForm;
+end;
+
+function OutForm.outTableForm(data);
+begin	    
+	    EID := data['EID'] ?data['EID'] :'';
+	    Name := data['Conf'] and data['Conf']['Name']?data['Conf']['Name']:'';
+	    op := data['op'];
+	    wordTools := createObject('WordTools');
+	    Styles := wordTools.getStyles();
+	    options1 := array();
+	    options2 := array();
+	    if ifArray(Styles) then
+	    begin	    	   
+	    	   Styles := Styles['Table'];
+	    	   for i := 0 to length(Styles['Base'])-1 do
+	    	   begin	    	        
+	    	        options1[i] := array('txt':Styles['Base'][i]['txt'],'value':Styles['Base'][i]['value']);
+	              if Name = Styles['Base'][i]['value'] then
+	              options1[i]['selected'] := "true";
+	         end;
+	         for j := 0 to length(Styles['UserDefined'])-1 do
+	         begin	         	    
+	         	    options2[j] := array('txt':Styles['UserDefined'][j]['txt'],'value':Styles['UserDefined'][j]['value']);
+	              if Name = Styles['UserDefined'][j]['value'] then
+	              options2[j]['selected'] := "true";
+	         end;
+	    end
+	    else
+	    Styles := array();
+	    tbForm := array(("Content":((("type":"selectgroup","txt":"样式名称","attr":("property":"Element_Style"),"optgroup":(("label":"基础样式","options":options1),
+                                                                                                                          ("label":"用户自定义","options":options2)))	                                                                   
+                                   ))),
+                      ("Content":((("type":"hidden","txt":"EID","value":EID,"attr":("property":"Element_EID")),
+                                   ("type":"hidden","txt":"op","value":op,"attr":("property":"Element_op"))
+                                   )))
+                     );      
+      f := CreateObject("TForm");
+	    f.config := tbForm;
+		  f.partitionLine := false;
+		  f.showNavigation := false;
+		  f.button := array("button":(("attr":("class":"Element_Save"),"action":"submit","icon":"ui-icon-disk","title":"完成","callBack":("type":"tsf","name":"Element.saveTableStyleConf"))),
+			                  "align":"left"
+			                 );
+			html :=  f.GainHtml();
+			return html;
+end;
+
+function OutForm.outTxtForm(data);
+begin	    
+	    EID := data['EID']?data['EID']:'';
+	    Name := data['Conf'] and data['Conf']['Name']?data['Conf']['Name']:'';
+	    op := data['op'];
+	    wordTools := createObject('WordTools');
+	    Styles := wordTools.getStyles();
+	    options1 := array();
+	    options2 := array();
+	    if ifArray(Styles) then
+	    begin	    	   
+	    	   Styles := Styles['Txt'];
+	    	   for i := 0 to length(Styles['Base'])-1 do
+	    	   begin	    	        
+	    	        options1[i] := array('txt':Styles['Base'][i]['txt'],'value':Styles['Base'][i]['value']);
+	              if Name = Styles['Base'][i]['value'] then
+	              options1[i]['selected'] := "true";
+	         end;
+	         for j := 0 to length(Styles['UserDefined'])-1 do
+	         begin	         	    
+	         	    options2[j] := array('txt':Styles['UserDefined'][j]['txt'],'value':Styles['UserDefined'][j]['value']);
+	              if Name = Styles['UserDefined'][j]['value'] then
+	              options2[j]['selected'] := "true";
+	         end;
+	    end
+	    else
+	    Styles := array();
+	    
+	    txtForm := array(	                    
+                       ("Content":((("type":"selectgroup","txt":"样式名称","attr":("property":"Element_Style"),"optgroup":(("label":"基础样式","options":options1),
+                                                                                                                      ("label":"用户自定义","options":options2)))	                                                
+                                   ))),
+                       ("Content":((("type":"hidden","txt":"EID","value":EID,"attr":("property":"Element_EID")),
+                                    ("type":"hidden","txt":"op","value":op,"attr":("property":"Element_op"))                                               
+                                   )))
+                      );
+      f := CreateObject("TForm") ;
+	    f.config := txtForm ;
+		  f.partitionLine := false ;
+		  f.showNavigation := false;
+		  f.button := array("button":(("attr":("class":"Element_Save"),"action":"submit","icon":"ui-icon-disk","title":"完成","callBack":("type":"tsf","name":"Element.saveTxtStyleConf"))),
+			                  "align":"left"
+			                 ) ;
+			html :=  f.GainHtml();
+			return html;
+end;
+
+function OutForm.outPicForm(data);
+begin	    
+	    EID := data['EID'];	    
+	    conf := data['Conf'];
+	    op := data['op'];
+	    XAxisConf:= array(("txt":"文本","value":"文本"),("txt":"数字","value":"数字"));//("txt":"时间","value":"时间")
+		  fontSize:=array(
+					("txt":"8","value":"8px"),
+					("txt":"9","value":"9px"),
+					("txt":"10","value":"10px"),
+					("txt":"11","value":"11px"),
+					("txt":"12","value":"12px"),
+					("txt":"14","value":"14px"),
+					("txt":"16","value":"16px"),
+					("txt":"18","value":"18px"),
+					("txt":"20","value":"20px"),
+					("txt":"22","value":"22px"),
+					("txt":"24","value":"24px"),
+					("txt":"28","value":"28px"),
+					("txt":"36","value":"36px"),
+					("txt":"48","value":"48px"),
+					("txt":"72","value":"72px")
+		);
+		fontType:=array(
+					("txt":"sans-serif","value":"sans-serif"),
+					("txt":"宋体","value":"Simson"),
+					("txt":"黑体","value":"Simhei"),
+					("txt":"仿宋","value":"仿宋,仿宋_GB2312"),
+					("txt":"楷体","value":"楷体,楷体_GB2312"),
+					("txt":"隶书","value":"隶书"),
+					("txt":"微软雅黑","value":"Microsoft Yahei"),
+					("txt":"幼圆","value":"幼圆"),
+					("txt":"Arial","value":"Arial"),
+					("txt":"Calibri","value":"Calibri"),
+					("txt":"Tahoma","value":"Tahoma"),
+					("txt":"Verdana","value":"Verdana")
+		);
+		
+		YPos:=array(
+					("txt":"左边","value":"left"),
+					("txt":"右边","value":"right")
+		);
+		
+		TorF := array(
+					("txt":"是","value":1),
+					("txt":"否","value":0)
+		);
+		FormatLegendpos:= array(
+					("txt":"上","value":"top"),
+					("txt":"下","value":"bottom"),
+					("txt":"左","value":"left"),
+					("txt":"右","value":"right")
+		);
+		
+		Num := array(
+					("txt":"0","value":0),
+					("txt":"1","value":1),
+					("txt":"2","value":2),
+					("txt":"3","value":3),
+					("txt":"4","value":4),
+					("txt":"5","value":5),
+					("txt":"6","value":6),
+					("txt":"7","value":7),
+					("txt":"8","value":8),
+					("txt":"9","value":9)
+					);
+		
+		Width := array(
+					("txt":"0","value":0),
+					("txt":"1","value":1),
+					("txt":"2","value":2),
+					("txt":"3","value":3),
+					("txt":"4","value":4),
+					("txt":"5","value":5)					
+					);				
+		if not istable(conf) then 
+		    conf:= array("dispWay":1,"width":"","height":"","限制条件":"","名称":"","可导出数据":0,"可导出图片":1,"字体大小":"","字体颜色":"",
+		            "图形属性":
+		                ("图形边框":("粗细":1,"颜色":"#000000","内边距":8,"角类型":2),
+		                "背景网格":("边框":"normal","是否画网格线":0,"网格设置":("类型":"系统默认")),
+		                "图例格式":("内外":"内部","位置":"ne","类型":"简要"),
+		                "X轴":("类型":"文本","X轴列名":"","轴名":"","主标记个数":4,"刻度":"","角度":"0","坐标":()),
+		                "Y轴":(),
+		                "图表类型和坐标轴":("*":("图形属性":14,"坐标轴":0,"标识类型":"none","大小":0,"空值是否连续":1,"线型粗细":1.5)),
+		                ));
+		                //"动作事件":("提示框":"")));
+		
+		basicConf:= array("ItemName":"基本设置","Content":(
+										    (("txt":"图高","type":"input","singleCol":1,"value":conf['height']?:250,"comment":("content":"px"),"attr":("property":"height","dataType":"num","css":("width":"60px")))),
+										    (("txt":"图宽","type":"input","value":conf['width']?:'',"comment":("content":"px"),"attr":("property":"width","dataType":"num","css":("width":"60px")))),
+										    (("txt":"背景颜色","type":"colorpicker","value":conf['图形属性']['背景颜色']?:'',"attr":("property":"图形属性:背景颜色","css":("width":"60px"))))
+		               ));		
+		if not istable(conf["图形属性"]["X轴"]) then conf["图形属性"]["X轴"]:= array();			
+		XaxisSetup := array("ItemName":"横轴设置","Content":(
+									     (
+													("txt":"轴类型","type":"select","value":conf["图形属性"]["X轴"]["类型"]?:"文本","attr":("property":"图形属性:X轴:类型","css":("width":"64px")),"options":XAxisConf),
+													("txt":"字段名","type":"input","value":conf["图形属性"]["X轴"]["X轴列名"]?:'*',"attr":("title":"如为空或者*则默认数据第一列为x轴","property":"图形属性:X轴:X轴列名","css":("width":"60px"))),
+				                  ("txt":"角度","type":"input","value":isEmpty(conf["图形属性"]["X轴"]["角度"])?"0":conf["图形属性"]["X轴"]["角度"],"attr":("property":"图形属性:X轴:角度","css":("width":"40px")))
+				                ),
+				                (
+				                	("txt":"主标记个数","type":"input","value":isEmpty(conf["图形属性"]["X轴"]["主标记个数"])? '':conf["图形属性"]["X轴"]["主标记个数"],"attr":("datatype":"num","property":"图形属性:X轴:主标记个数","css":("width":"60px"))),
+				                  ("txt":"轴名称","type":"input","value":conf["图形属性"]["X轴"]["轴名"]?:'',"attr":("property":"图形属性:X轴:轴名","css":("width":"60px")))
+													//("txt":"颜色","type":"input","attr":("property":"图形属性:X轴:轴名:颜色","css":("width":"60px"))),
+													//("txt":"轴单位","type":"input","value":conf["图形属性"]["X轴"]["单位"]?:'',"attr":("property":"图形属性:X轴:单位","css":("width":"40px"))),
+													),
+													(("txt":"轴颜色","type":"colorpicker","value":conf["图形属性"]["X轴"]["颜色"]?:'',"attr":("property":"图形属性:X轴:颜色","css":("width":"60px"))),
+													("txt":"坐标[宫图专用]","type":"input","value":conf["图形属性"]["X轴"]["坐标"]?:'',"attr":("property":"图形属性:X轴:坐标","css":("width":"60px"))),
+													//("txt":"最大值","type":"input","attr":("property":"图形属性:X轴:最大值","css":("width":"60px"))),
+													//("txt":"最小值","type":"input","attr":("property":"图形属性:X轴:最小值","css":("width":"60px"))),
+													("type":"text","txt":"更多","sub":
+														("Content":((
+																					("type":"text","txt":"主要刻度","attr":("css":("display":"block","font-weight":"bold"))),
+																				
+																					("txt":"颜色","type":"colorpicker","value":conf["图形属性"]["X轴"]["主要刻度"]["颜色"]?:'',"attr":("property":"图形属性:X轴:主要刻度:颜色","css":("width":"60px"))),
+																					("txt":"线宽","type":"input","value":conf["图形属性"]["X轴"]["主要刻度"]["线宽"]?:'',"attr":("property":"图形属性:X轴:主要刻度:线宽","dataType":"num","css":("width":"60px"))),
+																					("txt":"长度","type":"hidden","value":conf["图形属性"]["X轴"]["主要刻度"]["长度"]?:'',"attr":("property":"图形属性:X轴:主要刻度:长度","dataType":"num","css":("width":"60px"))),
+																					("txt":"间隔","type":"input","value":conf["图形属性"]["X轴"]["主要刻度"]["间隔"]?:'',"attr":("property":"图形属性:X轴:主要刻度:间隔","dataType":"num","css":("width":"60px"))),
+																				),(
+																					("type":"text","txt":"次要刻度","attr":("css":("display":"block","font-weight":"bold"))),
+																					("txt":"颜色","type":"colorpicker","value":conf["图形属性"]["X轴"]["次要刻度"]["颜色"]?:'',"attr":("property":"图形属性:X轴:次要刻度:颜色","css":("width":"60px"))),
+																					("txt":"线宽","type":"input","value":conf["图形属性"]["X轴"]["次要刻度"]["线宽"]?:'',"attr":("property":"图形属性:X轴:次要刻度:线宽","dataType":"num","css":("width":"60px"))),
+																					("txt":"长度","type":"hidden","value":conf["图形属性"]["X轴"]["次要刻度"]["长度"]?:'',"attr":("property":"图形属性:X轴:次要刻度:长度","dataType":"num","css":("width":"60px"))),
+																					("txt":"间隔","type":"input","value":conf["图形属性"]["X轴"]["次要刻度"]["间隔"]?:'',"attr":("property":"图形属性:X轴:次要刻度:间隔","dataType":"num","css":("width":"60px"))),
+																				),(
+																					("type":"text","txt":"主要网格线","attr":("css":("display":"block","font-weight":"bold"))),
+																					
+																					("txt":"颜色","type":"colorpicker","value":conf["图形属性"]["X轴"]["主要网格线"]["颜色"]?:'',"attr":("property":"图形属性:X轴:主要网格线:颜色","css":("width":"60px"))),
+																					("txt":"线宽","type":"input","value":conf["图形属性"]["X轴"]["次要刻度"]["线宽"]?:'',"attr":("property":"图形属性:X轴:主要网格线:线宽","dataType":"num","css":("width":"60px"))),
+																					("txt":"间隔","type":"input","value":conf["图形属性"]["X轴"]["主要网格线"]["间隔"]?:'',"attr":("property":"图形属性:X轴:主要网格线:间隔","dataType":"num","css":("width":"60px"))),
+																				),(
+																					("type":"text","txt":"次要网格线","attr":("css":("display":"block","font-weight":"bold"))),
+																					
+																					("txt":"颜色","type":"colorpicker","value":conf["图形属性"]["X轴"]["次要网格线"]["颜色"]?:'',"attr":("property":"图形属性:X轴:次要网格线:颜色","css":("width":"60px"))),
+																					("txt":"线宽","type":"input","value":conf["图形属性"]["X轴"]["次要网格线"]["线宽"]?:'',"attr":("property":"图形属性:X轴:次要网格线:线宽","dataType":"num","css":("width":"60px"))),
+																					("txt":"间隔","type":"input","value":conf["图形属性"]["X轴"]["次要网格线"]["间隔"]?:'',"attr":("property":"图形属性:X轴:次要网格线:间隔","dataType":"num","css":("width":"60px")))
+																					
+																			 ))
+														),
+													"attr":("css":("margin-left":"8px","font-size":"10px","color":"#FA9300","cursor":"pointer")))
+												)
+		                  ));
+		arr2:= _getYAxisArr(conf);
+		
+		YaxisSetup := array("ItemName":"系列设置","Content":(
+										(("txt":" 增 加 ","type":"button","attr":("css":("margin-left":"10px"),"onclick":"return chartY_mgr(this,1);")))
+		              ));
+		YaxisSetup['Content'] &= arr2;
+		
+		s_title:= conf['名称']?:'';
+ 		if isEmpty(s_title) then s_title:= conf['图形属性']['标题']['内容']?:'';
+ 		s_fontSize:= conf['字体大小']?:'';
+ 		if isEmpty(s_fontSize) then s_fontSize:= conf['图形属性']['标题']['大小']?:'8px';
+ 		s_fontColor:= conf['字体颜色']?:'';
+ 		if isEmpty(s_fontColor) then s_fontColor:= conf['图形属性']['标题']['颜色']?:'#000000';
+ 		
+		title := array("ItemName":"图表标题","Content":(
+										(
+											("txt":"标题","type":"input","value":s_title,"attr":("property":"图形属性:标题:内容","css":("width":"200px")))),
+											(("txt":"字体","type":"select","value":conf['图形属性']['标题']['字体']?:'',"attr":("property":"图形属性:标题:字体"),"options":fontType)),
+											(("txt":"字大小","type":"select","value":s_fontSize,"attr":("property":"图形属性:标题:大小"),"options":fontSize)
+										),
+										(
+											("txt":"字颜色","type":"colorpicker","value":s_fontColor,"attr":("property":"图形属性:标题:颜色","css":("width":"60px"))),
+											//("txt":"边框宽度","type":"input","attr":("property":"图形属性:标题:边框宽度","css":("width":"60px"))),
+											//("txt":"字边框色","type":"input","attr":("property":"图形属性:标题:字边框色","css":("width":"60px")))
+										)
+										//(("txt":"字边距","type":"input","attr":("property":"图形属性:标题:字边距")))
+							 		));
+		orginGrid_1:= conf['图形属性']['背景网格']['水平线'];
+		orginGrid_2:= conf['图形属性']['背景网格']['垂直线'];
+		BackgroundGrid := array("ItemName":"背景网格","Content":(
+										(
+											("txt":"画网格线","type":"checkbox","checked":conf['图形属性']['背景网格']['是否画网格线']?1:0,"attr":("property":"图形属性:背景网格:是否画网格线","css":())),
+											//("txt":"数据点","type":"select","attr":("property":"图形属性:背景网格:数据点","css":("width":"60px")),"options":TorF),
+										)
+							 ));
+		ChartBorder := array("ItemName":"图表边框","Content":(
+										(											 
+											
+											("txt":"粗细","type":"select","value":conf['图形属性']['图形边框']['粗细']?:0,"attr":("dataType":"num","property":"图形属性:图形边框:粗细","css":("width":"40px")),"options":Width),
+											("txt":"内边距","type":"input","value":conf['图形属性']['图形边框']['内边距']?conf['图形属性']['图形边框']['内边距']:8,"attr":("dataType":"num","property":"图形属性:图形边框:内边距","css":("width":"30px"))),
+											("txt":"颜色","type":"colorpicker","value":conf['图形属性']['图形边框']['颜色']?conf['图形属性']['图形边框']['颜色']:'',"attr":("property":"图形属性:图形边框:颜色","css":("width":"60px"))),
+											("txt":"圆角","type":"input","value":conf['图形属性']['图形边框']['角类型']?conf['图形属性']['图形边框']['角类型']:2,"attr":("dataType":"num","property":"图形属性:图形边框:角类型","css":("width":"30px")))
+										)));
+	  orginLegTitle:= conf['图形属性']['图例格式']['名称'];
+	  if not istable(orginLegTitle) then orginLegTitle:= array();
+	  orginLegBord:= conf['图形属性']['图例格式']['边框'];
+	  if not istable(orginLegBord) then orginLegBord:= array();
+	  orginLegDisp:= conf['图形属性']['图例格式']['可见'];
+	  if isEmpty(orginLegDisp) then orginLegDisp:= 1 ;
+		FormatLegend := array("ItemName":"图例格式","Content":(
+										(
+											("txt":"是否显示","type":"checkbox","checked":orginLegDisp?1:0,"attr":("property":"图形属性:图例格式:可见"),"css":()),
+											("txt":"图例位置","type":"select","value":conf['图形属性']['图例格式']['位置']?:'',"attr":("property":"图形属性:图例格式:位置","css":("width":"60px")),"options":FormatLegendpos),
+											("type":"text","txt":"更多","sub":
+														("Content":((
+																					
+																						("txt":"背景颜色","type":"colorpicker","value":conf['图形属性']['图例格式']['背景颜色']?:'',"attr":("property":"图形属性:图例格式:背景颜色","css":("width":"60px")))
+																						//("txt":"边框颜色","type":"colorpicker","value":conf['图形属性']['图例格式']['字体边框颜色']?:'',"attr":("property":"图形属性:图例格式:字体边框颜色","css":("width":"60px"))),
+																						//("txt":"外边距","type":"input","value":conf['图形属性']['图例格式']['外边距']?:'',"attr":("property":"图形属性:图例格式:外边距","css":("width":"60px")))
+																			 ),(
+																						//("txt":"字体","type":"select","value":conf['图形属性']['图例格式']['字体']? :'',"attr":("property":"图形属性:图例格式:字体"),"options":fontType)
+																						//("txt":"字大小","type":"select","value":conf['图形属性']['图例格式']['大小']?:'12px',"attr":("property":"图形属性:图例格式:大小"),"options":fontSize),
+																						//("txt":"字粗度","type":"input","value":conf['图形属性']['图例格式']['字体线条宽度']?:'',"attr":("property":"图形属性:图例格式:字体线条宽度","css":("width":"60px"))),
+																						//("txt":"字颜色","type":"colorpicker","value":conf['图形属性']['图例格式']['字体颜色']?:'',"attr":("property":"图形属性:图例格式:字体颜色","css":("width":"60px")))
+																			 ))
+														),
+												"attr":("css":("margin-left":"8px","font-size":"10px","color":"#FA9300","cursor":"pointer"))
+												),
+											("type":"input","txt":" 图例标题","value":orginLegTitle['名称内容']?:'',"attr":("property":"图形属性:图例格式:名称:名称内容","css":("width":"60px"))),											
+										)
+							 ));
+		ToolTip := array("ItemName":"提示框","Content":(
+									(
+										("txt":"是否显示","type":"checkbox","checked":conf['图形属性']['提示框']['可见']?1:0,"attr":("property":"图形属性:提示框:可见","dataType":"num","css":()))
+										//("txt":"类型","type":"select","attr":("property":"图形属性:提示框:类型","css":()),"options":(("txt":"normal","value":"normal"),("txt":"shared","value":"shared"))),
+										//("txt":"高亮","type":"select","value":conf['图形属性']['提示框']['高亮显示']?1:0,"attr":("property":"图形属性:提示框:高亮显示","dataType":"num","css":()),"options":TorF)
+										//("txt":"背景色","type":"colorpicker","attr":("property":"图形属性:提示框:背景颜色","css":("width":"60px")))
+									),
+									(
+										("txt":"动作事件","type":"textarea","value":conf['图形属性']['动作事件']['提示框']?:'',"attr":("property":"图形属性:动作事件:提示框","css":()))
+									)
+									//(("txt":"边框颜色","type":"colorpicker","attr":("property":"图形属性:提示框:边框颜色","css":("width":"60px"))),("txt":"提示区面积:","type":"input","attr":("property":"图形属性:提示框:提示区面积","css":("width":"60px"))))
+							));
+		animation := array("ItemName":"动画特效","Content":(
+									(
+										//("txt":"动画显示","type":"checkbox","checked":conf['图形属性']['动画']['是否']?1:0,"attr":("property":"图形属性:动画:是否")),
+										//("txt":"延迟显示","type":"select","value":conf['图形属性']['动画']['延迟']?:0,"attr":("property":"图形属性:动画:延迟","dataType":"num"),"options":Num),
+										//("txt":"显示速度","type":"select","value":conf['图形属性']['动画']['速度']?:0,"attr":("property":"图形属性:动画:速度","dataType":"num"),"options":Num)
+									),
+									(
+										("txt":"十字准线","type":"checkbox","checked":conf['图形属性']['动画']['十字准线']['可见']?1:0,"attr":("property":"图形属性:动画:十字准线:可见")),
+										("type":"text","txt":"更多","sub":
+												("Content":(
+																		(
+																			("type":"text","txt":"水平线","attr":("css":("display":"block","font-weight":"bold"))),
+																			("type":"checkbox","txt":"是否启用","checked":conf['图形属性']['动画']['十字准线']['水平线可见']?1:0,"attr":("property":"图形属性:动画:十字准线:水平线可见","css":())),
+																			("type":"colorpicker","txt":"颜色","value":conf['图形属性']['动画']['十字准线']['水平线颜色']?:'',"attr":("property":"图形属性:动画:十字准线:水平线颜色","css":("width":"60px")))
+																		 ),
+																		 (
+																		  ("type":"text","txt":"垂直线","attr":("css":("display":"block","font-weight":"bold"))),
+																		  ("type":"checkbox","txt":"是否启用","checked":conf['图形属性']['动画']['十字准线']['垂直线可见']?1:0,"attr":("property":"图形属性:动画:十字准线:垂直线可见","css":())),
+																		  ("type":"colorpicker","txt":"颜色","value":conf['图形属性']['动画']['十字准线']['垂直线颜色']?:'',"attr":("property":"图形属性:动画:十字准线:垂直线颜色","css":("width":"60px")))
+																	   )
+														        )
+												),"attr":("css":("margin-left":"8px","font-size":"10px","color":"#FA9300","cursor":"pointer"))
+										)
+									)
+							));
+		orginRefresh:= array();
+		if istable(conf['刷新']) then orginRefresh:= conf['刷新'];
+		other := array("ItemName":"其他设置","Content":(
+									(("txt":"可导出数据","type":"checkbox","checked":conf['可导出数据']?1:0,"attr":("property":"可导出数据"))),
+									(("txt":"自动刷新","type":"text","attr":("css":("display":"block","font-weight":"bold")))),
+									(("txt":"允许刷新","type":"checkbox","checked":orginRefresh['是否']?1:0,"attr":("property":"刷新:是否")),
+									("txt":"间隔(秒)","type":"input","value":orginRefresh['间隔']>0?orginRefresh['间隔']:'',"attr":("property":"刷新:间隔","dataType":"num","css":("width":"60px")))),
+							));
+
+		//basiArr:=array(XaxisSetup,YaxisSetup,basicConf,title,BackgroundGrid,ChartBorder,FormatLegend,ToolTip,animation,other);
+	  hiddenArr := array("Content":((("type":"hidden","txt":"EID","value":EID,"attr":("property":"Element_EID")),
+                                   ("type":"hidden","txt":"op","value":op,"attr":("property":"Element_op"))
+                                   ))
+                      );
+	  basiArr:=array(XaxisSetup,YaxisSetup,basicConf,title,BackgroundGrid,ChartBorder,FormatLegend,hiddenArr);	  
+		f := CreateObject("TForm") ;
+		f.config := basiArr;
+		f.partitionLine := false ;
+		f.showNavigation := false;
+		f.button := array("button":(("attr":("class":"Element_Save"),"action":"submit","icon":"ui-icon-disk","title":"完成","callBack":("type":"tsf","name":"Element.savePicStyleConf"))),
+		                "align":"left"
+		               ) ;
+		html :=  f.GainHtml();
+		return html;
+end;
+
+function _getYAxisArr(conf);
+begin
+     arr:= array();
+		if not (istable(conf)  and istable(conf['图形属性']) and conf['图形属性']['图表类型和坐标轴'])then begin
+				return __getBaiscConf(arr,0);
+		end;
+		yAxisConf:= conf['图形属性']['Y轴'];
+		ySeriesConf:= conf['图形属性']['图表类型和坐标轴'];		
+		fieldArr:= getAllIndexs(ySeriesConf);
+		for i:=0 to length(fieldArr)-1 do begin
+				basicArr:= array();
+				axisArr:= array();
+				basicArr['系列名']:= fieldArr[i];
+				basicArr['图形属性']:= ySeriesConf[fieldArr[i]]['图形属性'];
+				basicArr['图例别名']:= ySeriesConf[fieldArr[i]]['图例别名']?:'';
+				basicArr['标识类型']:= ySeriesConf[fieldArr[i]]['标识类型'];
+				basicArr['大小']:= ySeriesConf[fieldArr[i]]['大小'];
+				basicArr['空值是否连续']:= ySeriesConf[fieldArr[i]]['空值是否连续'];
+				basicArr['线宽']:= ySeriesConf[fieldArr[i]]['线宽']?:2;
+				basicArr['颜色']:= ySeriesConf[fieldArr[i]]['颜色'];
+				basicArr['坐标轴']:= ySeriesConf[fieldArr[i]]['坐标轴'];
+				
+				y_f:= ySeriesConf[fieldArr[i]]['坐标轴'];
+				case y_f of
+							0:
+							begin//左轴
+									axisArr:= yAxisConf['左轴'];
+							end;
+							1:
+							begin//右轴
+									axisArr:= yAxisConf['右轴'];
+							end;
+							{
+							2:
+							begin//第三轴
+									axisArr:= yAxisConf['第三轴'];
+							end;
+							3:
+							begin//第四轴
+									axisArr:= yAxisConf['第四轴'];
+							end;
+							}
+				end;
+				if istable(axisArr) then basicArr&= axisArr;
+				arr&= __getBaiscConf(basicArr,i);
+		end;
+		return arr;	
+end;
+
+function __getBaiscConf(arr,i);
+begin	
+	chartConf:= chartConf();
+	YType:= array();
+	for j:= 0 to length(chartConf)-1 do begin
+		L:= length(YType);
+		YType[L]['txt']:= chartConf[j]['V'];
+		YType[L]['value']:= chartConf[j]['N'];
+	end;
+
+		YName:=array(
+					("txt":"第一轴","value":0),
+					("txt":"第二轴","value":1),
+					//("txt":"第三轴","value":2),
+					//("txt":"第四轴","value":3)
+		);
+		YPos:=array(
+					("txt":"左边","value":"left"),
+					("txt":"右边","value":"right")
+		);
+		
+		Width:=array(
+		      ("txt":1,"value":1),
+		      ("txt":2,"value":2),
+		      ("txt":3,"value":3),
+		      ("txt":4,"value":4),
+		      ("txt":5,"value":5), 
+		);
+		Yidentifying:=array(
+					("txt":"无","value":"none"),
+					("txt":"圆","value":"circle"),
+					("txt":"长方形","value":"rectangle"),
+					("txt":"菱形","value":"diamond"),
+					("txt":"三角形","value":"triangle"),
+					("txt":"加号","value":"plus"),
+					("txt":"线","value":"line")		        
+		);
+		markSizeArr:=array(
+		                ("txt":"默认","value":0),
+		                ("txt":"常用","value":5),
+		                ("txt":"中","value":8),
+		                ("txt":"大","value":12),
+		                ("txt":"特大","value":15),
+		        );
+		TorF := array(
+					("txt":"是","value":1),
+					("txt":"否","value":0)
+		); 
+	ax_str:= '左轴';
+	case arr['坐标轴'] of 
+		0:ax_str:= '左轴';
+		1:ax_str:= '右轴';
+		2:ax_str:= '第三轴';
+		3:ax_str:= '第四轴';
+	end;
+  if not istable(arr['主要刻度']) then arr['主要刻度']:= array();
+  if not istable(arr['次要刻度']) then arr['次要刻度']:= array();
+  if not istable(arr['主要网格线']) then arr['主要网格线']:= array();
+  if not istable(arr['次要网格线']) then arr['次要网格线']:= array();
+  
+	return array((
+								("txt":"删除","type":"button","attr":("onclick":"return chartY_mgr(this,0);","css":("margin-left":"10px","border":"0px black solid","color":"blue"))),
+								("txt":" 图","type":"select","value":arr['图形属性']?:'',"attr":("dataType":"num","property":"图形属性:图表类型和坐标轴:"+tostring(i)+":图形属性","css":()),"options":YType),
+								("txt":"数据列名","type":"input","value":arr['系列名']?:'*',"required":false,"requiredMark":"","attr":("title":"如为空或*,则默认数据第二列开始至最后一列作为y轴","property":"图形属性:图表类型和坐标轴:"+tostring(i)+":系列名","css":("width":"180px",))),
+								("type":"text","txt":"更多","sub":
+												("Content":(
+																		 (("txt":"图例别名","type":"input","value":arr['图例别名']?:'',"attr":("property":"图形属性:图表类型和坐标轴:"+tostring(i)+":图例别名","css":("width":"60px")))),
+																		 (
+																		 	("txt":"标识","type":"select","value":arr['标识类型']?:'',"attr":("property":"图形属性:图表类型和坐标轴:"+tostring(i)+":标识类型","css":()),"options":Yidentifying),
+																		 	("txt":"大小","type":"select","value":arr['大小']?:'',"attr":("dataType":"num","property":"图形属性:图表类型和坐标轴:"+tostring(i)+":大小","css":()),"options":markSizeArr)
+																		 ),
+																		 (("txt":"空值连续","type":"select","value":arr['空值是否连续']?:'',"attr":("property":"图形属性:图表类型和坐标轴:"+tostring(i)+":空值是否连续","dataType":"num","css":()),"options":TorF),
+																		 	("txt":"线宽","type":"select","value":arr['线宽']?:1,"attr":("property":"图形属性:图表类型和坐标轴:"+tostring(i)+":线宽","dataType":"num","css":("width":"40px")),"options":Width),
+																		 	("txt":"颜色","type":"colorpicker","value":arr['颜色']?:"","attr":("property":"图形属性:图表类型和坐标轴:"+tostring(i)+":颜色","css":("width":"40px")))
+																		 ),
+																		 (("txt":"坐标轴设置","type":"text","attr":("css":("display":"block","font-weight":"bold")))),
+																		 (("txt":"坐标轴","type":"select","value":arr['坐标轴']?:0,"attr":("chartProperty":"axisSelect","datatype":"num","property":"图形属性:图表类型和坐标轴:"+tostring(i)+":坐标轴"),"options":YName)),
+																		 //---//图形属性:图表类型和坐标轴:----end--
+																		 (//图形属性:Y轴:左轴:+
+																			("txt":"轴名","type":"input","value":arr['轴名']?:'',"attr":("property":"图形属性:Y轴:"+tostring(i)+":"+ax_str+":轴名","chartProperty":"chartAxis","css":("width":"80px"))),
+																			//("txt":"颜色","type":"colorpicker","attr":("property":"轴名称:颜色")),
+																			("txt":"位置","type":"select","value":arr['位置']?:'',"attr":("property":"图形属性:Y轴:"+tostring(i)+":"+ax_str+":位置","chartProperty":"chartAxis"),"options":YPos),
+																			//("txt":"类型","type":"select","value":arr['类型']?:'',"attr":("property":"图形属性:Y轴:"+tostring(i)+":"+ax_str+":类型","chartProperty":"chartAxis"),"options":(("txt":"文本","value":"文本"),("txt":"时间","value":"时间"),("txt":"数字","value":"数字"))),
+																		),(
+																			("txt":"轴单位","type":"input","value":arr['单位']?:'',"attr":("property":"图形属性:Y轴:"+tostring(i)+":"+ax_str+":单位","chartProperty":"chartAxis","css":("width":"60px"))),
+																			("txt":"轴宽度","type":"select","value":arr['轴宽度']?:1,"attr":("property":"图形属性:Y轴:"+tostring(i)+":"+ax_str+":轴宽度","chartProperty":"chartAxis","dataType":"num","css":("width":"60px")),"options":Width),
+																			("txt":"轴颜色","type":"colorpicker","value":arr['轴颜色']?:'',"attr":("property":"图形属性:Y轴:"+tostring(i)+":"+ax_str+":轴颜色","chartProperty":"chartAxis","css":("width":"60px")))
+																		),(("txt":"最大值","type":"input","value":arr['最大值']?:'',"attr":("property":"图形属性:Y轴:"+tostring(i)+":"+ax_str+":最大值","chartProperty":"chartAxis","css":("width":"60px"))),
+																			("txt":"最小值","type":"input","value":arr['最小值']?:'',"attr":("property":"图形属性:Y轴:"+tostring(i)+":"+ax_str+":最小值","chartProperty":"chartAxis","css":("width":"60px"))),
+																			)
+																			,																			
+																			(("type":"text","txt":"主要网格线","attr":("css":("display":"block","font-weight":"bold")))),
+																			(("txt":"颜色","type":"colorpicker","value":arr['主要网格线']['颜色']?:'',"attr":("property":"图形属性:Y轴:"+tostring(i)+":"+ax_str+":主要网格线:颜色","chartProperty":"chartAxis","css":("width":"60px"))),																			
+																			("txt":"线宽","type":"select","value":arr['主要网格线']['线宽']?:1,"attr":("property":"图形属性:Y轴:"+tostring(i)+":"+ax_str+":主要网格线:线宽","chartProperty":"chartAxis","dataType":"num","css":("width":"40px")),"options":Width),
+																			("txt":"间隔","type":"input","value":arr['主要网格线']['间隔']?:'',"attr":("property":"图形属性:Y轴:"+tostring(i)+":"+ax_str+":主要网格线:间隔","chartProperty":"chartAxis","css":("width":"40px"))),
+																			),
+																			(("type":"text","txt":"次要网格线","attr":("css":("display":"block","font-weight":"bold")))),
+																			(("txt":"颜色","type":"colorpicker","value":arr['次要网格线']['颜色']?:'',"attr":("property":"图形属性:Y轴:"+tostring(i)+":"+ax_str+":次要网格线:颜色","chartProperty":"chartAxis","css":("width":"60px"))),																			
+																			("txt":"线宽","type":"select","value":arr['次要网格线']['线宽']?:'',"attr":("property":"图形属性:Y轴:"+tostring(i)+":"+ax_str+":次要网格线:线宽","chartProperty":"chartAxis","dataType":"num","css":("width":"40px")),"options":Width),
+																			("txt":"间隔","type":"input","value":arr['次要网格线']['间隔']?:'',"attr":("property":"图形属性:Y轴:"+tostring(i)+":"+ax_str+":次要网格线:间隔","chartProperty":"chartAxis","css":("width":"40px")))
+																	 
+																	 )
+																	 )
+												),
+										"attr":("css":("margin-left":"8px","font-size":"10px","color":"#FA9300","cursor":"pointer"))
+										)));	
+end;
+
+function OutForm.outElementType();
+begin
+	   conf := getElementConfig();
+	   html := "";
+	   for i := 0 to length(conf['Base'])-1 do
+	   html += '<div><span class="comType" comID="'+conf['Base'][i]['Value']+'">'+conf['Base'][i]['Txt']+'</span></div>';
+	   html := '<div class="Element_Base">'+html+'</div>';
+	   
+	   for j := 0 to length(conf['Layout'])-1 do
+	   html += '<div><span class="comType" comID="'+conf['Layout'][j]['Value']+'">'+conf['Layout'][j]['Txt']+'</span></div>';
+	   html := '<div class="Element_Layout">'+html+'</div>';	  
+	   
+	   html := '<div class="Element_EType">'+html+'</div>';
+	   return html;
+end;
+
+function OutForm.getElementEditFormConfig(data);
+begin	   
+	   conf  := array();	   
+	   op := data['op'];
+	   EID := data['EID'] ? data['EID'] :'';
+	   EName := data['NAME'] ? data['NAME']:'';	  
+	   Element_Labels := data['LABELS'] ? data['LABELS'] :'';
+	   Element_IfProduct := data['TIP2'] ? data['TIP2'] : '';
+	   Element_IfCommon := data['TIP3'] ? data['TIP3'] :'';
+	   Element_IfReportDate := data['TIP1'] ? data['TIP1'] :'';
+	   Element_IfAutoInherit := data['TIP4'] ? data['TIP4'] :'';
+	   Element_IfDifference := data['TIP5'] ? data['TIP5'] :'';	   
+	   Element_IfNewLine := data['Conf'] and data['Conf']['Newline'] ? data['Conf']['Newline'] :1;
+	   Element_Auditors := data['Auditors'];
+	   Element_Editors := data['Editors'];
+	   DataSource := data['Conf']['DataSource'];	   
+	   Element_ElementType := data['Conf']['Type'];
+	   ETypeArr := getElementConfig()['Base'];	   
+	   conf &= array(("Content":((("type":"hidden","txt":"EID","value":EID,"attr":("property":"Element_EID","class":"Element_EID")),
+                                ("type":"hidden","txt":"Group","value":"Base","attr":("property":"Element_Group")),                               
+                                ("type":"hidden","txt":"op","value":op,"attr":("property":"Element_op"))
+                                ))));
+	   conf &= array(("Content":((("type":"input","txt":"元素名称","value":EName,"required":true,"attr":("property":"Element_Name"))                          
+                                ))));
+     conf &= array(("Content":((("type":"input","txt":"标&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;签","onblur":"Element_Labels(this)","value":Element_Labels,"attr":("property":"Element_Labels","class":"Element_Labels"))                           
+                              ))));
+     conf &= array(("Content":(labelsArr)));   
+     //************标签处理***********//
+     queryData := array();
+	   queryData['Table'] := 'TS_TElabel';
+	   queryData['QueryStr'] := '';
+	   ELabels := str2Array(Element_Labels);
+	   labels := class(ExecuteSQL).query(queryData);
+     arr := array();
+     for i := 0 to length(labels)-1 do
+     begin
+     	    len := i div 5;
+     	    if not ifArray(arr[len]) then
+     	    arr[len] := array();
+     	    arr[len][length(arr[len])] := labels[i];
+     end;
+     for j := 0 to length(arr)-1 do
+     begin     	    
+     	    marks := array();
+     	    if j = 0 then
+     	    marks[length(marks)]  := array("type":"text","txt":"所有标签","attr":("class":"Element_Label_Title"));	   
+     	    for k := 0 to length(arr[j])-1 do
+				  begin				   	    
+				   	    len := length(marks);	   	    
+                marks[len] := array("type":"button","txt":arr[j][k]['NAME'],"onclick":"Element_AddLabel(this)","attr":("class":"tag"));				   	   
+				        if arr[j][k]['NAME'] in ELabels then
+	              marks[len]['attr']['class'] := 'tag_added';
+				  end;
+          conf &= array(("Content":(marks)));
+     end;
+     //***************END*************//
+     if Element_IfProduct then
+     begin
+     conf &= array(("Content":((("type":"radio","txt":"产品相关","checked":"true","attr":("property":"Element_IfProduct","name":"formradio1")),                            
+                                 ("type":"radio","txt":"通用","attr":("property":"Element_IfCommon","name":"formradio1"))  
+                           ))));
+     end
+     else
+     begin
+          conf &= array(("Content":((("type":"radio","txt":"产品相关","attr":("property":"Element_IfProduct","name":"formradio1")),                            
+                                 ("type":"radio","txt":"通用","checked":"true","attr":("property":"Element_IfCommon","name":"formradio1"))  
+                           ))));
+     end;
+     if Element_IfReportDate then
+     begin
+     	    conf &= array(("Content":((("type":"checkbox","checked":"true","txt":"报告期相关","attr":("property":"Element_IfReportDate"))                           
+                           ))));
+     end
+     else
+     begin
+     	    conf &= array(("Content":((("type":"checkbox","txt":"报告期相关","attr":("property":"Element_IfReportDate"))                           
+                           ))));
+     end;
+     if Element_IfAutoInherit then
+     begin
+     	    conf &= array(("Content":((("type":"checkbox","checked":"true","txt":"自动沿用上期数据","attr":("property":"Element_IfAutoInherit"))                           
+                           ))));
+     end
+     else
+     begin
+     	    conf &= array(("Content":((("type":"checkbox","txt":"自动沿用上期数据","attr":("property":"Element_IfAutoInherit"))                           
+                           ))));
+     end;
+     if Element_IfDifference then
+     begin
+     	    conf &= array(("Content":((("type":"checkbox","checked":"true","txt":"强调与上期数据的差异","attr":("property":"Element_IfDifference"))                           
+                           ))));
+     end
+     else
+     begin
+     	    conf &= array(("Content":((("type":"checkbox","txt":"强调与上期数据的差异","attr":("property":"Element_IfDifference"))                           
+                           ))));
+     end;
+     //************//
+     if Element_ElementType <> 'WordFile' then
+     begin
+		     options1 := array();
+		     for i := 0 to length(ETypeArr)-1 do
+		     begin
+		     	    if Element_ElementType = ETypeArr[i]['Value'] then
+		     	    options1[i] := array("txt":ETypeArr[i]['Txt'],"value":ETypeArr[i]['Value'],"linkage":"c"+tostring(i),"selected":"true")
+		     	    else
+		     	    options1[i] := array("txt":ETypeArr[i]['Txt'],"value":ETypeArr[i]['Value'],"linkage":"c"+tostring(i));     	    
+		     end;
+		     conf &= array(("Content":((("type":"select","txt":"显示方式","attr":("property":"Element_ElementType","class":"Element_ElementType"),"options":options1),
+		                              ("type":"button","txt":"预设样式","attr":("property":"Element_SetStyle","class":"Element_SetStyle"),"onclick":"Element_SetStyle(this)")
+		                           ))));
+		     options2 := array();     
+		     if DataSource['From'] = 'userDefined' then
+		     begin
+		     	    options2 := array(("txt":"模型","value":"model","linkage":"DataSource"),("txt":"用户自定义","value":"useDefined","selected":"true","linkage":"DataSource_Null"));
+		     end
+		     else
+		     begin
+		     	    options2 := array(("txt":"模型","value":"model","linkage":"DataSource"),("txt":"用户自定义","value":"useDefined","linkage":"DataSource_Null"));
+		     end;
+		     conf &= array(("Content":((("type":"select","txt":"数据来源","attr":("property":"Element_DataSource"),"options":options2)
+		                           ))));
+		     if DataSource['From'] = 'model' then
+		     begin
+		     	    conf &= array(("linkname":"DataSource","Content":((("type":"autocomplete","txt":"模型名称","value":DataSource['ModelName'],"source":("type":"tsf","name":"TFormGetUserFuns","param":(Class(TWebFundIDSConfig).getDefaultClientUser())),"attr":("property":"Element_ModelName")),
+		                       ("type":"input","txt":"下标名称","attr":("property":"Element_FieldName"),"value":DataSource['Field'])          
+		                        ))));
+		     end
+		     else
+		     begin
+		     	    conf &= array(("linkname":"DataSource","Content":((("type":"autocomplete","txt":"模型名称","source":("type":"tsf","name":"TFormGetUserFuns","param":(Class(TWebFundIDSConfig).getDefaultClientUser())),"attr":("property":"Element_ModelName")),
+		                       ("type":"input","txt":"下标名称","attr":("property":"Element_FieldName"))          
+		                        ))));
+		     end;    
+     end
+     else
+     begin
+     	    conf &= array(("Content":((("type":"hidden","txt":"显示方式","attr":("property":"Element_ElementType","class":"Element_ElementType"),"value":Element_ElementType)		                              
+		                        ))));
+     end;
+     //*****************//
+     if Element_IfNewline then
+     begin
+     	    conf &= array(("Content":((("type":"checkbox","txt":"在元素末尾换行","attr":("property":"Element_Newline"),"checked":"true")               
+                        ))));
+     end
+     else
+     begin
+     	    conf &= array(("Content":((("type":"checkbox","txt":"在元素末尾换行","attr":("property":"Element_Newline"))               
+                       ))));
+     end;
+     DataRights := array();
+     DataRights[0] := array(("type":"input","txt":"审核人","attr":("class":"Element_Auditors","property":"Element_Auditors"),"value":Element_Auditors));
+     EditorList := array();
+     if ifArray(Element_Editors) then
+     begin		    
+		     for j := 0 to length(Element_Editors)-1 do
+		     begin
+		     	    len := length(DataRights);
+		     	    DataRights[len] := array(("type":"input","txt":"维护人","attr":("class":"Element_Editor_Users0","property":"DMUsers:Element_Editor_Users"+tostring(j)),"value":Element_Editors[j]['USERID']),
+				                               ("type":"input","txt":"负责产品","attr":("class":"Element_Editor_Products"+tostring(j),"property":"DMProducts:Element_Editor_Products"+tostring(j)),"value":Element_Editors[j]['PRODUCTS']),
+				                               ("type":"button","txt":"删除","onclick":"Element_DeleteRights(this)"));
+		     end;
+		 end
+		 else
+		 DataRights[length(DataRights)] := array(("type":"input","txt":"维护人","attr":("class":"Element_Editor_Users0","property":"DMUsers:Element_Editor_Users0"),"value":''),
+				                               ("type":"input","txt":"负责产品","attr":("class":"Element_Editor_Products0","property":"DMProducts:Element_Editor_Products0"),"value":''),
+				                               ("type":"button","txt":"删除","onclick":"Element_DeleteRights(this)"));
+     
+     DataRights[length(DataRights)] := array(("type":"button","txt":"增加维护人","attr":("property":"Element_AddEditor"),"onclick":"Element_AddEditor(this)"));
+     conf &= array(("ItemName":"责权关系","Content":DataRights));
+     return conf;
+end;
+
+function OutForm.outElementEditForm(data);
+begin	   
+	   conf := data['Conf'];	   
+	   case conf['Type'] of
+	   'Title': tsFormConf := getTitleFormConfig(data);
+	   'Category':tsFormConf := getCategoryFormConfig(data);
+	   'Newline','PageBreak':tsFormConf := getCommonFormConfig(data);
+	   else
+	   tsFormConf := getElementEditFormConfig(data);
+	   end;
+	   f := CreateObject("TForm") ;
+	   f.config := tsFormConf ;
+		 f.partitionLine := false ;
+		 f.showNavigation := false;
+		 f.button := array("button":(("attr":("class":"Element_Save"),"action":"submit","icon":"ui-icon-disk","title":"完成","callBack":("type":"tsf","name":"Element.saveElementConf"),"success":("dataType":"html","js":"Element_outHtml"))),
+			                  "align":"left"
+			                 ) ;
+			html :=  f.GainHtml();
+			return html;	   
+end;
+
+function OutForm.getTemplateFormConfig(data);
+begin
+	   uid := data['UID']?data['UID']:'';
+	   queryData := array();	   	   
+	   conf := array();
+     conf &= array(("Content":((("type":"input","txt":"模板名称","required":true,"attr":("property":"Model_TemplateName"))               
+                   ))));     
+     conf &= array(("Content":((("type":"input","txt":"标&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;签","onblur":"Element_Labels(this)","value":"","attr":("property":"Model_Labels","class":"Model_Labels Element_Labels"))                           
+                              ))));      
+     //**********标签处理************//
+     queryData := array();
+	   queryData['Table'] := 'TS_TElabel';
+	   queryData['QueryStr'] := '';	  
+	   labels := class(ExecuteSQL).query(queryData);
+     arr := array();
+     for i := 0 to length(labels)-1 do
+     begin
+     	    len := i div 5;
+     	    if not ifArray(arr[len]) then
+     	    arr[len] := array();
+     	    arr[len][length(arr[len])] := labels[i];
+     end;
+     for j := 0 to length(arr)-1 do
+     begin     	    
+     	    marks := array();
+     	    if j = 0 then
+     	    marks[length(marks)]  := array("type":"text","txt":"所有标签","attr":("class":"Element_Label_Title"));	   
+     	    for k := 0 to length(arr[j])-1 do
+				  begin				   	    
+				   	    len := length(marks);	   	    
+                marks[len] := array("type":"button","txt":arr[j][k]['NAME'],"onclick":"Element_AddLabel(this)","attr":("class":"tag"));				       
+				  end;
+          conf &= array(("Content":(marks)));
+     end;     
+     //*************END**************//                
+     conf &= array(("Content":((("type":"hidden","txt":"创建人/修改人","attr":("property":"Model_TemplateUID"),"value":UID)               
+                   ))));          
+     return conf;
+end;
+
+function OutForm.outTemplateForm(data);
+begin	  	   
+	   if not ifArray(data) then return;
+	   tformconf := getTemplateFormConfig(data);
+	   f := CreateObject("TForm") ;
+	   f.config := tformconf;
+		 f.partitionLine := false ;
+		 f.showNavigation := false;
+		 f.button := array("button":(("action":"submit","icon":"Model_Template_Sure","title":"确定","callBack":("type":"tsf","name":"Element.saveTemplateConf"),"success":("dataType":"html","js":"Template_outHtml")),
+		                             //("action":"close","icon":"Model_Template_Cancel","title":"取消")
+		                            ),
+			                 "align":"left"
+			                 );
+			html :=  f.GainHtml();
+			return html;	   
+end;

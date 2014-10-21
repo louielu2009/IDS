@@ -1,0 +1,24 @@
+type TSWebGraph=class
+	FConf;
+	FData;
+	function Create(pData,pConf);
+	function Draw();
+	class function setGraphLib(Header);
+end;
+
+function TSWebGraph.Create(pData,pConf);
+begin
+	FData:=pData;
+	FConf:=pConf;
+end;
+
+function TSWebGraph.Draw();
+begin
+	obj:=CreateObject("TWebsiteGraph",FData,FConf);
+	obj.draw();
+end;
+
+class function TSWebGraph.setGraphLib(Header);
+begin
+	TSBinderDrawGraphHeader(Header);
+end;

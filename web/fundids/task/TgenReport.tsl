@@ -1,0 +1,376 @@
+try
+     	TaskID := SysParamStr(1) ;   
+except
+     	return echo "没有相应任务！！！"; 
+end;
+ 
+if not taskID then return echo "没有相应任务！！！";      
+ 
+
+queryData := array();
+queryData['Table'] := 'TS_ReportInfo';
+queryData['QueryStr'] := "ID ='"+tostring(TaskID)+"'";
+r := class(ExecuteSQL).query(queryData);
+if not ifArray(r)or not length(r) then
+begin     
+   return;	       
+end; 		 
+r := r[0];
+{  
+TID := r['TID']?r['TID']:'';        
+sql := "select * from TS_RTemplateE a left join TS_RTemplateElement b on a.EID = b.EID where TID='"+TID+"' order by SERIESID asc";
+if not execSQL(class(TWebFundIDSConfig).getDBAlia(),sql,Elements) or  not length(Elements) then    
+begin
+    f := update sqltable 'TS_ReportInfo' of class(TWebFundIDSConfig).getDBAlia() set ['STATUS'] = 4 where ['ID'] = r['ID'] end;
+    return;
+end
+else
+    f := update sqltable 'TS_ReportInfo' of class(TWebFundIDSConfig).getDBAlia() set ['STATUS'] = 2 where ['ID'] = r['ID'] end;
+EIDs := `(Elements[:,array('EID')]);
+EIDs := EIDs['EID'];
+EData :=  _getReportData(array('EIDs':EIDs,'ReportDate':r['REPORTDATE'],'FundID':r['FUNDID']));
+Elements := select [1].*,[2].['DATA'] as 'Data' from Elements left join EData on [1].['EID'] = [2].['EID'] end;
+Elements := _convertEData(Elements);
+EArr := _genDocumentFlow(Elements);
+}
+ReportData := createObject('ReportData');
+EArr := ReportData.getWordReportData(TaskID);
+if not ifArray(EArr) then    
+begin
+    f := update sqltable 'TS_ReportInfo' of class(TWebFundIDSConfig).getDBAlia() set ['STATUS'] = 4 where ['ID'] = r['ID'] end;
+    return;
+end
+else
+    f := update sqltable 'TS_ReportInfo' of class(TWebFundIDSConfig).getDBAlia() set ['STATUS'] = 2 where ['ID'] = r['ID'] end;
+Conf := array();
+for j := 0 to length(EArr)-1 do
+begin     	    
+    len := length(Conf);
+    EArr[j]['CONF'] := EArr[j]['CONF']? STM(EArr[j]['CONF']):array();   
+    Data := EArr[j]['Data'];    
+    Conf[len]['Type'] := EArr[j]['type'];    
+    Conf[len]['lv'] := EArr[j]['lv'];
+    Conf[len]['content'] := EArr[j]['content'];
+    Conf[len]['OriginC'] := EArr[j]['OriginC'];
+    Conf[len]['setTitle'] := EArr[j]['setTitle'];    
+    if EArr[j]['EID'] then    
+    Conf[len]['NewLine'] := EArr[j]['CONF'] and not ifnil(EArr[j]['CONF']['NewLine']) ? EArr[j]['CONF']['NewLine']:1;
+    if EArr[j]['type'] = 'txt' then
+    begin     	    	       	    	   
+    	   Data := Data ? stm(data):'';
+    	   GlobalName := tostring(EArr[j]['EID'])+'_TxtData';     	    	   
+    	   Conf[len]['Conf'] := EArr[j]['CONF'];
+    	   Conf[len]['Data'] := GlobalName;
+    	   SetSysParam(GlobalName,Data);
+    end
+    else if EArr[j]['type'] = 'table' then
+    begin     	    	 
+    	   Data := Data ? stm(data):'';
+    	   GlobalName := tostring(EArr[j]['EID'])+'_TabData';     	    	   
+    	   Conf[len]['Conf'] := Earr[j]['CONF'];
+    	   Conf[len]['Data'] := GlobalName;
+    	   SetSysParam(GlobalName,Data);     	    	  
+    end
+    else if EArr[j]['type'] = 'pic' then
+    begin     	    	   
+    	   Data := Data ? stm(data):'';
+    	   randomize();
+    	   GlobalName := tostring(EArr[j]['EID'])+'_PicData';
+    	   FilePath := class(TWebFundIDSConfig).getFileBasePath()+'reportData\\temp\\'+tostring(EArr[j]['EID'])+'_PicData_'+tostring(random())+'.xls';    	   
+    	   Conf[len]['Conf'] := Earr[j]['CONF']['Conf'];
+    	   Conf[len]['Data'] := GlobalName;
+    	   ChartConf := array('Data':Data,'Conf':EArr[j]['CONF']['Conf']);
+    	   _genExcel(FilePath,ChartConf);
+    	   SetSysParam(GlobalName,FilePath);
+    end
+    else if EArr[j]['type'] = 'wordfile' then
+    begin    	   
+    	   Data := Data ? data:'';
+    	   randomize();
+    	   GlobalName := tostring(EArr[j]['EID'])+'_WordFileData';
+    	   FilePath := class(TWebFundIDSConfig).getFileBasePath()+'reportData\\temp\\'+tostring(EArr[j]['EID'])+'_WordData_'+tostring(random())+'.doc';
+    	   if Data then
+    	   begin
+    	        if writeFile(rwBinary(),'',FilePath,0,length(Data),Data) then     	         
+              Conf[len]['Conf'] := Earr[j]['CONF'];
+         end;
+         Conf[len]['Data'] := GlobalName;         
+         SetSysParam(GlobalName,FilePath);
+    end
+    else
+    begin
+    	   Conf[len]['Conf']:= EArr[j]['CONF'];
+    end; 
+end;  
+randomize();
+WordTFile := class(TWebFundIDSConfig).getTemplateRootPath()+'Word_Template\\default.doc'; 
+destFile := class(TWebFundIDSConfig).getFileBasePath()+'reportData\\temp\\'+tostring(r['TITLE'])+tostring(random())+'.doc';
+setSysParam('Conf',Conf);
+if wordTemplate('',WordTFile,destFile) then
+begin   
+   if not readFile(rwBinary(),'',destFile,0,fileSize('',destFile),fileContent) then
+   f := update sqltable 'TS_ReportInfo' of class(TWebFundIDSConfig).getDBAlia() set ['STATUS'] = 4 where ['ID'] = r['ID'] end
+   else
+   f := update sqltable 'TS_ReportInfo' of class(TWebFundIDSConfig).getDBAlia() set ['STATUS'] = 3,['REPORTDATA'] = fileContent where ['ID'] = r['ID'] end;   
+end
+else
+begin   
+   f := update sqltable 'TS_ReportInfo' of class(TWebFundIDSConfig).getDBAlia() set ['STATUS'] = 4 where ['ID'] = r['ID'] end;
+end;
+
+function _genExcel(filePath,Conf);
+begin    
+     srcFile :=  class(TWebFundIDSConfig).getTemplateRootPath()+'Excel_Template\\chart.xls';     
+     if not fileExists('',srcFile) then
+	   return;	   
+	   fileCopy('',srcfile,'',filePath); 	 	   
+	   data := Conf['Data'];	   
+	   if  not ifArray(data) or not length(data) then return;	   
+	   xName := Conf['Conf']['X轴']['X轴列名'];	  	   
+	   xData := select [xName] from data end;	   	   	   	   
+	   data := select * from xData join data on [1].[xName] = [2].[xName] end;	  	 
+	   mark := getAllIndexs(Conf['Conf']['图表类型和坐标轴']);	   	   	   
+     arrIndex := getAllIndexs(data[0]);     
+     chart := _seriesArr(arrIndex,Conf['Conf']['图表类型和坐标轴']);         
+     chartConf := _getChartConf(Conf); //获取图表相关配置信息，返回数组     
+     mc:= createObject('ExcelChart',data,chart);	           	   		           	   		           	  
+     mc.ColorArr := array(
+     RGB(248,147,67),
+     RGB(249,208,93),
+     RGB(239,250,92),					         
+     RGB(251,83,87),
+     RGB(60,212,228),
+     RGB(77,36,252),
+     RGB(114,82,252),
+     RGB(251,83,227),					        
+     RGB(118,252,82),
+     RGB(90,90,90),
+     RGB(252,26,20), 
+     RGB(252,98,82)
+     ); 	        
+     mc.ChartName := "Chart";
+     mc.SheetName := "Data";
+     mc.Conf := chartConf;
+	   mc.IfFormatData := true ;
+	   mc.FileSavePath := filePath;
+	   mc.PlotBy := xlColumns();//xlRows()
+	   mc.Elevation := 0 ;
+	   mc.Rotation := 0 ;
+	   mc.GenChart() ;  
+end;
+
+function _convert(x);
+begin
+		h:=array(49:73,1:51,2:52,3:53,8:57,9:58,14:4,17:65,21:5,27:-4169,32:1,33:76,26:71,4:54,5:55,6:56,7:-4100,10:59,11:60,12:61,13:62,15:63,16:64,18:66,19:67,20:-4101,22:5,23:68,24:69,25:70,28:72,29:73,30:74,31:75,34:77,35:-4098,36:78,37:79,38:89,45:-4151);		
+		return h[x];
+end;
+
+function _seriesArr(indexArr,Conf);
+begin
+     arr := array();
+     mark := getAllIndexs(Conf);
+     if not ifArray(indexArr) or not ifArray(Conf) then return arr;     
+     for i := 0 to length(indexArr)-1 do
+     begin  
+          len := length(arr);
+          if i = 0 then
+          begin
+          	 arr[len]['type'] :=  _convert(Conf['*']['图形属性']);
+             arr[len]['series'] := 'xline';                        
+             continue; 
+          end;
+          if '*' in mark then 
+          begin
+          	 arr[len]['type'] :=  _convert(Conf['*']['图形属性']);
+             arr[len]['series'] := 'yline';
+             arr[len]['value'] := len+1;
+             arr[len]['color'] := Conf['*']['颜色'] ? _rgb(Conf['*']['颜色']):'';
+             if Conf['*']['坐标轴']>0 then
+             arr[len]['second'] := 1;
+             continue;
+          end
+          for j := 0 to length(mark)-1 do
+          begin          	   
+          	   if LeftBStr(mark[j],1)='*' and RightBStr(mark[j],1)<>'*' then
+          	   begin
+          	        if not AnsiEndsText(rightstr(mark[j],lengthw(mark[j])-1),indexArr[i]) then continue;
+          	   end
+          	   else if RightBStr(mark[j],1)='*' and LeftBStr(mark[j],1)<>'*' then
+          	   begin
+          	        if not AnsiStartsStr(rightstr(mark[j],lengthw(mark[j])-1),indexArr[i]) then continue;
+          	   end
+          	   else
+          	   begin
+          	        if not AnsiContainsText(indexArr[i],mark[j]) then continue;            	   
+          	   end;
+          	   arr[len]['type'] := _convert(Conf[mark[j]]['图形属性']);   
+          	   arr[len]['series'] := 'yline';
+          	   arr[len]['value'] := len+1;
+          	   arr[len]['color'] := Conf[mark[j]]['颜色'] ? _rgb(Conf[mark[j]]['颜色']):'';              
+               if Conf[mark[j]]['坐标轴'] >0 then
+               arr[len]['second'] := 1;
+          end;          
+          if arr[len] then continue;
+          arr[len]['series'] := '';
+     end;
+     return arr;
+end;
+
+function _getChartConf(ConfArr);
+begin
+       Conf := array();	   
+	    if ConfArr['Conf']['标题']['内容'] then
+	    begin
+	       Conf['Title'] := ConfArr['Conf']['标题']['内容'];
+	       Conf['Title-Font-Type'] := ConfArr['Conf']['标题']['字体'];
+	       Conf['Title-Font-Size'] := strtointDef(str2Array(ConfArr['Conf']['标题']['大小'],'px')[0],12);
+	       color := ConfArr['Conf']['标题']['颜色'];
+	       Conf['Title-Font-Color'] := _rgb(color);	      
+	    end
+	    if ConfArr['Conf']['X轴']['角度']<> '' then			    					    	   
+  	 	   Conf['Xangle'] := -strtoint(ConfArr['Conf']['X轴']['角度']);
+  	 	if ConfArr['Conf']['X轴']['轴名'] then
+  	 	   Conf['Xtitle'] := ConfArr['Conf']['X轴']['轴名'];
+  	 	if ConfArr['Conf']['X轴']['类型'] then	
+  	 	   Conf['Xtype']  := ConfArr['Conf']['X轴']['类型'];
+  	  if ConfArr['Conf']['X轴']['颜色'] then	
+  	     Conf['XColor']  := _rgb(ConfArr['Conf']['X轴']['颜色']);
+  	 	if ConfArr['Conf']['背景网格']['是否画网格线'] then
+  	 	begin 
+  	 	   Conf['Gridding'] := array();  	 	  	 	
+  	 	   Conf['Gridding']['XMajorGridlines']  := ConfArr['Conf']['X轴']['主要网格线'];
+  	 	   Conf['Gridding']['XMajorGridlines']['颜色'] := _rgb(Conf['Gridding']['XMajorGridlines']['颜色']);
+  	 	   Conf['Gridding']['XSecondGridlines'] := ConfArr['Conf']['X轴']['次要要网格线'];
+  	 	   Conf['Gridding']['XSecondGridlines']['颜色'] := _rgb(Conf['Gridding']['XSecondGridlines']['颜色']);
+  	 	   Conf['Gridding']['YLeftMajorGridlines'] := ConfArr['Conf']['Y轴']['左轴']['主要网格线'];
+  	 	   Conf['Gridding']['YLeftMajorGridlines']['颜色'] := _rgb(Conf['Gridding']['YLeftMajorGridlines']['颜色']);
+  	 	   Conf['Gridding']['YLeftSecondGridlines'] := ConfArr['Conf']['Y轴']['左轴']['次要要网格线'];
+  	     Conf['Gridding']['YLeftSecondGridlines']['颜色'] := _rgb(Conf['Gridding']['YLeftSecondGridlines']['颜色']);
+  	     Conf['Gridding']['YRightMajorGridlines'] := ConfArr['Conf']['Y轴']['右轴']['主要网格线'];
+  	 	   Conf['Gridding']['YRightMajorGridlines']['颜色'] := _rgb(Conf['Gridding']['YRightMajorGridlines']['颜色']);
+  	 	   Conf['Gridding']['YRightSecondGridlines'] := ConfArr['Conf']['Y轴']['右轴']['次要网格线'];
+  	 	   Conf['Gridding']['YRightSecondGridlines']['颜色'] := _rgb(Conf['Gridding']['YRightSecondGridlines']['颜色']);
+  	 	end; 
+  	 	if ConfArr['Conf']['Y轴']['左轴'] then
+  	 	   Conf['Ytitle'] := ConfArr['Conf']['Y轴']['左轴']['轴名'];
+      if ConfArr['Conf']['Y轴']['左轴']['轴颜色'] then
+         Conf['YLeftColor'] := _rgb(ConfArr['Conf']['Y轴']['左轴']['轴颜色']);
+      if ConfArr['Conf']['Y轴']['左轴']['最大值'] then
+         Conf['YLeftMax'] := ConfArr['Conf']['Y轴']['左轴']['最大值'];
+      if ConfArr['Conf']['Y轴']['左轴']['最大值'] then
+         Conf['YLeftMin'] := ConfArr['Conf']['Y轴']['左轴']['最小值'];
+             
+         Conf['Width'] := ConfArr['Conf'][ConfArr['Conf']['视图类型']]['width'];
+     if Conf['Width'] then
+     begin
+     if str2Array(Conf['Width'],'%')[0] <> Conf['Width']  then
+        Conf['Width'] := strtoint(str2Array(Conf['Width'],'%')[0])*0.01
+     else
+        Conf['Width'] := strtoint(str2Array(Conf['Width'],'px')[0])/900;								    
+	   end
+	   else
+	      Conf['Width'] := 1;	      
+	      Conf['Height'] := ConfArr['Conf'][ConfArr['Conf']['视图类型']]['height'] ? (ifString(ConfArr['Conf'][ConfArr['Conf']['视图类型']]['height']) ? strtoint(str2Array(ConfArr['Conf'][ConfArr['Conf']['视图类型']]['height'],'px')[0]):ConfArr['Conf'][ConfArr['Conf']['视图类型']]['height']) : 300;	 	     
+	   if not ConfArr['Conf']['图例格式']['可见'] then   	    
+	      Conf['LegendPos'] := ""
+	   else
+	      begin
+	      case ConfArr['Conf']['图例格式']['位置'] of
+	      'top' : Conf['LegendPos'] := xlLegendPositionTop() ;
+	      'bottom' : Conf['LegendPos'] := xlLegendPositionBottom();
+	      'left' : Conf['LegendPos'] := xlLegendPositionLeft();
+	      'right' : Conf['LegendPos'] := xlLegendPositionRight();  
+	      //'ne': Conf['LegendPos'] := xlLegendPositionCorner();
+	      else 
+	            Conf['LegendPos'] := xlLegendPositionBottom();
+	      end;
+	      end;	    
+     if ConfArr['Conf']['图形边框']['粗细'] then
+     begin  
+        Conf['Border'] := 1;
+        Conf['Border_Width'] := ConfArr['Conf']['图形边框']['粗细'];
+		    Conf['Border_Color'] := _rgb(ConfArr['Conf']['图形边框']['颜色']);		    
+		 end;
+		 if ConfArr['Conf']['背景颜色'] then
+		    Conf['BackgroundColor'] := _rgb(ConfArr['Conf']['背景颜色']);		 
+		    		              
+     return Conf;
+end;
+
+function _genDocumentFlow(data);
+begin	   
+	   lv1_order := lv2_order := lv3_order := lv4_order := lv5_order := lv6_order := 1;
+	   for i := 0 to length(data)-1 do
+	   begin	   	   
+	   	    if data[i]['type'] = 'title' or data[i]['setTitle'] then
+		   	  begin  
+		   	    data[i]['OriginC'] := data[i]['content'] ; 
+		   	    case data[i]['lv'] of
+				   	    1:
+				   	    begin				            
+				             data[i]['Label'] := inttostr(lv1_order++);
+				             lv2_order := lv3_order := lv4_order := lv5_order := lv6_order := 1;
+				             data[i]['content'] := '§'+data[i]['Label']+data[i]['content'];
+				   	    end;
+				   	    2:
+				   	    begin				   	    	   
+				   	    	   data[i]['Label'] := inttostr(lv1_order-1)+'.'+inttostr(lv2_order++);
+				   	    	   data[i]['content'] := data[i]['Label']+data[i]['content'];				   	    	  
+				   	    end;
+				   	    3:
+				   	    begin				   	    	   
+				   	    	   data[i]['Label'] := inttostr(lv1_order-1)+'.'+inttostr(lv2_order-1)+'.'+inttostr(lv3_order++);
+				   	         data[i]['content'] := data[i]['Label']+data[i]['content'];
+				   	    end;
+				   	    4:
+				   	    begin				   	    	   
+				   	    	   data[i]['Label'] := inttostr(lv1_order-1)+'.'+inttostr(lv2_order-1)+'.'+inttostr(lv3_order-1)+'.'+inttostr(lv4_order++)+'.';
+				   	         data[i]['content'] := data[i]['Label']+data[i]['content'];
+				   	    end;
+				   	    5:
+				   	    begin
+				   	    	   data[i]['Label'] := inttostr(lv1_order-1)+'.'+inttostr(lv2_order-1)+'.'+inttostr(lv3_order-1)+'.'+inttostr(lv4_order-1)+'.'+inttostr(lv5_order++);
+				   	         data[i]['content'] := data[i]['Label']+data[i]['content'];
+				   	    end;
+				   	    6:
+				   	    begin
+				   	    	   data[i]['Label'] := inttostr(lv1_order-1)+'.'+inttostr(lv2_order-1)+'.'+inttostr(lv3_order-1)+'.'+inttostr(lv4_order-1)+'.'+inttostr(lv5_order-1)+'.'+inttostr(lv6_order++);
+				   	         data[i]['content'] := data[i]['Label']+data[i]['content'];
+				   	    end;
+	          end;
+	       end;
+	   end;
+	   return data;	   
+end;
+
+function _getReportData(Data);
+begin
+	   EArr := array();
+	   EIDs := Data['EIDs'];
+	   EIDs := array2Str(EIDs,"','");
+	   ReportDate := Data['ReportDate'];
+	   FundID := Data['FundID'];	   	   
+	   sql := "select a.EID,a.DATA from TS_RFormalData a left join TS_RTemplateElement b on a.EID=b.EID where a.EID in ('"+EIDs+"') and a.STATUS=4 and (b.TIP1=0 or (b.TIP1=1 and a.TIP1='"+tostring(ReportDate)+"')) and (b.TIP2=0 or (b.TIP2=1 and a.TIP2='"+tostring(FundID)+"'))";
+	   if not Execsql(class(TWebFundIDSConfig).getDBAlia(),sql,r) or not length(r) then return EArr;
+	   return r;
+end;
+
+function _convertEData(Data);
+begin     
+     if not ifArray(Data) then return ;
+     for i := 0 to length(Data)-1 do
+     begin         
+          conf := Data[i]['CONF'] ? stm(Data[i]['CONF']): array();
+          if Data[i]['EID'] then
+          Data[i]['type'] := conf['Type']?conf['Type'] :''
+          else
+          Data[i]['type'] := Data[i]['TYPE']?Data[i]['TYPE']:'';
+          if Data[i]['SRC1'] and Data[i]['SRC2'] and Data[i]['SRC3'] then
+          begin              
+               Data[i]['setTitle'] := 1;
+               Data[i]['content'] := Data[i]['SRC2'];
+               Data[i]['lv'] := Data[i]['SRC3'];
+          end;
+     end;     
+     return Data;
+end;

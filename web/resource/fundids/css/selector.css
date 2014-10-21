@@ -1,0 +1,105 @@
+input, textarea, select, button {
+	outline:none;
+}
+
+button {
+
+}
+div.selectorlay {
+	position:fixed;
+	top:0;
+	left:0;
+	width:100%;
+	height:100%;
+	z-index:1000;
+	background-color:#d9d9d9;
+	opacity : 0.3;
+	-moz-opacity : 0.3;
+	filter:Alpha(Opacity=30)/*{opacityFilterOverlay}*/	
+}
+div.selectordiv {
+	display:none;
+	height:400px;
+	z-index: 1001;
+	overflow: auto;
+	font-family: Microsoft Yahei !important;
+	font-size: 12px;
+	position:absolute;
+	left:200px;
+	top:10px;
+}
+
+div.selectordiv table {
+	border-spacing:none;
+	width:100%;
+}
+div.selectordiv .selector_title {
+	text-align: center;
+	font-size: 13px;
+	height:25px;
+}
+
+div.selectordiv select {
+	width:200px;
+	height:330px;
+	outline:none;
+}
+
+div.selectordiv .opButton button {
+	width: 90px;
+	padding: 0;
+	margin: 2px 0;
+}
+.inputloading {
+	background-image: url('/resource/img/loading/loading4.gif');
+	background-repeat: no-repeat;
+	background-color: transparent;
+	background-position: right;
+}
+div.selectordiv .f_level {
+	width:198px;
+	height:328px;
+	border:1px solid #aaaaaa;
+	overflow:auto;
+}
+div.selectordiv .f_level ul {
+	list-style:none;
+	margin:0 auto;
+	padding:0 0 ;		
+}
+div.selectordiv .f_level ul li {
+	border-bottom:1px dashed #9d9d9d;	
+}
+div.selectordiv .f_level ul li a {
+	position: relative;
+	display: block;
+	color: #666666;
+	padding: 0.5em 0 0.5em 1em;
+	font-size: 12px;
+	text-decoration:none;
+}
+div.selectordiv .f_level ul li .sys_submenu {
+	display:none;	
+}
+
+div.selectordiv .f_level ul li .sys_submenu li {
+	border-top: 1px solid #d9d9d9;
+	/* border-right: 1px solid #d9d9d9; */
+	border-bottom: none;
+	background-color: #f7f7f7;
+}
+
+
+div.selectordiv .f_level ul li .sys_submenu li a {
+	display: block;
+	color: #666666;
+	padding: 8px 0 8px 50px;
+	padding: 0.5em 2.5em;
+}
+div.selectordiv .f_level .ui-icon {
+	float:left;	
+}
+
+table tr.filter {
+	cursor:move;	
+}

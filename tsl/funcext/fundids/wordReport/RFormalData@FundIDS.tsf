@@ -1,0 +1,13 @@
+type RFormalData = class
+
+class function query(condition);
+end;
+
+class function RFormalData.query(condition);
+begin
+	   sql := "select * from TS _RFormalData where "+tostring(condition);
+	   if execSQL(class(TWebFundIDSConfig).getDBAlia(),sql,r) then
+	   return r
+	   else
+	   return 0;
+end;

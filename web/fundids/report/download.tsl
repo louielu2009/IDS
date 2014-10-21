@@ -1,0 +1,21 @@
+
+ID := HttpGetQueryValueByName('rid');
+sql := "select * from  TS_ReportInfo where ID='"+tostring(ID)+"'";			 
+if not execSql(class(TWebFundIDSConfig).getDBAlia(),sql,result) or not length(result) then
+begin
+     return echo '<script type="text/javascript">alert("文件下载失败！");</script>';
+end
+else
+begin
+     if result[0]['REPORT_DATA']='' then
+     return echo '<script type="text/javascript">alert("该文件不存在！！！");</script>';             
+     filecontent := result[0]['REPORTDATA'];
+     opentype:='attachment';
+     filetype:='application/octstream';
+     filename:= tostring(result[0]['TITLE'])+'.doc';
+     httpsetheadstring(
+                    'content-disposition:'+opentype+';filename='+filename+'\r\n'+
+                    'content-length:'+inttostr(length(filecontent))+'\r\n'+
+                    'content-type:'+filetype+'\r\n\r\n');
+     echo filecontent;   
+end;

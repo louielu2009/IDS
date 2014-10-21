@@ -1,0 +1,80 @@
+type WordTools = class
+
+function getStyles();overload;
+function getStyles(filePath);overload;
+end;
+
+function WordTools.getStyles();overload;
+begin
+	   filePath := class(TWebFundIDSConfig).getFileBasePath()+'reportData\\template\\Word_Template\\default.doc';
+	   return getStyles(filePath);	   
+end;
+
+function WordTools.getStyles(filePath);overload;
+begin	   	   
+	   if not fileExists('',filePath) then
+	   return 0;	   
+	   StylesLog := class(TWebFundIDSConfig).getFileBasePath()+'reportData\\template\\Word_Template\\wordStyles.log';
+	   TTime := fileTime('',filePath);
+	   if fileExists('',StylesLog) then
+	   begin
+	   	    importFile(ftStream(),'',StylesLog,r);
+	   	    if ifArray(r) and length(r) then
+	   	    begin	   	    	   
+	   	    	   FTime := r['TTime'];
+	   	    	   if FTime = TTime then	 
+	   	    	   return r['TStyles'];  	    	 
+	   	    end;
+	   end;
+	   getOleObject('word.application',3,wordApp);
+	   if not ifObj(wordApp) then
+	   return 0;		 
+		 wordObj := wordApp.documents.open(filePath);
+		 if ifObj(wordObj.Application.Templates("Normal.dotm")) then
+		 wordObj.Application.Templates("Normal.dotm").Saved := true;
+		 if ifObj(wordObj.Application.Templates("Normal.dot")) then
+		 wordObj.Application.Templates("Normal.dot").Saved := true;   
+		 arr := array('Txt':('Base':(),'UserDefined':()),'Table':('Base':(),'UserDefined':()));
+		 styles := wordObj.Styles;
+		 for i := 1 to Styles.count do
+		 begin
+		 	    if Styles.item(i).Type = 3 then
+		 	    begin		 	    	   		 	    	   
+		 	    	   if Styles.item(i).BuiltIn then
+		 	    	   begin
+		 	    	        len := length(arr['Table']['Base']);
+		 	    	        arr['Table']['Base'][len]['value'] := Styles.item(i).NameLocal;
+		 	    	        arr['Table']['Base'][len]['txt'] := Styles.item(i).NameLocal;
+		 	    	   end
+		 	    	   else
+		 	    	   begin
+		 	    	        len := length(arr['Table']['UserDefined']);
+		 	    	        arr['Table']['UserDefined'][len]['value'] := Styles.item(i).NameLocal;
+		 	    	        arr['Table']['UserDefined'][len]['txt'] := Styles.item(i).NameLocal;
+		 	         end;
+		 	         continue;
+		 	    end;
+		 	    if Styles.item(i).Type = 1 then
+		 	    begin
+		 	    	   if Styles.item(i).BuiltIn then
+		 	    	   begin
+                    len := length(arr['Txt']['Base']);
+                    arr['Txt']['Base'][len]['txt'] := Styles.item(i).NameLocal;
+		 	    	        arr['Txt']['Base'][len]['value'] := Styles.item(i).NameLocal;
+		 	      	 end
+		 	    	   else
+		 	    	   begin
+		 	    	        len := length(arr['Txt']['UserDefined']);
+		 	    	        arr['Txt']['UserDefined'][len]['txt'] := Styles.item(i).NameLocal;
+		 	              arr['Txt']['UserDefined'][len]['value'] := Styles.item(i).NameLocal;
+		 	         end;
+		 	         continue;
+		 	    end;
+		 end;
+		 wordObj.application.quit(wdSaveChanges());
+		 r := array();
+		 r['TTime'] := TTime;
+		 r['TStyles'] := arr;	
+		 exportFile(ftstream(),'',StylesLog,r);
+		 return arr;
+end;

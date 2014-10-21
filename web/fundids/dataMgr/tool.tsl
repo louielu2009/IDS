@@ -1,0 +1,106 @@
+
+
+//7、获取用户信息
+obj:= createObject("TWSMemberDB",-1);
+t:= obj.GetMembers();
+echo tostn(t);
+arr:= obj.GetMemberRoles("admin");
+ echo tostn(arr);
+//roles:= obj.GetRoles();
+
+departnent:= obj.GetDepartment();
+
+//echo tostn(t);
+return echo tostn(departnent);
+
+//6、报告权责关系测试
+rid:= '20141015093308982_9868875471511772140';
+obj:= createObject("ElementData");
+arr:= obj.getElementPower(rid);
+//return echo '--',tostn(arr);
+str:= obj.genElementPower(rid);
+return echo str;
+
+eleObj:= createObject("TComBox");
+echo eleObj.genDepartments("");
+return echo tostn(arr);
+
+//Frame := createObject("TWebFrame","TWebFundIDSHeader");
+//Frame.header.outHeader('测试工具');
+///eid:= '20140724142112443_302473662_1763892284';
+//r:= class(TFIDSDataManager).getElementInfo(eid); 
+//echo '<h2>元素配置：</h2>',tostn(r);
+
+setsysparam("ConfigClassName","TWebFundIDSConfig");
+
+//5、根据报告ID获取数据
+id:= '20140903110238562_323602817878657095';
+productionID:='OF202005' ;
+RptID:= today();
+t:= class(TgenReport).getReportData(id,productionID,RptID);
+return echo tostn(t);
+
+//4、获取报告信息
+queryData:= array();
+queryData['Table'] := 'TS_ReportInfo';
+queryData['QueryStr'] := "";
+r:= class(ExecuteSQL).query(queryData);
+
+
+
+r:=class(TgenReport).getReportInfoByID(r[0]['ID']);
+TID:= r[0]['TID'];
+queryData:= array();
+queryData['Table'] := 'TS_RTemplateE';
+queryData['QueryStr'] := " TID='"+TID+"'";
+eArr:= class(ExecuteSQL).query(queryData);
+return echo tostn(eArr);
+return echo tostn(r);
+
+//3、模型名自动完成测试
+<?tslx>
+<script  type="text/javascript" src="/resource/fundids/js/jquery-1.8.3.min.js" ></script>
+<script  type="text/javascript" src="/resource/fundids/js/jquery-ui-1.10.2.custom.min.js" ></script>
+<script  type="text/javascript" src="/resource/toolbox/jquery.json-2.4.min.js" ></script>
+<script  type="text/javascript" src="/resource/toolbox/jquery.extendtool.js" ></script>
+<script  type="text/javascript" src="/resource/form/js/tsform.js" ></script>
+<link rel="stylesheet" rev="stylesheet" href="/resource/form/css/ui.tsform.css" />
+<?tsl
+setSysParam("ConfigClassName","TWebFundIDSConfig"); 
+//r:= TFormGetUserFuns("model_xxpl") ;//直接获取方法
+//return echo tostn(r);
+_alia := getClientAlia() ;
+echo _alia;
+conf := array(("linkname":"DataSource","Content":((("type":"autocomplete","txt":"模型名称","value":"","source":("type":"tsf","name":"TFormGetUserFuns","param":(Class(TWebFundIDSConfig).getDefaultClientUser())),"attr":("property":"Element_ModelName")),
+		                       ("type":"input","txt":"下标名称","attr":("property":"Element_FieldName"),"value":"")  
+		                       ))));
+f := CreateObject("TForm") ;
+f.config := conf ;
+echo '<h2>模型名自动完成</h2>';
+return echo f.GainHtml();
+
+
+//2、元素 data
+setSysParam("ConfigClassName","TWebFundIDSConfig"); 
+setSysParam("EXECUSERID","model_xxpl");
+//eid:= '20140724142112443_302473662_1763892284';
+//r:= class(TFIDSDataManager).getElementInfo(eid); 
+//conf:= r['conf'];
+conf:= Array('Type':'Txt','DataSource':('From':'model','ModelName':'demo_getTxt','Field':''),'Conf':('Name':'样式名'));
+r:= class(TFIDSDataManager).getElementDataByConf(conf,'','');
+echo '<h2>获取元素数据</h2>';
+return echo tostn(r);
+
+//1、获取元素配置
+dbAlia:= class(TWebFundIDSConfig).getDBAlia();
+		sql:= "select * from TS_RTemplateElement";
+		if not  execSQL(dbAlia,sql,r) then return echo sqlErrorMsg();
+	return echo tostn(r);	
+queryData := array();
+queryData['Table'] := 'TS_RTemplateElement';
+	   //queryData['QueryStr'] := "";
+	   TData := class(ExecuteSQL).query(queryData);
+echo '<h2>元素配置信息：</h2>',tostn(TData);
+	   
+
+//return echo '<br/><br/>元素展示：',class(TFIDSDataManager).dispElement(conf,data,viewType);

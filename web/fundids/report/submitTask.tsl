@@ -1,0 +1,68 @@
+Frame := CreateObject("TWebFrame","TWebFundIDSHeader");
+Frame.outHeader("信息披露系统");
+
+rid := httpGetQueryValueByName('rid');
+if not rid then return echo '<script type="text/javascript">alert("操作失败！");</script>';
+
+updateData := array();
+updateData['Table'] := 'TS_ReportInfo';
+updateData['Conf'] := array(('QueryStr':"ID='"+tostring(rid)+"'",'Data':(('Field':'STATUS','Type':'Number','Value':1))));
+r := class(ExecuteSQL).update(updateData);
+if not r then
+return echo '<div class="Report_Status">操作失败！</div>';
+else
+begin
+     echo '<div class="Report_Status">任务已提交,等待执行...</div><input type="hidden" class="Report_ID" value="'+tostring(rid)+'" /><iframe class="Download_Frame" style="display:none;" src=""></iframe>';
+     <?tslx>
+            <script type="text/javascript"> 
+            $(function(){
+               Report_DoAjax();
+            });                       
+            function Report_Download(){
+                                      var RID = $(".Report_ID").attr("value");
+                                      if(!RID)return;
+                                      $(".Download_Frame").attr("src",'/fundids/report/download.tsl?rid='+RID);             
+            }            
+            function Report_DoAjax(){
+                                      var Status = 1,RID= '<?=rid?>';
+                                      $.ajax({
+                                              url :'/fundids/ajax/report_ajax.tsl',
+                                              type:'post',
+                                              cache:false,
+                                              dataType:"json",
+                                              data:{
+                                                    dowhat:'checkReportStatus',
+                                                    RID:RID                                                    
+                                                   },
+                                              success:function(data){
+                                                if(data)
+                                                {
+                                                 var txt = data['htm'],flag = data['Status'];                                                 
+                                                 $(".Report_Status").html(txt);
+                                                 if(flag==3)
+                                                 {
+                                                  $(".Download_Frame").attr("src",'/fundids/report/download.tsl?rid='+RID);
+                                                  Status = 0;
+                                                 }
+                                                 else if(flag==4)
+                                                 {
+                                                  Status = 0;
+                                                 }
+                                                }
+                                                if(Status)
+                                                setTimeout(Report_DoAjax,3*1000);
+                                              }
+                                            });                                    
+                                    }
+            </script>
+     <?tsl 
+end;
+{
+if not rid then
+echo '<script type="text/javascript">alert("下载失败！");</script>';
+
+queryData := array();
+queryData['Table'] := 'TS_ReportInfo';
+queryData['QueryStr'] := "ID='"+tostring(rid)+"'";
+r := class(ExecuteSQL).Query(queryData);
+}

@@ -1,0 +1,35 @@
+
+.main_content{margin-left:280px;}
+.EM_EditConf{position:absolute;display:none;}
+.EM_EditConf img{display:block;margin:0 auto;}
+/********元素样式编辑窗口********/
+.Element_Style{z-index:101;position:absolute;background:#fff}
+.Element_Style_Close{float:right;}
+
+
+.EM_NoData{color:red;padding-left:20px;}
+.EM_Button{height:30px;margin:10px;}
+/*****元素管理******/
+.SearchContent{width:100%;height:30px;}
+.Search_div{width:720px;float:left;margin-left:10px;}
+.txt_search{height:23px;width:660px;border:1px solid #E0E0E0;}
+.btn_search{height:25px;width:50px;border:1px solid #E0E0E0;}
+.EM_Button_AddElement{float:left;margin-left:20px;height:25px;width:80px;background-color:#4672C4; border: 1px solid #4672C4;color: #fff;}
+.EM_CheckBox{margin:10px;}
+.EM_CheckBox label{margin-right: 10px;}
+.span_radio{margin-left:35px;}
+.elements_table{border-collapse:collapse;margin:0px auto;width:100%;}
+.elements_table>tbody>tr:hover{background-color:#EDEDED;}
+.EM_thead_name,.EM_table_name{width:380px;text-align:left;padding:5px 0px 5px 20px;}
+.EM_thead_product,.EM_thead_Rpt,.EM_thead_dis,.EM_thead_audit,.EM_thead_maint,.EM_table_product,.EM_table_Rpt,.EM_table_dis,.EM_table_audit,.EM_table_maint{width:80px;text-align:center;padding:5px 0px 5px 0px;}
+
+
+.ui-button-text{font-size:12px;}
+
+
+
+
+
+
+		
+			

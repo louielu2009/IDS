@@ -1,0 +1,33 @@
+Frame := CreateObject("TWebFrame","TWebFundIDSHeader");
+Frame.outHeader("信息披露系统");
+
+ifLogin := CreateObject('TWSSecurity',-1).CheckLogined();
+if not ifLogin then
+CreateObject('TWebResponse').SendRedirect('/website/security/login.tsl');
+uid := OnlineUserID();
+(*
+uid := httpGetQueryValueByName('UID');
+UID := 'admin';
+TID := utf8toansi(urltotext(httpGetQueryValueByName('tid')));
+//*********2014-06-20-cookie设置********//
+SessionObject := CreateObject("TSessionMan");
+Session:=SessionObject.NewSession(UID);
+Resp:=CreateObject('TWebResponse');
+CookieValues:=CreateObject('TStringList');
+CookieValues.Add("FundIDS_LoginName="+UID);
+CookieValues.Add("FundIDS_sessionid="+Session.SessionId);
+Resp.SetCookieField(CookieValues,'','/',now()+1,false);
+//*************End**************//
+*)
+Ctype := getSysParam('Type');
+setSysparam('UID',uid);
+
+<?tslx>
+<script type="text/javascript">
+		var g_userID= "<?=uid?>";
+		var pageAction = {};      
+		var TID = getQueryString('tid');
+		pageAction['Ctype'] = "<?=Ctype?>";
+		pageAction['UID'] = g_userID;
+		if(TID) pageAction['TID'] = TID;
+</script>

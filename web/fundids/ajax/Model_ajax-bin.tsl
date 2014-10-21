@@ -1,0 +1,322 @@
+httpSetHeadString("Content-Type:text/html; Charset=gb2312;\r\n\r\n") ;
+
+dowhat := utf8toansi(urltotext(httpGetQueryValueByName('dowhat')));
+obj := createObject("TSuggest");
+
+UID := 'admin';
+setSysParam("ConfigClassName","TWebFundIDSConfig");
+if dowhat= 'createNewTemplate' then
+begin
+	   outForm := createObject('OutForm');
+	   html := outForm.outTemplateForm(array());
+	   return echo html;
+end;
+
+if dowhat = 'queryUsers' then
+begin
+     members := array(
+									("label":"张三","value":"张三","name":"张三"),
+									("label":"李四","value":"李四","name":"李四"),
+									("label":"王五","value":"王五","name":"王五"),
+									("label":"阿猫","value":"阿猫","name":"阿猫"),
+									("label":"阿狗","value":"阿狗","name":"阿狗"),
+									("label":"阿鸡","value":"阿鸡","name":"阿鸡"));
+	  update members set ['PY']= array2str( obj.getPinYinData( ["name"] )," ") end;
+	  (*
+	  for i:=0 to length(members)-1 do
+		begin
+			tmp := members[i]['value'];
+			update tmp set ['PY'] = array2str( obj.getPinYinData( ['name'] )," ") end;
+			members[i]['value'] := tmp;
+		end;		
+		*)
+		if not istable(Members) then return echo '{}';
+		return echo Class(TSTool).Arr2Json(members);	
+end;
+
+if dowhat = 'queryProducts' then
+begin
+	   members := array(
+									("label":"SZ000001 平安银行","value":"SZ000001","name":"平安银行"),
+									("label":"SZ000002 万  科Ａ","value":"SZ000002","name":"万  科Ａ"),
+									("label":"SZ000004 国农科技","value":"SZ000004","name":"国农科技"),
+									("label":"SZ000005 世纪星源","value":"SZ000005","name":"世纪星源"),
+									("label":"SZ000006 深振业Ａ","value":"SZ000006","name":"深振业Ａ"),
+									("label":"SZ000007 零七股份","value":"SZ000007","name":"零七股份"),
+									("label":"SZ000008 ST宝利来","value":"SZ000008","name":"ST宝利来"),
+									("label":"SZ000009 中国宝安","value":"SZ000009","name":"中国宝安"),
+									("label":"SZ000010 S ST华新","value":"SZ000010","name":"S ST华新"),
+									("label":"SZ000011 深物业A ","value":"SZ000011","name":"深物业A "));
+   update members set ['PY']= array2str( obj.getPinYinData( ["name"] )," ") end;
+   {	 
+	  for i:=0 to length(members)-1 do
+		begin
+			tmp := members[i]['value'];
+			update tmp set ['PY'] = array2str( obj.getPinYinData( ['name'] )," ") end;
+			members[i]['value'] := tmp;
+		end;		
+		}
+		if not istable(Members) then return echo '{}';
+		return echo Class(TSTool).Arr2Json(members);
+end;
+
+if dowhat = 'addNewElement' then
+begin	   
+	   EType := utf8toansi(urltotext(httpGetQueryValueByName('EType')));	   
+	   randomize();	  
+	   timeStr := FormatDateTime('yyyymmddhhnnssz',now());
+	   EID := timeStr+'_'+inttostr(random(2000000000))+inttostr(random(2000000000))+inttostr(random(2000000000));
+	   insertData := array();
+	   insertData['Table'] := 'TS_RTemplateElement';
+	   insertData['Data'] := array(('EID':EID,'USERID':UID,'STATUS':-1));
+	   r := class(ExecuteSQL).insert(insertData);	  
+	   if not r then return;
+	   data := array();
+	   conf := array('Type':EType,'Conf':(),'DataSource':());
+	   data['EID'] := EID;
+	   data['Conf'] := conf;
+	   data['op'] := 'add';
+	   outForm := createObject('OutForm');	   
+	   html := outForm.outElementEditForm(data);
+     return echo html;
+end;
+
+if dowhat = 'outElementStyle' then
+begin
+	   EID := utf8toansi(urltotext(httpGetQueryValueByName('EID')));
+	   EType := utf8toansi(urltotext(httpGetQueryValueByName('EType')));
+	   NewE := utf8toansi(urltotext(httpGetQueryValueByName('NewE')));
+	   outForm := createObject('OutForm');
+	   data := array();
+	   if not NewE then
+	   begin
+			   queryData := array();
+			   queryData['Table'] := 'TS_RTemplateElement';
+			   queryData['QueryStr'] := "EID='"+tostring(EID)+"'";
+			   data:= class(ExecuteSQL).query(queryData);
+	       if ifArray(data) and length(data) then
+	       begin
+	       	    data := data[0];
+	       	    data['Conf'] := data['CONF']? stm(data['CONF']):array();	       	   
+	       	    if data['Conf']['Type'] <> EType then
+	       	    data['Conf'] := array();	       	    	       	    
+	       end
+	       else
+	       data := array('Type':EType,'Conf':('Name':''));
+	   end
+	   else	     	                  
+	       data['Conf'] := array();
+	   data['Type'] := EType;
+	   data['EID'] := EID;
+	   html:= outForm.outStyleForm(data);
+	   return echo html;	   
+end;
+
+if dowhat = 'editElement' then
+begin	   
+	   EID := utf8toansi(urltotext(httpGetQueryValueByName('EID')));
+	   queryData := array();
+	   queryData['Table'] := 'TS_RTemplateElement';
+	   queryData['QueryStr'] := "EID='"+EID+"'";
+	   r := class(ExecuteSQL).query(queryData);
+	   if not ifArray(r) or not length(r) then return;
+	   r := r[0];
+	   r['Conf'] := stm(r['CONF']);
+	   r['op'] := 'edit';
+	   outForm := createObject('OutForm');
+	   html := outForm.outElementEditForm(r);	  
+	   return echo html;
+end;
+
+if dowhat = 'QTemplateList' then
+begin
+	   TCombox := createObject('TComBox');
+	   html := '';
+	   queryData1 := array();
+	   queryData1['Table'] := 'TS_RTemplateConf';
+	   queryData1['QueryStr'] := 'STATUS= 1';
+	   r1 := class(ExecuteSQL).query(queryData1);
+	   
+	   queryData2 := array();
+	   queryData2['Table'] := 'TS_TElabel';
+	   queryData2['QueryStr'] := '';
+	   r2 := class(ExecuteSQL).query(queryData2);
+	   div1 := '';
+	   div2 := '';
+	   div3 := '';
+	   div1 := '<div class="Model_TemplateList_Search"><input type="text" class="Model_TemplateList_Search_Value" /><button class="Model_TemplateList_Search_Button">搜索</button></div>';	   
+	   div2 := TComBox.genLabels();
+	   div2 := '<ul class="Model_TemplateList_Labels">'+div2+'</ul>';
+	   for j := 0 to length(r1)-1 do
+	   begin
+	   	    div3 += '<li  class="Model_TemplateList_Template" tid="'+tostring(r1[j]['TID'])+'"><span>'+tostring(r1[j]['TNAME'])+'</span></li>';
+	   end;
+	   div3 := '<ul class="Model_TemplateList_List">'+div3+'</ul>';
+	   html := div1+div2+div3;
+	   return echo html;	    
+end;
+
+if dowhat = 'openTemplate' then
+begin
+	   TID := utf8toansi(urltotext(httpGetQueryValueByName('TID')));
+	   TCombox := createObject('TComBox');
+	   html := TCombox.genTemplate(TID);
+	   return echo html;	   
+end;
+
+if dowhat = 'saveTemplate' then
+begin	   
+	   TID := utf8toansi(urltotext(httpGetQueryValueByName('TID')));
+	   EIDs := utf8toansi(urltotext(httpGetQueryValueByName('EIDs')));
+     EIDSArr := class(TSTool).json2Arr(EIDs,'',0);
+     deleteData := array();
+     deleteData['Table'] := 'TS_RTemplateE';
+     deleteData['QueryStr'] := "TID='"+tostring(TID)+"'";
+     f := class(ExecuteSQL).Delete(deleteData);
+     if not f then return;
+     insertData := array();
+     insertData['Table'] := 'TS_RTemplateE';
+     data := array();
+     for i := 0 to length(EIDSArr)-1 do
+     begin
+     	    len := length(data);
+     	    data[len] := array('TID':TID,'EID':EIDSArr[i],'USERID':UID,'SERIESID':i+1);
+     end;
+     insertData['Data'] := data;
+     r1 := class(ExecuteSQL).insert(insertData);
+     updateData := array();
+     updateData['Table'] := 'TS_RTemplateElement';
+     updateData['Conf'] := array(('QueryStr':"EID in (select EID from TS_RTemplateE where TID='"+tostring(TID)+"')",'Data':(('Field':'STATUS','TYPE':'Number','Value':1))));     
+     r2 := class(ExecuteSQL).update(updateData);
+     if not r1 or not r2 then return;
+     return echo 1;
+end;
+
+if dowhat = 'clearNewElement' then
+begin
+	   deleteData := array();
+	   deleteData['Table'] := 'TS_RTemplateElement';
+	   deleteData['QueryStr'] := "STATUS=-1 and USERID='"+UID+"'";
+	   r := class(ExecuteSQL).delete(deleteData);
+	   if r then
+	   return 1
+	   else
+	   return 0;
+end;
+
+if dowhat = 'addLabel' then
+begin
+	   labels := utf8toansi(urltotext(httpGetQueryValueByName('Labels')));	
+	   if not labels then return;
+	   labelsArr := class(TSTool).json2Arr(labels,'',0);
+	   data := array();
+	   for i := 0 to length(labelsArr)-1 do
+	   begin
+	   	     len := length(data);
+	   	     data[len] := array('USERID':uid,'NAME':tostring(labelsArr[i]));
+	   end;	   
+	   insertData := array();
+	   insertData['Table'] := 'TS_TElabel';
+	   insertData['Data'] := Data;
+	   r := class(ExecuteSQL).insert(insertData);
+	   if r then
+	   return echo 1
+	   else
+	   return echo 0;
+end;
+
+//********输出元素选择列表*********//
+if dowhat = 'loadElements' then
+begin
+	   	queryData := array();
+	   	queryData['Table'] := 'TS_RTemplateElement';
+	   	queryData['QueryStr'] := "USERID='"+UID+"' and FLAG= 1 and STATUS= 1";
+	   	arr := class(ExecuteSQL).Query(queryData);
+	   	html := '';
+	   	if not ifArray(arr) or not length(arr) then return echo '没有相关记录！';
+	   	for i := 0 to length(arr)-1 do
+	   	begin
+	   	    str:='<div><input type="text" class="Model_AE_Search"/><input type="button" class="Model_btn_AE_Search" value="搜索"></div>';
+			    str+='<div class="Model_AE_content"><table class="Model_AE_content_table" >';
+			   	for i:= 0 to length(arr)-1 do
+			   	begin	
+				    	str+='<tr><td class="Model_AE_content_table_td1">'+tostring(arr[i]["NAME"])+'</td><td class="Model_AE_content_table_td2"><button class="Model_btn_add_Element"  eid="'+arr[i]["EID"]+'" value="'+tostring(arr[i]["NAME"])+'">添加</button></td></tr>';
+					end;
+					str+='</table></div>';			
+	    end;
+	    html := str;
+	    return echo html;
+end;
+
+//*********插入用户元素**********//
+if dowhat = 'genElements' then
+begin	 
+	   EIDs := utf8toansi(urltotext(httpGetQueryValueByName('EIDs')));
+	   Titles := utf8toansi(urltotext(httpGetQueryValueByName('Titles')));	   
+	   Level := utf8toansi(urltotext(httpGetQueryValueByName('Level')));
+	   EIDs := class(TSTool).json2Arr(EIDs,'',0);
+	   Titles := class(TSTool).json2Arr(Titles,'',0);
+	   EIDStr := array2Str(EIDS,"','");
+	   EIDStr := "('"+EIDStr+"')";	   
+	   queryData := array();
+	   queryData['Table'] := 'TS_RTemplateElement';
+	   queryData['QueryStr'] := "EID in "+EIDStr;
+	   arr := class(ExecuteSQL).Query(queryData);	   
+	   TComBox := createObject("TComBox");
+	   html := '';	   
+	   for i := 0 to length(arr)-1 do
+	   begin
+	   	    arr[i]['SRC1'] := Titles[i];
+	        arr[i]['CONF'] := stm(arr[i]['CONF']);
+	        arr[i]['SetTitle'] := Titles[i]?Titles[i]:0;	        
+	        arr[i]['Level'] := strtointDef(Level,1);
+	        html += TComBox.genElement(arr[i]);
+	   end;	
+	     
+	   return echo html;	 
+end;
+
+//******删除布局元素*******//
+if dowhat = 'deleteContent' then
+begin
+	   EID := utf8toansi(urltotext(httpGetQueryValueByName('EID')));
+	   Ctype := utf8toansi(urltotext(httpGetQueryValueByName('CType')));
+	   SID := utf8toansi(urltotext(httpGetQueryValueByName('SID')));
+	   //**************//
+	   if not (Ctype in array('Title','Category','Newline','PageBreak')) then
+	   return;
+	   //**************//
+	   deleteData := array();
+	   deleteData['Table'] := 'TS_RTemplateElement';
+	   deleteData['QueryStr'] := "EID='"+tostring(EID)+"'";
+	   r := class(ExecuteSQL).delete(deleteData);
+	   if r then 
+	   return echo 1
+	   else
+	   return echo 0;
+end;
+
+//**********元素换序***********//
+if dowhat='changeSeq' then
+begin
+     TID := utf8toansi(urltotext(httpGetQueryValueByName('TID')));
+     EID := utf8toansi(urltotext(httpGetQueryValueByName('EID')));
+     Epos := utf8toansi(urltotext(httpGetQueryValueByName('Pos')));
+     Epre := utf8toansi(urltotext(httpGetQueryValueByName('Pre')));
+     Epos := strToIntDef(Epos,0);
+     Epre := strToIntDef(Epre,0);
+     if not Epos or not Epre then return;
+     updateData := array();
+     updateData['Table'] := 'TS_RTemplateE';
+     if Epos > Epre then
+     begin
+     	    updateData['Conf'] := array(('QueryStr':"TID='"+tostring(TID)+"'and EID='"+tostring(EID)+"' and SERIESID>="+tostring(Epre)+" and SERIESID<"+tostring(Epos),'Data':(('Field':'SID','Type':'Number','Value':'SID-1'))));
+     end
+     else
+     begin
+     	    updateData['Conf'] := array(('QueryStr':"TID='"+tostring(TID)+"'and EID='"+tostring(EID)+"' and SERIESID>="+tostring(Epos)+" and SERIESID<"+tostring(Epre),'Data':(('Field':'SID','Type':'Number','Value':'SID+1'))));
+     end;
+     r := class(ExecuteSQL).update(updateData);
+     if r then return echo 1
+     else return;
+end;

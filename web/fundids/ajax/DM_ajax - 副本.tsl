@@ -1,0 +1,114 @@
+
+class(TpageTool).setAjaxHeader();
+dowhat:= httpGetQueryValueByName("dowhat");
+//产品选择
+if dowhat ="products" then
+begin
+	
+ arr:=array(("ID":"表格数据","Name":"table"),
+						("ID":"文本数据","Name":"text"),
+					  ("ID":"图表数据","Name":"pic"),
+					  ("ID":"模型数据测试","Name":"model"));
+
+	
+		str:= '<ul>';
+		for i:= 0 to length(arr)-1 do	
+		begin  
+			str+= '<li class="products_li" li_flag="'+arr[i]['Name']+'">'+arr[i]['ID']+'   ' +arr[i]['Name']+'</li>';
+		end;
+	str+= '</ul>';
+	return echo str;
+end;
+//审核
+ if dowhat ="audit" then
+begin 
+		str:=' <div class="btn_Audit"> <input type="radio" name="Audit" value="同意" />同意</div>
+           <div class="btn_Audit"> <input type="radio" name="Audit" value="不同意" />不同意</div>
+	  		   <textarea class="text_Audit">评论意见内容</textarea>
+	  		   <input type="button" class="btn_Audit2" value="确定"/>';
+	 return echo str;
+end;
+
+//重载数据
+if dowhat ="reload" then
+begin 
+		str:='<div class="DM_div_Reload"></div>
+	  		<input type="button" class="btn_Reload" value="应用数据"/>';
+	 return echo str;
+end;
+//本期版本
+if dowhat ="dataversion" then
+begin 
+		str:='	<div class="DM_Datadiv"></div>';
+	 return echo str;
+end;
+
+//往期数据
+if dowhat ="predata" then
+begin 
+		str:='<div class="DM_Datadiv"></div>';
+	 return echo str;
+end;
+
+//选择产品
+
+
+
+begin
+		//文本数据
+		if dowhat="text" then
+        begin
+           viewType:="Txt";
+           disp:=class(TFIDSDataManager).dispElement(conf,data,viewType);;
+           return  echo tostn(disp);
+        end;
+	 //表格		
+		if dowhat="table" then
+        begin 
+        	 viewType:="Table";
+           disp:=class(TFIDSDataManager).dispElement(conf,data,viewType);
+		       return  echo  disp;
+		      // return  echo tostn(data);
+        end;
+    //图表   
+    if dowhat="pic" then
+       begin
+         disp:=class(TFIDSDataManager).dispElement(conf,data,"Pic");
+       	 disp2:=class(TFIDSDataManager).dispElement(conf,data,"Table");
+       	 return echo disp+disp2;
+      end;
+end;
+//模型数据测试
+if dowhat="model" then
+ begin
+	 name1:="本期末2012年12月31日";
+   data:=array(
+         ("项目":"股票","本期末2012年12月31日@成本":2646779003.04,"本期末2012年12月31日@公允价值":2968872791.72,"本期末2012年12月31日@公允价值变动":322093788.68),
+         ("项目":"债券@交易所市场","本期末2012年12月31日@成本":NIL,"本期末2012年12月31日@公允价值":NIL,"本期末2012年12月31日@公允价值变动":NIL),
+         ("项目":"债券@银行间市场","本期末2012年12月31日@成本":59970952.87,"本期末2012年12月31日@公允价值":60280000.00,"本期末2012年12月31日@公允价值变动":309047.13),
+         ("项目":"债券@合计","本期末2012年12月31日@成本":59970952.87,"本期末2012年12月31日@公允价值":60280000.00,"本期末2012年12月31日@公允价值变动":309047.13),
+         ("项目":"资产支持证券","本期末2012年12月31日@成本":NIL,"本期末2012年12月31日@公允价值":NIL,"本期末2012年12月31日@公允价值变动":NIL),
+         ("项目":"基金","本期末2012年12月31日@成本":NIL,"本期末2012年12月31日@公允价值":NIL,"本期末2012年12月31日@公允价值变动":NIL),
+         ("项目":"其他","本期末2012年12月31日@成本":NIL,"本期末2012年12月31日@公允价值":NIL,"本期末2012年12月31日@公允价值变动":NIL),
+         ("项目":"合计","本期末2012年12月31日@成本":2706749955.91,"本期末2012年12月31日@公允价值":3029152791.72,"本期末2012年12月31日@公允价值变动":322402835.81));
+ 		
+ 			conf:=array("dispWay":1,"width":"","height":"",
+						 "图形属性": ("图形边框": ("内边距":8,"角类型":2),
+						 "X轴": ("类型":"文本","X轴列名":"date"),
+						 "Y轴": (),
+					   "图表类型和坐标轴": ("*": ("图形属性":14000000,"坐标轴":0))));
+				 obj1 := createObject("TWebsiteJQGraph",data,conf);
+			 	 pic := obj1.Draw();
+				 
+				 table_dg := CreateObject("DataGrid") ;
+    		 table_dg.SerialID := GenVerID("table_dg");
+    		 table_dg.data:= data;
+    		 table_dg.editable:=true;
+    		 table_dg.button := array("refresh":("show":false),
+                   "save":("name":"保存","trigger":"#DM_Save","type":"fun","fvar":("p":1000),"type":"fun","alia":"DataGrid","function":"opSaveData"),
+                   "reset":("name":"还原","type":"tsf","function":"opResetData")
+                  ) ;
+             
+				return echo pic+table_dg.GainHtml();
+			
+ end;

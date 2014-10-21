@@ -1,0 +1,6 @@
+
+
+class(TpageTool).setAjaxHeader();
+setSysParam(pn_configClassName(),'twebsiteConfig');
+
+ComID:= utf8toansi(urltotext(httpgetqueryvaluebyname("np")));

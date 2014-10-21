@@ -1,0 +1,51 @@
+
+httpSetHeadString("Content-Type:text/html; charset=gb2312;\r\n");
+dowhat := Q('dowhat');
+eid := Q('eid');
+fundids := Q('fundIds');
+userid := Q('userid');
+data := array('EID':eid,'Products':fundids);
+case dowhat of
+  'add-auditor':
+  begin
+  	data['Auditors']:= userid;
+    return echo class(Element).addAuditors(data);
+  end;
+  'edit-auditor':
+  begin
+  end;
+  'remove-auditor':
+  begin
+    return echo deleteAuditor(eid,userid);
+  end;
+  'add-editor':
+  begin
+    data['Editors'] := userid;
+    return echo class(Element).addEditors(data);
+  end;
+  'eidt-editor':
+  begin
+  
+  end;
+  'remove-editor':
+  begin
+    echo deleteEditor(eid,userid);
+  end;
+end;
+
+function deleteEditor(eid,userid);
+begin  
+  return DeleteRights(eid,userid,1);//1 means is editor;
+end;
+
+function deleteAuditor(eid,userid);
+begin  
+  return DeleteRights(eid,userid,2);//2 means is auditor;
+end;
+
+function DeleteRights(eid,userid,RoleType);
+begin
+  sql := "update TS_DataRight set IsValid = 0 where Type="+inttostr(roleType)+" and eid = '"+eid+"' and UserId = '"+UserId+"'";  
+  r := IDS_Execsql(sql,t);  
+  return r;
+end;

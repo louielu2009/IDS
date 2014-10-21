@@ -1,0 +1,78 @@
+type ExecuteSql = class
+
+class function update(data);
+class function insert(data);
+class function query(data);
+class function delete(data);
+end;
+
+class function ExecuteSql.delete(data);
+begin
+	   if not ifArray(data) then return 0;
+	   TableName := data['Table'];
+	   if not TableName then return 0;
+	   if not data['QueryStr'] then return 0;
+	   sql := "delete from "+TableName+" where "+tostring(data['QueryStr']);	   
+	   if execSQL(class(TWebFundIDSConfig).getDBAlia(),SQL,r) then
+	   return 1
+	   else
+	   return 0;
+end;
+
+class function ExecuteSql.insert(data);
+begin
+	   if not ifArray(data) then return 0;
+	   TableName := data['Table'];
+	   if not TableName then return 0;
+	   arr := data['Data'];
+	   r := insert into sqlTable TableName of class(TWebFundIDSConfig).getDBAlia() arr;
+	   if r then
+	   return 1
+	   else
+	   return 0;
+end;
+
+class function ExecuteSql.update(data);
+begin
+	   if not ifArray(data) then return 0;
+	   TableName := tostring(data['Table']);
+	   Conf := data['Conf'];
+	   for i := 0 to length(Conf)-1 do
+	   begin	   	      	  	   	   	        
+	        if not Conf[i]['QueryStr'] then continue;
+	        updateStr := '';	   	  
+	   	    for j := 0 to length(Conf[i]['Data'])-1 do
+	   	    begin
+	   	    	   if Conf[i]['Data'][j]['Type']='DateTime' then
+	   	    	   		Conf[i]['Data'][j]['Value'] := "to_date('"+datetimetostr(Conf[i]['Data'][j]['Value'])+"','YYYY-MM-DD HH24:MI:SS')";
+	   	    	   updateStr += ifThen(updateStr,',','')+tostring(Conf[i]['Data'][j]['Field'])+'='+(Conf[i]['Data'][j]['Type']='String'?"'":"")+tostring(Conf[i]['Data'][j]['Value'])+(Conf[i]['Data'][j]['Type']='String'?"'":"");
+	   	    end;
+	        sql := "update "+TableName+" set "+updateStr+" where "+tostring(Conf[i]['QueryStr']);	        
+	        f := execSql(class(TWebFundIDSConfig).getDBAlia(),sql,r);	 	        
+	   end;
+	   return 1;
+end;
+
+class function ExecuteSql.query(data);
+begin
+	    if not ifArray(data) then return 0;
+	    fieldStr  := '';
+	    if ifArray(data['QueryField']) and length(data['QueryField']) then
+	    begin
+	    	   
+	    	   for i := 0 to length(data['QueryField'])-1 do
+	    	   fieldStr += ifThen(fieldStr,',','')+tostring(data['QueryField'][i]);
+	    	   
+	    end
+	    else if ifString(data['QueryField']) then
+	    begin
+	    	   fieldStr := data['QueryField'];
+	    end
+	    else
+	         fieldStr := '*';
+	    sql := "select "+fieldStr+" from "+tostring(data['Table'])+(data['QueryStr']?" where "+tostring(data['QueryStr']):"");
+	    if execSQL(class(TWebFundIDSConfig).getDBAlia(),sql,r) then
+	    return r
+	    else
+	    return 0;
+end;

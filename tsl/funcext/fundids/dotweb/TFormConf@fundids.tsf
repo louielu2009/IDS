@@ -1,0 +1,919 @@
+Type TFormConf = class
+UID;
+//function _getStyles(Stype);
+function getComTextConf(conf);
+function getComTableConf(conf);
+function getComPicConf(conf);
+function getComCatConf(conf);
+
+//********输出文本配置脚本*********//
+function outTxtConf(conf);
+//********输出表格配置脚本*********//
+function outTableConf(conf);
+//********输出图配置脚本***********//
+function outPicConf(conf);
+end;
+
+function TFormConf.outTableConf(conf);
+begin
+	   dataSource := conf['DataSource']?conf['DataSource']:array();
+	   dataConf := conf['Conf']?conf['Conf']:array();
+	   options := _getStyles('Table'); 
+	   options := options['Base']?options['Base']:array();
+	   TabList := '';	   
+	   for i := 0 to length(options)-1 do
+	   begin
+	        src := '/resource/fundids/reportData/Template/Word_Template/imgs/'+options[i]['value']+'.gif';
+	        if dataConf['Name']= options[i]['value'] then
+	        className := 'Element_TableStyle Element_Active'
+	        else
+	        className := 'Element_TableStyle';
+	        TabList += '<li><a href="javascript:void(0);" value="'+tostring(options[i]['value'])+'" class="'+className+'"><img src="'+src+'" title="'+tostring(options[i]['txt'])+'" /></a></li>';
+	   end;
+	   TabList := '<ul class="Element_Table_Style">'+TabList+'</ul>';
+	   disp := '';
+	   if conf['Type']= 'Table' then
+	   disp := 'display:block;';	  
+	   html := '';	  
+	   html := '<div class="Element_Table" style="'+disp+'">
+	            <div>数据源<select class="Element_Table_DataSource">
+	                       <option value="model">模型</option>
+	                       </select>
+	            </div>
+	            <div>函数名<input type="text" class="Element_Table_Modal" value="'+(dataSource['ModelName']?dataSource['ModelName']:'')+'"/>
+	                 数据字段名<input type="text" class="Element_Table_DataField" value="'+(dataSource['Field']?dataSource['Field']:'')+'"/>
+	            </div>
+	            <div>
+	            
+	            </div>
+	            <div>表格样式
+	            '+TabList+'
+	            </div>	   
+	           </div>';
+	    return html;
+end;
+
+function TFormConf.outPicConf(conf);
+begin
+
+end;
+
+function TFormConf.outTxtConf(conf);
+begin
+	   dataSource := conf['DataSource']?conf['DataSource']:array();
+	   Conf := conf['Conf']?conf['Conf']:array();
+	   options := _getStyles('Txt'); 
+     options := options['Base']?options['Base']:array();
+     TxtList := '';
+     for i := 0 to length(options)-1 do
+     TxtList+= '<option value="'+tostring(options[i]['value'])+'">'+tostring(options[i]['txt'])+'</option>';
+     TxtList:= '<select class="Element_Txt_Style">'+TxtList+'</select>';
+	   disp := '';
+	   if conf['Type']= 'Table' then
+	   disp := 'display:block;';
+	   html := '<div class="Element_Txt" style="'+disp+'">
+	           <div>数据源<select class="Element_Txt_DataSource">
+	                       <option value="model">模型</option>
+	                       <option value="userDefined" '+(dataSource['From']='userDefined'? 'selected="true"':'')+'>自定义</option>
+	                       </select>
+	            </div>
+	            <div>函数名<input type="text" class="Element_Txt_Modal" value="'+(dataSource['ModelName']?dataSource['ModelName']:'')+'"/>
+	                 数据字段名<input type="text" class="Element_Txt_DataField" value="'+(dataSource['Field']?dataSource['Field']:'')+'"/>
+	            </div>
+	           <div>样式名'+TxtList+'
+	           </div>
+	           </div>
+	           ';	            
+	   return html;
+end;
+
+function TFormConf.getComTextConf(conf);
+begin	   
+	   options := _getStyles('Txt'); 
+     options := options['Base']?options['Base']:array();	   	   
+	   FormConf:= array(("_ItemName":"文本设置","Content":
+	                     (
+										    (("txt":"样式名","type":"select","singleCol":1,"value":conf['Name']?:'',"attr":("property":"Element_Style"),'options':options))				                
+			                 	)
+		               ));
+     return FormConf;
+end;
+
+function TFormConf.getComTableConf(conf);
+begin	    
+	    colNameArr := ifArray(conf['FColNameArr']) ? conf['FColNameArr'] : array() ;
+      colModelArr := conf['FColModel'] ;
+      tsFormConf := array() ;      
+      _sourceInfo := ifArray(conf['dataSource']) ? conf['dataSource'] : array() ;
+      _sourceName := _sourceInfo['name'] ? _sourceInfo['name'] : "" ;
+      _dataSet := _sourceInfo['dataSet'] ? _sourceInfo['dataSet'] : "" ;
+      currentSourceType := _sourceInfo['currentSourceType'] ;
+      //tmpItemConf := array("ItemName":"数据源","Content":((("type":"dataSource","","userID":execuserID,"currentSourceType":currentSourceType,"dataSet":_dataSet,"value":_sourceName,"info":_sourceInfo))));
+      DataConf:= array();
+      tsFormConf &= array(("_ItemName":"数据源","Content":((("type":"select","attr":("property":"select"),"txt":"数据来源","options":
+																														(
+																														("txt":"模型","value":"model","linkage":"c1"),
+																														("txt":"用户自定义","value":"userDefined","linkage":"c2"))
+																											 )))),
+											("linkname":"c1","Content":((("type":"input","txt":"函数名","value":DataConf['ModelName']?:'',"attr":("property":"Element_ModelName")),
+							                                     ("type":"input","txt":"数据字段名","value":DataConf['Field']?:'',"attr":("property":"Element_FieldName"))
+							                           ))
+                     )
+										);      
+      addItemConf := array(("_ItemName":"适用范围","Content":((("type":"radio","txt":"通用","attr":("property":"ifCommonUse","name":"radio1")),
+                                                             ("type":"radio","txt":"产品相关","attr":("property":"ifProductRelation","name":"radio1"))                                                             
+                                                            ))),
+                           ("Content":((("type":"checkbox","txt":"报告期相关","attr":("property":"ifReportDate")))))
+                           );
+      tsFormConf &= addItemConf;
+      tmpItemConf := array("_ItemName":"列配置","partitionLine":false,"attr":("class":"dgColConfigList")) ;
+      tmpContent := array() ;
+      extendColConf := array() ;
+      if isTable(colModelArr) then
+      begin
+		      extendColIndex := vSelect countof(['index']) from colModelArr where ifnil(['extendcol']) end ;//非新增列个数,即新增列开始下标
+		      _index := 0 ;
+		      for i := 0 to length(colNameArr)-1 do
+		      begin
+		           _name := colNameArr[i] ;
+		           _colModel := vSelect thisrow from colModelArr where ['index'] = (i+1) end ;
+		
+		           _extendCol := _colModel['extendcol'] ? true : false ;//是否是新增列
+		           if _extendCol then
+		           begin
+		           	    _tmp_property := "FColModel:"+inttostr(extendColIndex) ;
+		           	    extendColIndex ++ ;
+		           end
+		           else
+		           begin
+		               _tmp_property := "FColModel:"+inttostr(_index) ;
+		               _index++ ;
+		           end ;
+		
+		           _width := _colModel['width'] ? _colModel['width'] : "" ;
+		           _resizable := _colModel['resizable'] <> 0 ? true : false ;
+		           _sortable := _colModel['sortable'] <> 0 ? true : false ;
+		           _fieldName := _colModel['fieldname'] ? _colModel['fieldname'] : _name ;
+		
+		           _precision := _colModel['precision'] ? _colModel['precision'] : "" ;
+		           _addblank := _colModel['addblank'] <> 0 ? true : false ;
+		           _display := _colModel['display'] = 'none' ? true : false ;
+		           _textAlign := _colModel['text-align'] ? _colModel['text-align'] : "" ;
+		           _position := _colModel['position'] ;
+		           _content := _colModel['content'] ;
+		
+		           _formatStr := '' ;
+		           if ifArray(_colModel['format']) then
+		           begin
+		                _formatStr := ifString(_colModel['format']['formatstr']) ? _colModel['format']['formatstr'] : "" ;
+		           end ;
+		
+		           //列高级配置
+		           supColSubContent := array("content":((("type":"input","txt":"列数据精度","value":2,"attr":("datatype":"num","property":"FColModel:0:precision","css":("width":"60px"))),
+		                                                 ("type":"checkbox","txt":"内容前后留白","checked":1,"attr":("property":"FColModel:0:addblank","css":("margin-left":"10px"))),
+							                                      ),
+															                      (("type":"select","txt":"列数据格式","options":(("txt":"YYYY-MM-DD","value":"YYYY-MM-DD"),("txt":"YYYY/MM/DD","value":"YYYY/MM/DD"),("txt":"YYYYMMDD","value":"YYYYMMDD")),"attr":("property":"FColModel:0:format:formatstr")),
+															                       ("type":"checkbox","txt":"隐藏此列","checked":0,"attr":("property":"FColModel:0:display","css":("margin-left":"10px")))
+															                      ),
+															                      (("type":"input","txt":"文本框"),
+															                       ("type":"datepicker","txt":"日期")
+															                      )
+							                                     )
+		                                    ) ;
+		
+		           _show := _colModel['show'] ;
+		           if ifArray(_show) then
+		              _showType := _show['type']
+		           else
+		              _showType := "" ;
+		
+		           //表格
+		           _table := array("content":((("type":"checkbox","txt":"嵌套显示","attr":("property":_tmp_property+":show:inlay")),
+										                       ("type":"checkbox","txt":"合并表头","attr":("property":_tmp_property+":show:unifyHead"))
+										                      ),
+										                      (("type":"input","txt":"显示内容","attr":("property":_tmp_property+":show:showname"))
+										                      ),
+										                      (("type":"input","txt":"弹出框长度","attr":("property":_tmp_property+":show:width")),
+										                       ("type":"input","txt":"弹出框宽度","attr":("property":_tmp_property+":show:height"))
+										                      )
+						                             )
+					                    ) ;
+		           if _showType = 'table' then
+		           begin
+		                _inlay := ifnil(_show['inlay']) ? 0 : _show['inlay'] ;
+		                _unifyHead := ifnil(_show['unifyHead']) ?  0 : _show['unifyHead'] ;
+		
+		                _showname := _show['showname'] ;
+										_width := _show['width'] ;
+										_height := _show['height'] ;
+		
+		                _table := array("content":((("type":"checkbox","txt":"嵌套显示","checked":_inlay,"attr":("property":_tmp_property+":show:inlay")),
+										                            ("type":"checkbox","txt":"合并表头","checked":_unifyHead,"attr":("property":_tmp_property+":show:unifyHead"))
+													                     ),
+												                       (("type":"input","txt":"显示内容","value":_showname,"attr":("property":_tmp_property+":show:showname"))
+												                       ),
+												                       (("type":"input","txt":"弹出框长度","value":_width,"attr":("property":_tmp_property+":show:width")),
+												                        ("type":"input","txt":"弹出框宽度","value":_height,"attr":("property":_tmp_property+":show:height"))
+												                       )
+									                            )
+					                         ) ;
+		           end ;
+		
+		           //链接
+		           _url := array("content":((("type":"input","txt":"链接地址","attr":("property":_tmp_property+":show:href","css":("width":"300px")))
+							                           ),
+							                          (("type":"select","txt":"打开方式","attr":("property":_tmp_property+":show:target"),"options":(("txt":"--请选择--","value":""),("txt":"在当前页","value":"_self"),("txt":"在新窗口","value":"_blank"))),
+							                           ("type":"checkbox","txt":"在弹出框中打开","attr":("property":_tmp_property+":show:dialogBox"))
+							                          ),
+							                          (("type":"input","txt":"弹出框长度","attr":("property":_tmp_property+":show:width"),"css":("width":"40px")),
+							                           ("type":"input","txt":"弹出框宽度","attr":("property":_tmp_property+":show:height"),"css":("width":"40px"))
+							                          )
+					                             )
+					                    ) ;
+		           if _showType = 'url' then
+		           begin
+		                _href := _show['href'] ? _show['href'] : "" ;
+		                _target := _show['target'] ? _show['target'] : "" ;
+		                _openInBox := _show['dialogBox'] ? 1 : 0 ;
+		                _boxWidth := "" ;
+		                _boxHeight := "" ;
+		                if _openInBox then
+		                begin
+				                 _boxWidth := _show['width'] ? _show['width'] : "" ;
+				                 _boxHeight := _show['height'] ? _show['height'] : "" ;
+		                end ;
+		
+		                _url := array("content":((("type":"input","txt":"链接地址","value":_href,"attr":("property":_tmp_property+":show:href","css":("width":"300px")))
+										                         ),
+										                         (("type":"select","txt":"打开方式","value":_target,"attr":("property":_tmp_property+":show:target"),"options":(("txt":"--请选择--","value":""),("txt":"在当前页","value":"_self"),("txt":"在新窗口","value":"_blank"))),
+										                          ("type":"checkbox","txt":"在弹出框中打开","checked":_openInBox,"attr":("property":_tmp_property+":show:dialogBox"))
+										                         ),
+										                          (("type":"input","txt":"弹出框长度","value":_boxWidth,"attr":("property":_tmp_property+":show:width","css":("width":"40px"))),
+										                           ("type":"input","txt":"弹出框宽度","value":_boxHeight,"attr":("property":_tmp_property+":show:height","css":("width":"40px")))
+										                          )
+								                             )
+					                       ) ;
+		           end ;
+    				end;
+           //附件
+           _file := array("content":((("type":"input","txt":"显示内容","value":"下载","attr":("property":_tmp_property+":show:showname","css":("width":"100px"))),
+                                      ("type":"input","txt":"路径别名","value":"","required":true,"attr":("property":_tmp_property+":show:alia","css":("width":"60px")))
+								                     ),
+								                     (("type":"input","txt":"文件相对路径","value":"","attr":("property":_tmp_property+":show:filepath","css":("width":"300px")))
+								                     )
+						                        )
+			                   ) ;
+			     if _showType = 'file' then
+			     begin
+			     	    _showname := _show['showname'] ;
+			     	    _alia := _show['alia'] ;
+			     	    filepath := _show['filepath'] ;
+
+			          _file := array("content":((("type":"input","txt":"显示内容","value":_showname,"attr":("property":_tmp_property+":show:showname","css":("width":"100px"))),
+                                           ("type":"input","txt":"路径别名","value":_alia,"required":true,"attr":("property":_tmp_property+":show:alia","css":("width":"60px")))
+								                          ),
+										                      (("type":"input","txt":"文件相对路径","value":filepath,"attr":("property":_tmp_property+":show:filepath","css":("width":"300px")))
+										                      )
+								                         )
+			                   ) ;
+			     end ;
+
+			     //文本
+           _text := array("content":((("type":"input","txt":"显示内容","value":"查看","attr":("property":_tmp_property+":show:showname","css":("width":"100px")))
+								                     )
+						                        )
+			                   ) ;
+			     if _showType = 'file' then
+			     begin
+			     	    _showname := _show['showname'] ;
+			     	    _text := array("content":((("type":"input","txt":"显示内容","value":_showname,"attr":("property":_tmp_property+":show:showname","css":("width":"100px")))
+								                     )
+						                        )
+			                   ) ;
+			     end ;
+
+           //星级图列
+           _star := array("content":((("type":"input","txt":"最高星级","value":5,"attr":("datatype":"num","property":_tmp_property+":show:max","css":("width":"60px")))
+								                     )
+						                        )
+			                   ) ;
+           if _showType = 'star' then
+           begin
+			          max_star := ifInt(_show['max']) ? _show['max'] : "" ;
+			          _star := array("content":((("type":"input","txt":"最高星级","value":max_star,"attr":("datatype":"num","property":_tmp_property+":show:max","css":("width":"60px")))
+								                          )
+						                             )
+			                        ) ;
+           end ;
+
+           //百分比条
+           colorSchemeConfig := array() ;
+           colorScheme := conf['FColorScheme'] ;
+           colorScheme :: begin
+	                colorSchemeConfig &= array(("type":"colorpicker","txt":"颜色"+inttostr(mrow+1),"value":mcell,"attr":("property":_tmp_property+":show:colorscheme:"+inttostr(mrow),"css":("width":"60px")))) ;
+	         end ;
+           percentagebar := array("content":((("type":"input","txt":"条宽","value":10,"attr":("datatype":"num","property":_tmp_property+":show:height","css":("width":"60px"))),
+                                              ("type":"checkbox","txt":"显示百分号","checked":true,"attr":("property":_tmp_property+":show:percentsign"))
+								                             ),
+								                             colorSchemeConfig,
+								                             (("type":"text","onclick":'$(this).dotWeb("addColColor");',"txt":'+',"attr":("class":"ui-icon ui-icon-plus","css":("cursor":"pointer"),"title":"添加颜色")),
+											                        ("type":"text","onclick":'$(this).dotWeb("delColColor");',"txt":'-',"attr":("class":"ui-icon ui-icon-minus","css":("cursor":"pointer"),"title":"删除颜色"))
+											                       )
+						                                )
+			                           ) ;
+           if _showType = 'percentagebar' then
+           begin
+			          h := _show['height'] ? _show['height'] : "" ;
+			          percentsign := ifnil(_show['percentsign']) ? true : _show['percentsign'] ;
+			          colorSchemeConfig := array() ;
+			          colorScheme := conf['FColorScheme'] ;
+			          if ifArray(_show['colorscheme']) then //系统默认颜色配置和用户配置的颜色合并
+			          begin
+			               for n,v in _show['colorscheme'] do
+			                   colorScheme[n] := _show['colorscheme'][n] ;
+			          end ;
+
+			          colorScheme :: begin
+			                colorSchemeConfig &= array(("type":"colorpicker","txt":"颜色"+inttostr(mrow+1),"value":mcell,"attr":("property":_tmp_property+":show:colorscheme:"+inttostr(mrow),"css":("width":"60px")))) ;
+			          end ;
+
+			          percentagebar := array("content":((("type":"input","txt":"条宽","value":h,"attr":("datatype":"num","property":_tmp_property+":show:height","css":("width":"60px"))),
+                                                   ("type":"checkbox","txt":"显示百分号","checked":percentsign,"attr":("property":_tmp_property+":show:percentsign"))
+                                                  ),
+                                                  colorSchemeConfig,
+                                                  (("type":"text","onclick":'$(this).dotWeb("addColColor");',"txt":'',"attr":("class":"ui-icon ui-icon-plus","css":("cursor":"pointer"),"title":"添加颜色")),
+											                             ("type":"text","onclick":'$(this).dotWeb("delColColor");',"txt":'',"attr":("class":"ui-icon ui-icon-minus","css":("cursor":"pointer"),"title":"删除颜色"))
+											                            )
+						                                     )
+			                                ) ;
+           end ;
+
+					 colSubContent := array("table":("conf":_table,"position":"br"),
+							                    "url":("conf":_url,"position":"br"),
+							                    //"file":("conf":_file,"position":"br"),
+							                    "text":("conf":_text,"position":"br"),
+							                    "star":("conf":_star,"position":"br"),
+							                    "percentagebar":("conf":percentagebar,"position":"br")
+						                     ) ;
+           
+           subContent := array("Content":((("type":"checkbox","txt":"手动调整列宽","checked":_resizable,"attr":("property":_tmp_property+":resizable")),
+					                                 ("type":"checkbox","txt":"可排序","checked":_sortable,"attr":("property":_tmp_property+":sortable","css":("margin-left":"18px"))),
+					                                 ("type":"checkbox","txt":"隐藏此列","value":"none","checked":_display,"attr":("property":_tmp_property+":display","css":("margin-left":"10px")))
+                                          ),
+                                          (("type":"select","txt":"列数据格式","value":_formatStr,"attr":("property":_tmp_property+":format:formatstr"),"options":(("txt":"---选择---","value":""),("txt":"YYYY-MM-DD","value":"YYYY-MM-DD"),("txt":"YYYY/MM/DD","value":"YYYY/MM/DD"),("txt":"YYYYMMDD","value":"YYYYMMDD"))),
+                                           ("type":"select","txt":"高级列设置","value":_showType,"attr":("property":_tmp_property+":show:type"),"options":(("txt":"---选择---","value":""),
+																								                                                                                                    ("txt":"表格","value":"table","sub":colSubContent["table"]),
+																								                                                                                                    ("txt":"链接","value":"url","sub":colSubContent["url"]),
+																								                                                                                                    //("txt":"附件","value":"file","sub":colSubContent["file"]),
+																								                                                                                                    ("txt":"文本","value":"text","sub":colSubContent["text"]),
+																								                                                                                                    ("txt":"星级","value":"star","sub":colSubContent["star"]),
+																								                                                                                                    ("txt":"百分比条形图","value":"percentagebar","sub":colSubContent["percentagebar"])
+																								                                                                                                   )
+                                           )
+                                          )
+                                         )
+                              ) ;
+
+           //新增列配置
+           extendColConfigArr := array((("type":"checkbox","attr":("class":"addRowCheck","css":("margin-left":"10px"))),
+                                        ("type":"input","txt":"第几列显示","value":_position,"attr":("datatype":"num","property":_tmp_property+":position","css":("width":"20px"))),
+                                        ("type":"input","txt":"列名","value":_fieldName,"attr":("property":_tmp_property+":fieldname","css":("width":"60px"))),
+                                        ("type":"input","txt":"内容","value":_content,"attr":("property":_tmp_property+":content","css":("width":"100px"))),
+                                        ("type":"select","txt":"对齐方式","value":_textAlign,"attr":("property":_tmp_property+":text-align"),"options":(("txt":"左对齐","value":"left"),("txt":"右对齐","value":"right"),("txt":"居中","value":"center"))),
+                                        ("type":"input","txt":"精度","value":_precision,"attr":("dataType":"num","property":_tmp_property+":precision","css":("width":"30px"))),
+			                                  ("type":"input","txt":"列宽","value":_width,"attr":("dataType":"num","property":_tmp_property+":width","css":("width":"30px"))),
+			                                  ("type":"text","txt":"更多","sub":subContent)
+					                            )) ;
+					 //当前已有列配置
+           initColConfigArr :=  array((("type":"hidden","value":inttostr(_index),"attr":("property":_tmp_property+":index","dataType":"num")),
+		                                   ("type":"input","txt":"列名","value":_fieldName,"attr":("property":_tmp_property+":fieldname","css":("width":"120px","margin-right":"15px"))),
+		                                   ("type":"select","txt":"对齐方式","value":_textAlign,"attr":("property":_tmp_property+":text-align","css":("margin-right":"15px")),"options":(("txt":"左对齐","value":"left"),("txt":"右对齐","value":"right"),("txt":"居中","value":"center"))),
+		                                   ("type":"input","txt":"精度","value":_precision,"attr":("dataType":"num","property":_tmp_property+":precision","css":("width":"57px"))),
+		                                   ("type":"input","txt":"列宽","value":_width,"attr":("dataType":"num","property":_tmp_property+":width","css":("width":"60px","margin-right":"15px"))),
+		                                   ("type":"text","txt":"更多","sub":subContent)
+                                    ));
+
+           //给新增列定义隐藏行，每次添加时将克隆这行
+           if length(extendColConf) = 0 then
+       	   begin
+       	        tmp := extendColConfigArr[0] ;
+       	        tmp[0]['rowset'] := array("hiddenRow":true) ;
+       	        for j := 0 to length(tmp)-1 do
+       	        begin
+       	             if ifArray(tmp[j]['sub']) then
+       	                 tmp[j]['attr'] := array("nature":"notsubmit")
+       	             else
+       	                 tmp[j]['attr']['nature'] := "notsubmit" ;
+       	        end ;
+
+       	        extendColConf &= array(tmp) ;
+       	   end ;
+
+           if _extendCol then //新增列
+           	   extendColConf &= extendColConfigArr
+           else
+               tmpContent &= initColConfigArr ;
+      end ;
+      tmpItemConf['Content'] := tmpContent ;
+      tsFormConf &= array(tmpItemConf) ;
+
+      //新增列操作
+      tmpItemConf := array("_ItemName":"新增列配置","navigation":false,
+                           "Content":((("type":"text","txt":"","gather":"newColOpBtn","onclick":'$(this).dotWeb("addDgCol")',"attr":("class":"ui-icon ui-icon-plus","css":("cursor":"pointer"),"title":"新增")),
+																			 ("type":"text","txt":"","gather":"newColOpBtn","onclick":'$(this).dotWeb("delDgCol")',"attr":("class":"ui-icon ui-icon-minus","css":("cursor":"pointer"),"title":"删除"))
+							                        )
+                                     )
+                          ) ;
+      tmpItemConf["Content"] &= extendColConf ;
+
+      tsFormConf &= array(tmpItemConf) ;
+
+      //分组
+      groupView := conf['FGroupView'] ;
+      if not ifArray(groupView) then groupView := array() ;
+      _groupField := groupView['field'] ? groupView['field'] : nil ;
+      //保存后的分组信息配置,字段会转换成小写
+      _showGroupColumn := groupView['showgroupcolumn'] ? true : false ;
+      _showitemCount := groupView['showitemcount'] ? true : false ;
+      _groupSizeOrder := groupView['groupsizeorder'] ? groupView['groupsizeorder'] : "" ;
+
+      tmpItemConf := array("ItemName":"分　组","Content":((("type":"input","txt":"分组列","value":_groupField,"attr":("property":"FGroupView:field")),
+                                                           ("type":"checkbox","txt":"显示分组列","checked":_showGroupColumn,"attr":("property":"FGroupView:showGroupColumn","css":("margin-left":"18px"))),
+                                                           ("type":"checkbox","txt":"显示组成员个数","checked":_showitemCount,"attr":("property":"FGroupView:showitemCount","css":("margin-left":"18px"))),
+																			                     ("type":"select","txt":"按组成员个数","value":_groupSizeOrder,"attr":("property":"FGroupView:groupSizeOrder"),"options":(("txt":"不排序","value":""),("txt":"降序排序","value":"desc"),("txt":"升序排序","value":"asc")))
+																			                     //("type":"text","txt":"更多","subContent":subContent,"subAttr":("css":("margin-left":"8px","font-size":"10px","color":"#FA9300","cursor":"pointer")))
+																			                    )
+																			                   )
+                           ) ;
+
+      //tsFormConf &= array(tmpItemConf) ;
+
+      //其他
+      _title := conf['FTitle'] ? conf['FTitle'] : "" ;
+      _tWidth := conf['FWidth'] ? conf['FWidth'] : "" ;
+      _tHeight := conf['FHeight'] ? conf['FHeight'] : "" ;
+      _fixedColCount := conf['FFixedColCount']  ? conf['FFixedColCount']  : 0 ;
+      _pageRowCount := conf['FPageRowCount'] ? conf['FPageRowCount'] : "" ;
+      _gridClass := conf['FGridClass'] ? conf['FGridClass'] : "" ;
+      _pagerSwitchButton := conf['FPagerSwitchButton'] = 1 ? true : false ;
+      _defaultStyle := conf['FDefaultStyle'] = 0 ? false : true ; 
+      _showNumberField := conf['FShowNumberField'] <> 0 ? true : false ;
+      _sortable := conf['FSortable'] <> 0 ? true : false ;
+      _colBorder := conf['FColBorder'] <> 0 ? true : false ;
+      _pageable := conf['FPageable'] <> 0 ? true : false ;
+      _floatHeader := conf['FFloatHeader'] <> 0 ? true : false ;
+      _ifDownLoad := conf['FIfDownLoad'] <> 0 ? true : false ;
+      _showHeader := conf['FShowHeader'] <> 0 ? true : false ;
+      _precision := (ifInt(conf['FPrecision']) and conf['FPrecision'] <> -1) ? conf['FPrecision'] : "" ;//-1和空字符时都将保留原始精度,在界面上显示都为空
+      _cache := conf['FCache'] ? true : false ;
+      _contentBreak := conf['FContentBreak'] <> 0 ? true : false ;
+
+      _refresh := conf['FRefresh'] <> 0 ? true : false ;
+      _refreshInterval := conf['FRefreshInterval'] ;
+      _refreshTime := conf['FShowRefreshTime'] <> 0 ? true : false ;
+
+      subContent := array("Content":((
+                                      //("type":"input","txt":"样式类名","value":_gridClass,"attr":("property":"FGridClass","css":("width":"60px")))
+                                     ("type":"input","txt":"样式类名","value":_gridClass,"attr":("property":"Element_TableStyle","css":("width":"60px")))
+                                     ))
+                         ) ;
+
+      //是开启刷新
+      _refreshInterval_attr := array("datatype":"num","property":"FRefreshInterval","css":("width":"40px")) ;
+      if not _refresh then //不刷新将禁用刷新时间间隔设置
+         _refreshInterval_attr['disabled'] := 'disabled' ;       
+      tmpItemConf := array("_ItemName":"其　他","Content":subContent['Content']);
+      tsFormConf &= array(tmpItemConf) ;
+      return tsFormConf;
+end;
+
+function TFormConf.getComPicConf(conf);
+begin
+	   XAxisConf:= array(("txt":"文本","value":"文本"),("txt":"数字","value":"数字"));//("txt":"时间","value":"时间")
+		fontSize:=array(
+					("txt":"8","value":"8px"),
+					("txt":"9","value":"9px"),
+					("txt":"10","value":"10px"),
+					("txt":"11","value":"11px"),
+					("txt":"12","value":"12px"),
+					("txt":"14","value":"14px"),
+					("txt":"16","value":"16px"),
+					("txt":"18","value":"18px"),
+					("txt":"20","value":"20px"),
+					("txt":"22","value":"22px"),
+					("txt":"24","value":"24px"),
+					("txt":"28","value":"28px"),
+					("txt":"36","value":"36px"),
+					("txt":"48","value":"48px"),
+					("txt":"72","value":"72px")
+		);
+		fontType:=array(
+					("txt":"sans-serif","value":"sans-serif"),
+					("txt":"宋体","value":"Simson"),
+					("txt":"黑体","value":"Simhei"),
+					("txt":"仿宋","value":"仿宋,仿宋_GB2312"),
+					("txt":"楷体","value":"楷体,楷体_GB2312"),
+					("txt":"隶书","value":"隶书"),
+					("txt":"微软雅黑","value":"Microsoft Yahei"),
+					("txt":"幼圆","value":"幼圆"),
+					("txt":"Arial","value":"Arial"),
+					("txt":"Calibri","value":"Calibri"),
+					("txt":"Tahoma","value":"Tahoma"),
+					("txt":"Verdana","value":"Verdana")
+		);
+		
+		YPos:=array(
+					("txt":"左边","value":"left"),
+					("txt":"右边","value":"right")
+		);
+		
+		TorF := array(
+					("txt":"是","value":1),
+					("txt":"否","value":0)
+		);
+		FormatLegendpos:= array(
+					("txt":"上","value":"top"),
+					("txt":"下","value":"bottom"),
+					("txt":"左","value":"left"),
+					("txt":"右","value":"right")
+		);
+		
+		Num := array(
+					("txt":"0","value":0),
+					("txt":"1","value":1),
+					("txt":"2","value":2),
+					("txt":"3","value":3),
+					("txt":"4","value":4),
+					("txt":"5","value":5),
+					("txt":"6","value":6),
+					("txt":"7","value":7),
+					("txt":"8","value":8),
+					("txt":"9","value":9)
+					);
+		
+		Width := array(
+					("txt":"0","value":0),
+					("txt":"1","value":1),
+					("txt":"2","value":2),
+					("txt":"3","value":3),
+					("txt":"4","value":4),
+					("txt":"5","value":5)					
+					);				
+		if not istable(conf) then 
+		    conf:= array("dispWay":1,"width":"","height":"","限制条件":"","名称":"","可导出数据":0,"可导出图片":1,"字体大小":"","字体颜色":"",
+		            "图形属性":
+		                ("图形边框":("粗细":1,"颜色":"#000000","内边距":8,"角类型":2),
+		                "背景网格":("边框":"normal","是否画网格线":0,"网格设置":("类型":"系统默认")),
+		                "图例格式":("内外":"内部","位置":"ne","类型":"简要"),
+		                "X轴":("类型":"文本","X轴列名":"","轴名":"","主标记个数":4,"刻度":"","角度":"0","坐标":()),
+		                "Y轴":(),
+		                "图表类型和坐标轴":("*":("图形属性":14,"坐标轴":0,"标识类型":"none","大小":0,"空值是否连续":1,"线型粗细":1.5)),
+		                ));
+		                //"动作事件":("提示框":"")));
+		
+		basicConf:= array("ItemName":"基本设置","Content":(
+										    (("txt":"图高","type":"input","singleCol":1,"value":conf['height']?:250,"comment":("content":"px"),"attr":("property":"height","dataType":"num","css":("width":"60px")))),
+										    (("txt":"图宽","type":"input","value":conf['width']?:'',"comment":("content":"px"),"attr":("property":"width","dataType":"num","css":("width":"60px")))),
+										    (("txt":"背景颜色","type":"colorpicker","value":conf['图形属性']['背景颜色']?:'',"attr":("property":"图形属性:背景颜色","css":("width":"60px"))))
+		               ));
+		if not istable(conf["图形属性"]["X轴"]) then conf["图形属性"]["X轴"]:= array();	  
+		XaxisSetup := array("ItemName":"横轴设置","Content":(
+									     (
+													("txt":"轴类型","type":"select","value":conf["图形属性"]["X轴"]["类型"]?:"文本","attr":("property":"图形属性:X轴:类型","css":("width":"64px")),"options":XAxisConf),
+													("txt":"字段名","type":"input","value":WebsiteName,"value":conf["图形属性"]["X轴"]["X轴列名"]?:'*',"attr":("title":"如为空或者*则默认数据第一列为x轴","property":"图形属性:X轴:X轴列名","css":("width":"60px"))),
+				                  ("txt":"角度","type":"input","value":isEmpty(conf["图形属性"]["X轴"]["角度"])?"0":conf["图形属性"]["X轴"]["角度"],"attr":("property":"图形属性:X轴:角度","css":("width":"40px")))
+				                ),
+				                (
+				                	("txt":"主标记个数","type":"input","value":isEmpty(conf["图形属性"]["X轴"]["主标记个数"])? '':conf["图形属性"]["X轴"]["主标记个数"],"attr":("datatype":"num","property":"图形属性:X轴:主标记个数","css":("width":"60px"))),
+				                  ("txt":"轴名称","type":"input","value":conf["图形属性"]["X轴"]["轴名"]?:'',"attr":("property":"图形属性:X轴:轴名","css":("width":"60px")))
+													//("txt":"颜色","type":"input","attr":("property":"图形属性:X轴:轴名:颜色","css":("width":"60px"))),
+													//("txt":"轴单位","type":"input","value":conf["图形属性"]["X轴"]["单位"]?:'',"attr":("property":"图形属性:X轴:单位","css":("width":"40px"))),
+													),
+													(("txt":"轴颜色","type":"colorpicker","value":conf["图形属性"]["X轴"]["颜色"]?:'',"attr":("property":"图形属性:X轴:颜色","css":("width":"60px"))),
+													("txt":"坐标[宫图专用]","type":"input","value":conf["图形属性"]["X轴"]["坐标"]?:'',"attr":("property":"图形属性:X轴:坐标","css":("width":"60px"))),
+													//("txt":"最大值","type":"input","attr":("property":"图形属性:X轴:最大值","css":("width":"60px"))),
+													//("txt":"最小值","type":"input","attr":("property":"图形属性:X轴:最小值","css":("width":"60px"))),
+													("type":"text","txt":"更多","sub":
+														("Content":((
+																					("type":"text","txt":"主要刻度","attr":("css":("display":"block","font-weight":"bold"))),
+																				
+																					("txt":"颜色","type":"colorpicker","value":conf["图形属性"]["X轴"]["主要刻度"]["颜色"]?:'',"attr":("property":"图形属性:X轴:主要刻度:颜色","css":("width":"60px"))),
+																					("txt":"线宽","type":"input","value":conf["图形属性"]["X轴"]["主要刻度"]["线宽"]?:'',"attr":("property":"图形属性:X轴:主要刻度:线宽","dataType":"num","css":("width":"60px"))),
+																					("txt":"长度","type":"hidden","value":conf["图形属性"]["X轴"]["主要刻度"]["长度"]?:'',"attr":("property":"图形属性:X轴:主要刻度:长度","dataType":"num","css":("width":"60px"))),
+																					("txt":"间隔","type":"input","value":conf["图形属性"]["X轴"]["主要刻度"]["间隔"]?:'',"attr":("property":"图形属性:X轴:主要刻度:间隔","dataType":"num","css":("width":"60px"))),
+																				),(
+																					("type":"text","txt":"次要刻度","attr":("css":("display":"block","font-weight":"bold"))),
+																					("txt":"颜色","type":"colorpicker","value":conf["图形属性"]["X轴"]["次要刻度"]["颜色"]?:'',"attr":("property":"图形属性:X轴:次要刻度:颜色","css":("width":"60px"))),
+																					("txt":"线宽","type":"input","value":conf["图形属性"]["X轴"]["次要刻度"]["线宽"]?:'',"attr":("property":"图形属性:X轴:次要刻度:线宽","dataType":"num","css":("width":"60px"))),
+																					("txt":"长度","type":"hidden","value":conf["图形属性"]["X轴"]["次要刻度"]["长度"]?:'',"attr":("property":"图形属性:X轴:次要刻度:长度","dataType":"num","css":("width":"60px"))),
+																					("txt":"间隔","type":"input","value":conf["图形属性"]["X轴"]["次要刻度"]["间隔"]?:'',"attr":("property":"图形属性:X轴:次要刻度:间隔","dataType":"num","css":("width":"60px"))),
+																				),(
+																					("type":"text","txt":"主要网格线","attr":("css":("display":"block","font-weight":"bold"))),
+																					
+																					("txt":"颜色","type":"colorpicker","value":conf["图形属性"]["X轴"]["主要网格线"]["颜色"]?:'',"attr":("property":"图形属性:X轴:主要网格线:颜色","css":("width":"60px"))),
+																					("txt":"线宽","type":"input","value":conf["图形属性"]["X轴"]["次要刻度"]["线宽"]?:'',"attr":("property":"图形属性:X轴:主要网格线:线宽","dataType":"num","css":("width":"60px"))),
+																					("txt":"间隔","type":"input","value":conf["图形属性"]["X轴"]["主要网格线"]["间隔"]?:'',"attr":("property":"图形属性:X轴:主要网格线:间隔","dataType":"num","css":("width":"60px"))),
+																				),(
+																					("type":"text","txt":"次要网格线","attr":("css":("display":"block","font-weight":"bold"))),
+																					
+																					("txt":"颜色","type":"colorpicker","value":conf["图形属性"]["X轴"]["次要网格线"]["颜色"]?:'',"attr":("property":"图形属性:X轴:次要网格线:颜色","css":("width":"60px"))),
+																					("txt":"线宽","type":"input","value":conf["图形属性"]["X轴"]["次要网格线"]["线宽"]?:'',"attr":("property":"图形属性:X轴:次要网格线:线宽","dataType":"num","css":("width":"60px"))),
+																					("txt":"间隔","type":"input","value":conf["图形属性"]["X轴"]["次要网格线"]["间隔"]?:'',"attr":("property":"图形属性:X轴:次要网格线:间隔","dataType":"num","css":("width":"60px")))
+																					
+																			 ))
+														),
+													"attr":("css":("margin-left":"8px","font-size":"10px","color":"#FA9300","cursor":"pointer")))
+												)
+		                  ));
+		arr2:= _getYAxisArr(conf);
+		
+		YaxisSetup := array("ItemName":"系列设置","Content":(
+										(("txt":" 增 加 ","type":"button","attr":("css":("margin-left":"10px"),"onclick":"return chartY_mgr(this,1);")))
+		              ));
+		YaxisSetup['Content'] &= arr2;
+		
+		s_title:= conf['名称']?:'';
+ 		if isEmpty(s_title) then s_title:= conf['图形属性']['标题']['内容']?:'';
+ 		s_fontSize:= conf['字体大小']?:'';
+ 		if isEmpty(s_fontSize) then s_fontSize:= conf['图形属性']['标题']['大小']?:'8px';
+ 		s_fontColor:= conf['字体颜色']?:'';
+ 		if isEmpty(s_fontColor) then s_fontColor:= conf['图形属性']['标题']['颜色']?:'#000000';
+ 		
+		title := array("ItemName":"图表标题","Content":(
+										(
+											("txt":"标题","type":"input","value":s_title,"attr":("property":"图形属性:标题:内容","css":("width":"200px")))),
+											(("txt":"字体","type":"select","value":conf['图形属性']['标题']['字体']?:'',"attr":("property":"图形属性:标题:字体"),"options":fontType)),
+											(("txt":"字大小","type":"select","value":s_fontSize,"attr":("property":"图形属性:标题:大小"),"options":fontSize)
+										),
+										(
+											("txt":"字颜色","type":"colorpicker","value":s_fontColor,"attr":("property":"图形属性:标题:颜色","css":("width":"60px"))),
+											//("txt":"边框宽度","type":"input","attr":("property":"图形属性:标题:边框宽度","css":("width":"60px"))),
+											//("txt":"字边框色","type":"input","attr":("property":"图形属性:标题:字边框色","css":("width":"60px")))
+										)
+										//(("txt":"字边距","type":"input","attr":("property":"图形属性:标题:字边距")))
+							 		));
+		orginGrid_1:= conf['图形属性']['背景网格']['水平线'];
+		orginGrid_2:= conf['图形属性']['背景网格']['垂直线'];
+		BackgroundGrid := array("ItemName":"背景网格","Content":(
+										(
+											("txt":"画网格线","type":"checkbox","checked":conf['图形属性']['背景网格']['是否画网格线']?1:0,"attr":("property":"图形属性:背景网格:是否画网格线","css":())),
+											//("txt":"数据点","type":"select","attr":("property":"图形属性:背景网格:数据点","css":("width":"60px")),"options":TorF),
+										)
+							 ));
+		ChartBorder := array("ItemName":"图表边框","Content":(
+										(											 
+											
+											("txt":"粗细","type":"select","value":conf['图形属性']['图形边框']['粗细']?:0,"attr":("dataType":"num","property":"图形属性:图形边框:粗细","css":("width":"40px")),"options":Width),
+											("txt":"内边距","type":"input","value":conf['图形属性']['图形边框']['内边距']?conf['图形属性']['图形边框']['内边距']:8,"attr":("dataType":"num","property":"图形属性:图形边框:内边距","css":("width":"30px"))),
+											("txt":"颜色","type":"colorpicker","value":conf['图形属性']['图形边框']['颜色']?conf['图形属性']['图形边框']['颜色']:'',"attr":("property":"图形属性:图形边框:颜色","css":("width":"60px"))),
+											("txt":"圆角","type":"input","value":conf['图形属性']['图形边框']['角类型']?conf['图形属性']['图形边框']['角类型']:2,"attr":("dataType":"num","property":"图形属性:图形边框:角类型","css":("width":"30px")))
+										)));
+	  orginLegTitle:= conf['图形属性']['图例格式']['名称'];
+	  if not istable(orginLegTitle) then orginLegTitle:= array();
+	  orginLegBord:= conf['图形属性']['图例格式']['边框'];
+	  if not istable(orginLegBord) then orginLegBord:= array();
+	  orginLegDisp:= conf['图形属性']['图例格式']['可见'];
+	  if isEmpty(orginLegDisp) then orginLegDisp:= 1 ;
+		FormatLegend := array("ItemName":"图例格式","Content":(
+										(
+											("txt":"是否显示","type":"checkbox","checked":orginLegDisp?1:0,"attr":("property":"图形属性:图例格式:可见"),"css":()),
+											("txt":"图例位置","type":"select","value":conf['图形属性']['图例格式']['位置']?:'',"attr":("property":"图形属性:图例格式:位置","css":("width":"60px")),"options":FormatLegendpos),
+											("type":"text","txt":"更多","sub":
+														("Content":((
+																					
+																						("txt":"背景颜色","type":"colorpicker","value":conf['图形属性']['图例格式']['背景颜色']?:'',"attr":("property":"图形属性:图例格式:背景颜色","css":("width":"60px")))
+																						//("txt":"边框颜色","type":"colorpicker","value":conf['图形属性']['图例格式']['字体边框颜色']?:'',"attr":("property":"图形属性:图例格式:字体边框颜色","css":("width":"60px"))),
+																						//("txt":"外边距","type":"input","value":conf['图形属性']['图例格式']['外边距']?:'',"attr":("property":"图形属性:图例格式:外边距","css":("width":"60px")))
+																			 ),(
+																						//("txt":"字体","type":"select","value":conf['图形属性']['图例格式']['字体']? :'',"attr":("property":"图形属性:图例格式:字体"),"options":fontType)
+																						//("txt":"字大小","type":"select","value":conf['图形属性']['图例格式']['大小']?:'12px',"attr":("property":"图形属性:图例格式:大小"),"options":fontSize),
+																						//("txt":"字粗度","type":"input","value":conf['图形属性']['图例格式']['字体线条宽度']?:'',"attr":("property":"图形属性:图例格式:字体线条宽度","css":("width":"60px"))),
+																						//("txt":"字颜色","type":"colorpicker","value":conf['图形属性']['图例格式']['字体颜色']?:'',"attr":("property":"图形属性:图例格式:字体颜色","css":("width":"60px")))
+																			 ))
+														),
+												"attr":("css":("margin-left":"8px","font-size":"10px","color":"#FA9300","cursor":"pointer"))
+												),
+											("type":"input","txt":" 图例标题","value":orginLegTitle['名称内容']?:'',"attr":("property":"图形属性:图例格式:名称:名称内容","css":("width":"60px"))),											
+										)
+							 ));
+		ToolTip := array("ItemName":"提示框","Content":(
+									(
+										("txt":"是否显示","type":"checkbox","checked":conf['图形属性']['提示框']['可见']?1:0,"attr":("property":"图形属性:提示框:可见","dataType":"num","css":()))
+										//("txt":"类型","type":"select","attr":("property":"图形属性:提示框:类型","css":()),"options":(("txt":"normal","value":"normal"),("txt":"shared","value":"shared"))),
+										//("txt":"高亮","type":"select","value":conf['图形属性']['提示框']['高亮显示']?1:0,"attr":("property":"图形属性:提示框:高亮显示","dataType":"num","css":()),"options":TorF)
+										//("txt":"背景色","type":"colorpicker","attr":("property":"图形属性:提示框:背景颜色","css":("width":"60px")))
+									),
+									(
+										("txt":"动作事件","type":"textarea","value":conf['图形属性']['动作事件']['提示框']?:'',"attr":("property":"图形属性:动作事件:提示框","css":()))
+									)
+									//(("txt":"边框颜色","type":"colorpicker","attr":("property":"图形属性:提示框:边框颜色","css":("width":"60px"))),("txt":"提示区面积:","type":"input","attr":("property":"图形属性:提示框:提示区面积","css":("width":"60px"))))
+							));
+		animation := array("ItemName":"动画特效","Content":(
+									(
+										//("txt":"动画显示","type":"checkbox","checked":conf['图形属性']['动画']['是否']?1:0,"attr":("property":"图形属性:动画:是否")),
+										//("txt":"延迟显示","type":"select","value":conf['图形属性']['动画']['延迟']?:0,"attr":("property":"图形属性:动画:延迟","dataType":"num"),"options":Num),
+										//("txt":"显示速度","type":"select","value":conf['图形属性']['动画']['速度']?:0,"attr":("property":"图形属性:动画:速度","dataType":"num"),"options":Num)
+									),
+									(
+										("txt":"十字准线","type":"checkbox","checked":conf['图形属性']['动画']['十字准线']['可见']?1:0,"attr":("property":"图形属性:动画:十字准线:可见")),
+										("type":"text","txt":"更多","sub":
+												("Content":(
+																		(
+																			("type":"text","txt":"水平线","attr":("css":("display":"block","font-weight":"bold"))),
+																			("type":"checkbox","txt":"是否启用","checked":conf['图形属性']['动画']['十字准线']['水平线可见']?1:0,"attr":("property":"图形属性:动画:十字准线:水平线可见","css":())),
+																			("type":"colorpicker","txt":"颜色","value":conf['图形属性']['动画']['十字准线']['水平线颜色']?:'',"attr":("property":"图形属性:动画:十字准线:水平线颜色","css":("width":"60px")))
+																		 ),
+																		 (
+																		  ("type":"text","txt":"垂直线","attr":("css":("display":"block","font-weight":"bold"))),
+																		  ("type":"checkbox","txt":"是否启用","checked":conf['图形属性']['动画']['十字准线']['垂直线可见']?1:0,"attr":("property":"图形属性:动画:十字准线:垂直线可见","css":())),
+																		  ("type":"colorpicker","txt":"颜色","value":conf['图形属性']['动画']['十字准线']['垂直线颜色']?:'',"attr":("property":"图形属性:动画:十字准线:垂直线颜色","css":("width":"60px")))
+																	   )
+														        )
+												),"attr":("css":("margin-left":"8px","font-size":"10px","color":"#FA9300","cursor":"pointer"))
+										)
+									)
+							));
+		orginRefresh:= array();
+		if istable(conf['刷新']) then orginRefresh:= conf['刷新'];
+		other := array("ItemName":"其他设置","Content":(
+									(("txt":"可导出数据","type":"checkbox","checked":conf['可导出数据']?1:0,"attr":("property":"可导出数据"))),
+									(("txt":"自动刷新","type":"text","attr":("css":("display":"block","font-weight":"bold")))),
+									(("txt":"允许刷新","type":"checkbox","checked":orginRefresh['是否']?1:0,"attr":("property":"刷新:是否")),
+									("txt":"间隔(秒)","type":"input","value":orginRefresh['间隔']>0?orginRefresh['间隔']:'',"attr":("property":"刷新:间隔","dataType":"num","css":("width":"60px")))),
+							));
+
+		//basiArr:=array(XaxisSetup,YaxisSetup,basicConf,title,BackgroundGrid,ChartBorder,FormatLegend,ToolTip,animation,other);
+	  basiArr:=array(XaxisSetup,YaxisSetup,basicConf,title,BackgroundGrid,ChartBorder,FormatLegend);
+	  return basiArr;
+end;
+
+function _getYAxisArr(conf);
+begin
+     arr:= array();
+		if not (istable(conf)  and istable(conf['图形属性']) and conf['图形属性']['图表类型和坐标轴'])then begin
+				return __getBaiscConf(arr,0);
+		end;
+		yAxisConf:= conf['图形属性']['Y轴'];
+		ySeriesConf:= conf['图形属性']['图表类型和坐标轴'];		
+		fieldArr:= getAllIndexs(ySeriesConf);
+		for i:=0 to length(fieldArr)-1 do begin
+				basicArr:= array();
+				axisArr:= array();
+				basicArr['系列名']:= fieldArr[i];
+				basicArr['图形属性']:= ySeriesConf[fieldArr[i]]['图形属性'];
+				basicArr['图例别名']:= ySeriesConf[fieldArr[i]]['图例别名']?:'';
+				basicArr['标识类型']:= ySeriesConf[fieldArr[i]]['标识类型'];
+				basicArr['大小']:= ySeriesConf[fieldArr[i]]['大小'];
+				basicArr['空值是否连续']:= ySeriesConf[fieldArr[i]]['空值是否连续'];
+				basicArr['线宽']:= ySeriesConf[fieldArr[i]]['线宽']?:2;
+				basicArr['颜色']:= ySeriesConf[fieldArr[i]]['颜色'];
+				basicArr['坐标轴']:= ySeriesConf[fieldArr[i]]['坐标轴'];
+				
+				y_f:= ySeriesConf[fieldArr[i]]['坐标轴'];
+				case y_f of
+							0:
+							begin//左轴
+									axisArr:= yAxisConf['左轴'];
+							end;
+							1:
+							begin//右轴
+									axisArr:= yAxisConf['右轴'];
+							end;
+							2:
+							begin//第三轴
+									axisArr:= yAxisConf['第三轴'];
+							end;
+							3:
+							begin//第四轴
+									axisArr:= yAxisConf['第四轴'];
+							end;
+				end;
+				if istable(axisArr) then basicArr&= axisArr;
+				arr&= __getBaiscConf(basicArr,i);
+		end;
+		return arr;	
+end;
+
+function TFormConf.getComCatConf(conf);
+begin
+	
+end;
+
+function __getBaiscConf(arr,i);
+begin	
+	chartConf:= chartConf();
+	YType:= array();
+	for j:= 0 to length(chartConf)-1 do begin
+		L:= length(YType);
+		YType[L]['txt']:= chartConf[j]['V'];
+		YType[L]['value']:= chartConf[j]['N'];
+	end;
+
+		YName:=array(
+					("txt":"第一轴","value":0),
+					("txt":"第二轴","value":1),
+					("txt":"第三轴","value":2),
+					("txt":"第四轴","value":3)
+		);
+		YPos:=array(
+					("txt":"左边","value":"left"),
+					("txt":"右边","value":"right")
+		);
+		
+		Width:=array(
+		      ("txt":1,"value":1),
+		      ("txt":2,"value":2),
+		      ("txt":3,"value":3),
+		      ("txt":4,"value":4),
+		      ("txt":5,"value":5), 
+		);
+		Yidentifying:=array(
+					("txt":"无","value":"none"),
+					("txt":"圆","value":"circle"),
+					("txt":"长方形","value":"rectangle"),
+					("txt":"菱形","value":"diamond"),
+					("txt":"三角形","value":"triangle"),
+					("txt":"加号","value":"plus"),
+					("txt":"线","value":"line")		        
+		);
+		markSizeArr:=array(
+		                ("txt":"默认","value":0),
+		                ("txt":"常用","value":5),
+		                ("txt":"中","value":8),
+		                ("txt":"大","value":12),
+		                ("txt":"特大","value":15),
+		        );
+		TorF := array(
+					("txt":"是","value":1),
+					("txt":"否","value":0)
+		); 
+	ax_str:= '左轴';
+	case arr['坐标轴'] of 
+		0:ax_str:= '左轴';
+		1:ax_str:= '右轴';
+		2:ax_str:= '第三轴';
+		3:ax_str:= '第四轴';
+	end;
+  if not istable(arr['主要刻度']) then arr['主要刻度']:= array();
+  if not istable(arr['次要刻度']) then arr['次要刻度']:= array();
+  if not istable(arr['主要网格线']) then arr['主要网格线']:= array();
+  if not istable(arr['次要网格线']) then arr['次要网格线']:= array();
+  
+	return array((
+								("txt":"删除","type":"button","attr":("onclick":"return chartY_mgr(this,0);","css":("margin-left":"10px","border":"0px black solid","color":"blue"))),
+								("txt":" 图","type":"select","value":arr['图形属性']?:'',"attr":("dataType":"num","property":"图形属性:图表类型和坐标轴:"+tostring(i)+":图形属性","css":()),"options":YType),
+								("txt":"数据列名","type":"input","value":arr['系列名']?:'*',"required":false,"requiredMark":"","attr":("title":"如为空或*,则默认数据第二列开始至最后一列作为y轴","property":"图形属性:图表类型和坐标轴:"+tostring(i)+":系列名","css":("width":"180px",))),
+								("type":"text","txt":"更多","sub":
+												("Content":(
+																		 (("txt":"图例别名","type":"input","value":arr['图例别名']?:'',"attr":("property":"图形属性:图表类型和坐标轴:"+tostring(i)+":图例别名","css":("width":"60px")))),
+																		 (
+																		 	("txt":"标识","type":"select","value":arr['标识类型']?:'',"attr":("property":"图形属性:图表类型和坐标轴:"+tostring(i)+":标识类型","css":()),"options":Yidentifying),
+																		 	("txt":"大小","type":"select","value":arr['大小']?:'',"attr":("dataType":"num","property":"图形属性:图表类型和坐标轴:"+tostring(i)+":大小","css":()),"options":markSizeArr)
+																		 ),
+																		 (("txt":"空值连续","type":"select","value":arr['空值是否连续']?:'',"attr":("property":"图形属性:图表类型和坐标轴:"+tostring(i)+":空值是否连续","dataType":"num","css":()),"options":TorF),
+																		 	("txt":"线宽","type":"select","value":arr['线宽']?:1,"attr":("property":"图形属性:图表类型和坐标轴:"+tostring(i)+":线宽","dataType":"num","css":("width":"40px")),"options":Width),
+																		 	("txt":"颜色","type":"colorpicker","value":arr['颜色']?:"","attr":("property":"图形属性:图表类型和坐标轴:"+tostring(i)+":颜色","css":("width":"40px")))
+																		 ),
+																		 (("txt":"坐标轴设置","type":"text","attr":("css":("display":"block","font-weight":"bold")))),
+																		 (("txt":"坐标轴","type":"select","value":arr['坐标轴']?:0,"attr":("chartProperty":"axisSelect","datatype":"num","property":"图形属性:图表类型和坐标轴:"+tostring(i)+":坐标轴"),"options":YName)),
+																		 //---//图形属性:图表类型和坐标轴:----end--
+																		 (//图形属性:Y轴:左轴:+
+																			("txt":"轴名","type":"input","value":arr['轴名']?:'',"attr":("property":"图形属性:Y轴:"+tostring(i)+":"+ax_str+":轴名","chartProperty":"chartAxis","css":("width":"80px"))),
+																			//("txt":"颜色","type":"colorpicker","attr":("property":"轴名称:颜色")),
+																			("txt":"位置","type":"select","value":arr['位置']?:'',"attr":("property":"图形属性:Y轴:"+tostring(i)+":"+ax_str+":位置","chartProperty":"chartAxis"),"options":YPos),
+																			//("txt":"类型","type":"select","value":arr['类型']?:'',"attr":("property":"图形属性:Y轴:"+tostring(i)+":"+ax_str+":类型","chartProperty":"chartAxis"),"options":(("txt":"文本","value":"文本"),("txt":"时间","value":"时间"),("txt":"数字","value":"数字"))),
+																		),(
+																			("txt":"轴单位","type":"input","value":arr['单位']?:'',"attr":("property":"图形属性:Y轴:"+tostring(i)+":"+ax_str+":单位","chartProperty":"chartAxis","css":("width":"60px"))),
+																			("txt":"轴宽度","type":"select","value":arr['轴宽度']?:1,"attr":("property":"图形属性:Y轴:"+tostring(i)+":"+ax_str+":轴宽度","chartProperty":"chartAxis","dataType":"num","css":("width":"60px")),"options":Width),
+																			("txt":"轴颜色","type":"colorpicker","value":arr['轴颜色']?:'',"attr":("property":"图形属性:Y轴:"+tostring(i)+":"+ax_str+":轴颜色","chartProperty":"chartAxis","css":("width":"60px")))
+																		),(("txt":"最大值","type":"input","value":arr['最大值']?:'',"attr":("property":"图形属性:Y轴:"+tostring(i)+":"+ax_str+":最大值","chartProperty":"chartAxis","css":("width":"60px"))),
+																			("txt":"最小值","type":"input","value":arr['最小值']?:'',"attr":("property":"图形属性:Y轴:"+tostring(i)+":"+ax_str+":最小值","chartProperty":"chartAxis","css":("width":"60px"))),
+																			)
+																			,																			
+																			(("type":"text","txt":"主要网格线","attr":("css":("display":"block","font-weight":"bold")))),
+																			(("txt":"颜色","type":"colorpicker","value":arr['主要网格线']['颜色']?:'',"attr":("property":"图形属性:Y轴:"+tostring(i)+":"+ax_str+":主要网格线:颜色","chartProperty":"chartAxis","css":("width":"60px"))),																			
+																			("txt":"线宽","type":"select","value":arr['主要网格线']['线宽']?:1,"attr":("property":"图形属性:Y轴:"+tostring(i)+":"+ax_str+":主要网格线:线宽","chartProperty":"chartAxis","dataType":"num","css":("width":"40px")),"options":Width),
+																			("txt":"间隔","type":"input","value":arr['主要网格线']['间隔']?:'',"attr":("property":"图形属性:Y轴:"+tostring(i)+":"+ax_str+":主要网格线:间隔","chartProperty":"chartAxis","css":("width":"40px"))),
+																			),
+																			(("type":"text","txt":"次要网格线","attr":("css":("display":"block","font-weight":"bold")))),
+																			(("txt":"颜色","type":"colorpicker","value":arr['次要网格线']['颜色']?:'',"attr":("property":"图形属性:Y轴:"+tostring(i)+":"+ax_str+":次要网格线:颜色","chartProperty":"chartAxis","css":("width":"60px"))),																			
+																			("txt":"线宽","type":"select","value":arr['次要网格线']['线宽']?:'',"attr":("property":"图形属性:Y轴:"+tostring(i)+":"+ax_str+":次要网格线:线宽","chartProperty":"chartAxis","dataType":"num","css":("width":"40px")),"options":Width),
+																			("txt":"间隔","type":"input","value":arr['次要网格线']['间隔']?:'',"attr":("property":"图形属性:Y轴:"+tostring(i)+":"+ax_str+":次要网格线:间隔","chartProperty":"chartAxis","css":("width":"40px")))
+																	 
+																	 )
+																	 )
+												),
+										"attr":("css":("margin-left":"8px","font-size":"10px","color":"#FA9300","cursor":"pointer"))
+										)));	
+end;
+
+function _getStyles(Stype);
+begin
+	   WordTools := createObject('WordTools');
+	   filePath := class(TWebFundIDSConfig).getFileBasePath()+'reportData\\template\\Word_Template\\default.doc';	   
+	   styles := WordTools.getStyles(filePath);
+	   styles := ifArray(styles)?styles:array();
+	   if Styles[Stype] then return Styles[Stype]
+	   else
+	   return array();
+end;

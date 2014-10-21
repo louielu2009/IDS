@@ -1,0 +1,174 @@
+//2011-11-18
+//openSourceTree--->public
+//子系统头类
+type TWebFundIDSHeader = class(TWebHeader)       
+    function setDefaultResource();override;
+    function outHeader();override;        
+    function OutFooter();override;   
+    function jsConfig(Ctype); 
+    function cssConfig(Ctype);
+end;
+
+function TWebFundIDSHeader.setDefaultResource();override;
+Begin
+	class(TWebHeader).setDefaultResource();    
+	FCharset:='gb2312';
+	RegistCodeInHead('<!--[if IE]><script language="javascript" type="text/javascript" src="'+getBaseRootPath()+'plugin/jqChart/js/excanvas.js"></script><![endif]-->');		  
+	setCss(class(TWebFundIDSConfig).getBaseRootPath()+"plugin/jquery-ui-1.10.2.custom/development-bundle/themes/base/jquery.ui.all.css"); 		  
+	
+	//fundIDS
+	setJS(class(TWebFundIDSConfig).getBaseRootPath()+"fundids/js/jquery-1.8.3.min.js");
+	setJS(class(TWebFundIDSConfig).getBaseRootPath()+"fundids/js/jquery-ui-1.10.2.custom.min.js");
+	
+	//datagrid
+	setCss(class(TWebFundIDSConfig).getBaseRootPath()+"DataGrid/css/ui.datagrid.css"); 
+	setJs(class(TWebFundIDSConfig).getbaserootpath()+"DataGrid/js/DataGrid.js") ;  
+	setJs(class(TWebFundIDSConfig).getbaserootpath()+"ToolBox/jquery.json-2.4.min.js");  
+	setJs(class(TWebFundIDSConfig).getbaserootpath()+"ToolBox/jquery.extendTool.js");
+	
+	//jqchart
+	setCSS('/Resource/plugin/jqChart/CSS/jquery.jqchart.CSS');	
+	setCSS('/Resource/plugin/jqChart/CSS/jquery.jqRangeSlider.CSS');		
+	setJS('/Resource/plugin/jqChart/js/jquery.jqChart.min.js');	
+	setJS('/Resource/plugin/jqChart/js/jquery.jqRangeSlider.min.js');
+	setCSS('/Resource/plugin/jqChart/CSS/jquery.jqGauges.CSS');
+	setJS('/Resource/plugin/jqChart/js/jquery.jqGauges.min.js');
+		  		  
+			Ctype := httpGetQueryValueByName('type');
+			setSysParam('Type',Ctype);
+			jsConf := jsConfig(Ctype);
+			if ifArray( jsConf ) then
+			Begin
+			    for i := 0 to length(jsConf)-1 do
+			    setJS(class(TWebFundIDSConfig).getBaseRootPath()+jsConf[i]['path']);  
+      end;
+      cssConf := cssConfig(Ctype);
+      if ifArray(cssConf) then
+      Begin
+           for j := 0 to length(cssConf)-1 do
+           setCss(class(TWebFundIDSConfig).getBaseRootPath()+cssConf[j]['path']); 
+      end;
+     //site main css
+     setCss(getbaserootpath()+"fundids/css/style.css") ;
+End;
+
+function TWebFundIDSHeader.outHeader();override;
+Begin
+  class(TWebHeader).outHeader();
+  <?tslx>
+  <div class="sys_body">
+  	<div class="sys_header">
+			<div class="sys_header_logo">信息披露系统</div>
+			<div class="sys_userid">admin</div>
+			<div class="sys_login">注销</div>
+			<div style="clear:both"></div>
+			<div class="sys_menu">
+				<?tsl
+				UserID:= 'admin';
+		    menuStr:= class(TWebFundIDSMenuConf).siteNavDisplay(UserID);
+		    echo menuStr,'</div>';    
+        echo '</div><div style="clear:both"></div><div class="sys_content">';  
+End;
+
+
+function TWebFundIDSHeader.jsConfig(Ctype);
+Begin      		  
+      config := array('model':(('path':'fundids/js/jquery.model.js'),
+                               ('path':'fundids/js/jquery.model.contentEditor.js'),
+                               ('path':'fundIDS/js/modelConf.js'), 
+                               ('path':'fundids/js/selector.js'),
+                               ('path':'form/js/tsForm.js'),
+                               ('path':'Tree/js/tsTree.js'),
+                               ('path':'ToolBox/widget/jquery.widget.js'),
+                               ('path':'plugin/evoluteur-colorpicker/js/evol.colorpicker.js')
+                              ),
+	                    'element':(('path':'fundIDS/js/element.js'),
+	                          ('path':'fundids/js/jquery.model.js'),
+                            ('path':'fundids/js/jquery.model.contentEditor.js'),
+                            ('path':'form/js/tsForm.js'),
+                            ('path':'Tree/js/tsTree.js'),
+                            ('path':'ToolBox/widget/jquery.widget.js'),
+                              ),
+                      'EM':(('path':'fundIDS/js/EM.js'),
+                            ('path':'fundids/js/selector.js'),
+                            ('path':'form/js/tsForm.js') 
+                           ),
+                      'DM':(('path':'fundIDS/js/DM.js')),
+                      'manage':(('path':'fundIDS/js/ManageConf.js')),
+                      'group':(('path':'fundIDS/js/groupConf.js')),
+                     );
+      return config[Ctype];
+end;
+
+function TWebFundIDSHeader.cssConfig(Ctype);
+Begin
+      config := array('model':(('path':'fundIDS/css/model.css'),
+                               ('path':'fundIDS/css/selector.css'),
+                               ('path':'Form/css/ui.tsForm.css'),
+                               ('path':'Tree/css/ui.tsTree.css'),
+                               ('path':'ToolBox/widget/jquery.widget.css'),
+                               ('path':'plugin/evoluteur-colorpicker/css/evol.colorpicker.css')                               
+                              ),
+                      'element':(('path':'fundIDS/css/model.css'),
+                               ('path':'Form/css/ui.tsForm.css'),
+                               ('path':'Tree/css/ui.tsTree.css'),
+                               ('path':'ToolBox/widget/jquery.widget.css')                               
+                              ),
+                      'EM':(('path':'fundIDS/css/EM.css'),
+                            ('path':'fundIDS/css/selector.css'),
+                            ('path':'Form/css/ui.tsForm.css')
+                            ),
+                      'DM':(('path':'fundIDS/css/DM.css')
+                            ),
+                      'manage':(('path':'fundIDS/css/ModelManage.css')),
+                      'group':(('path':'fundIDS/css/group.css'))
+                      );                            
+      return config[Ctype];
+end;
+
+function TWebFundIDSHeader.outFooter();override;
+Begin	
+echo '</div><div style="clear:both"></div><div class="sys_footer"><p>Copyright &copy; 2014 <a href="//www.tinysoft.com.cn" target="_blank">天软科技</a></p></div></div>';
+<?tslx>
+    <script type="text/javascript">
+    $().ready(function(){           
+         $( ".jqButton" ).button(); 
+            $(".inputdate").each(function(){
+    			   	   $(this).datepicker({
+								                   "dateFormat": "yy-mm-dd",
+          	                       "changeYear": true,
+          	                       "changeMonth": true,
+          	                       "closeText": '关闭',
+																	 "prevText": '&#x3C;上月',
+																	 "nextText": '下月&#x3E;',
+																	 "currentText": '今天',
+																	 "monthNames": ['二月','三月','四月','五月','六月','七月','八月','九月','十月','十一月','十二月'],
+																	 "monthNamesShort": ['一月','二月','三月','四月','五月','六月','七月','八月','九月','十月','十一月','十二月'],
+																	 "dayNames": ['星期日','星期一','星期二','星期三','星期四','星期五','星期六'],
+																	 "dayNamesShort": ['周日','周一','周二','周三','周四','周五','周六'],
+																	 "dayNamesMin": ['日','一','二','三','四','五','六'],
+																	 "showMonthAfterYear": true,
+									    									beforeShow: function() {
+									                            					setTimeout(function(){$('.ui-datepicker').css('z-index', 99999);}, 0);
+									                       				 }
+									    			   	   })
+    		    })
+        })
+     
+	     $(".inputbond").autocomplete({
+    					source: "/public/suggest/autocomplete.tsl?t=bond",
+              minLength: 1,
+              autoFocus:true,
+              select: function( event, ui ) {},
+            search:function(event,ui){
+                $(this).css({"background":"#FFE"});
+            },
+            open:function(event,ui){setTimeout(function () {$('.ui-autocomplete').css('z-index', 9999);}, 0);},
+            close:function(event,ui){$(this).css({"background":""});}
+    		});
+
+});    
+</script>
+<?tsl
+     class(TWebHeader).outFooter();    
+End;

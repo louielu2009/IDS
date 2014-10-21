@@ -1,0 +1,529 @@
+type TComBox = class
+uid;
+
+function genDepartments(depID);//输出部门html
+function ElementConf();//输出元素配置
+function outElement(data);
+function genElement(data);//生成元素html
+function genTemplate(TID);overload;
+function genLabels(labels,flag);
+function genTitleList(TID);
+function outLayoutElement(TID,SID);//生成布局元素脚本
+
+function genTemplate(TID,param);overload;//输出完整模板     
+function genTable(Data);//生成表
+function genPic(Data);//生成图
+function genTxt(Data);//生成文本
+function genTitle(Data);//生成标题
+function genCategory(Data);//生成目录
+end;
+
+function TComBox.genDepartments(depID);
+begin
+     depID := depID ? depID:'';
+     (*queryData := array();
+     queryData['Table'] := 'TS_Departments'; 
+     queryData['QueryStr'] := '';
+     Deps := class(ExecuteSQL).Query(queryData);
+     *)
+     obj:= createObject("TWSMemberDB",-1);
+	 Deps:= obj.GetDepartment();//eg:array((RoleId":"role1410170003","RoleName":"信息技术部","Description":""))
+     if not ifArray(Deps) then Deps := array();
+     htm := '<select class="Departments">';
+     if not depID then
+     		htm += '<option value="">--</option>';
+     for i := 0 to length(Deps)-1 do
+     begin
+          if  Deps[i]['RoleId']= depID then
+          		htm += '<option value="'+tostring(Deps[i]['RoleId'])+'" selected="true">'+tostring(Deps[i]['RoleName'])+'</option>';
+          else
+          		htm += '<option value="'+tostring(Deps[i]['RoleId'])+'">'+tostring(Deps[i]['RoleName'])+'</option>';
+     end; 
+     htm += '</select>'; 
+     return htm;
+end;
+
+function TComBox.ElementConf();
+begin
+     arr := array('txt':'文本','table':'表格','pic':'图','category':'目录','title':'标题','newline':'换行符','pagebreak':'分页符','wordfile':'word附件');	
+     return arr;
+end;
+
+function TComBox.outLayoutElement(TID,SID);
+begin	  
+	   html := '';
+	   content := '';
+	   queryData := array();
+	   queryData['Table'] := 'TS_RTemplateE';
+	   queryData['QueryStr'] := "TID='"+tostring(TID)+"' and SERIESID="+tostring(SID);
+	   r := class(ExecuteSQL).query(queryData);
+	   if not ifArray(r) or not length(r) then return html;	   
+	   r := r[0];
+	   SID := r['SERIESID'];
+     EType := r['TYPE'];     
+     case EType of
+     'title':
+     begin
+     	    content += '<div class="Model_Element_FirstLine"><h'+tostring(r['SRC3'])+' class="Model_Element_Name">'+tostring(r['SRC2'])+'</h'+tostring(r['SRC3'])+'></div>';
+     end;
+     else
+     begin
+     	    arr := ElementConf();
+     	    content += '<div class="Model_Element_FirstLine"><span class="Model_Element_Name">（'+tostring(arr[EType])+'）</span></div>';
+     end;
+     end; 
+	   html := '<li class="Model_Element" SID="'+tostring(SID)+'"><div class="chooseCOM"  ctype="'+tostring(EType)+'">'+content+'</div></li>';
+     return html;
+end;
+
+function TComBox.genLabels(labels,flag);
+begin      
+      labels := ifString(labels)and labels ?labels:'';
+      labelsArr := str2Array(labels);
+      queryData := array();
+	    queryData['Table'] := 'TS_TElabel';
+	    queryData['QueryStr'] := '';
+	    r := class(ExecuteSQL).query(queryData);
+	    divStr := '';
+	    for i := 0 to length(r)-1 do
+	    begin
+	   	    if r[i]['NAME'] in labelsArr then
+	   	    divStr += '<input class="tag tag_added" type="checkbox" value= "'+tostring(r[i]['NAME'])+'" id="tag_'+tostring(flag)+tostring(i)+'"><label for="tag_'+tostring(flag)+tostring(i)+'">'+tostring(r[i]['NAME'])+'</label>'
+	   	    else
+	   	    divStr += '<input class="tag" type="checkbox" value= "'+tostring(r[i]['NAME'])+'" id="tag_'+tostring(flag)+tostring(i)+'"><label for="tag_'+tostring(flag)+tostring(i)+'">'+tostring(r[i]['NAME'])+'</label>';
+	    end;
+	    divStr := '<div class="tags">'+divStr+'</div>';	
+	    return divStr;
+end;
+
+function TComBox.genTitleList(TID);
+begin
+     html := '';
+     sql := "select * from TS_RTemplateE a left join TS_RTemplateElement b on a.EID=b.EID where TID='"+tostring(TID)+"' and SRC1=1 order by SERIESID asc";    
+     if not ExecSQL(class(TWebFundIDSConfig).getDBAlia(),sql,r) or not length(r) then return html;
+     for i := 0 to length(r)-1 do
+     begin
+     	    html += '<li><a href="javascript:void(0);" class="Model_Relocate Model_Title_Level'+tostring(r[i]['SRC3'])+'" SID="'+tostring(r[i]['SERIESID'])+'">'+tostring(r[i]['SRC2'])+'</a></li>';
+     end;
+     html := '<ul class="Model_LeftBox_TitleList">'+html+'</ul>';
+     return html;
+end;
+
+{
+function TComBox.genTemplate(TID);
+begin
+	   html := '';
+	   leftContent := '';
+	   rightContent := '';
+	   ullist := '';
+	   if not TID then return html;	   
+	   queryData := array();
+	   queryData['Table'] := 'TS_RTemplateConf';
+	   queryData['QueryStr'] := "TID='"+tostring(TID)+"'";
+	   TData := class(ExecuteSQL).query(queryData);
+	   if not ifArray(TData) or not length(TData) then return html;
+	   TName := TData[0]['TNAME'];
+	   queryData2 := array();
+	   queryData2['Table'] := 'TS_RTemplateE';
+	   queryData2['QueryStr'] := "TID='"+tostring(TID)+"' order By SERIESID asc";	   
+	   r := class(ExecuteSql).query(queryData2);	   
+	   Element := '<div class="Element_Base"><div><span class="Element_BaseTitle">基本</span></div>';
+	   Element += '<div><span class="Element_Type" comID="Txt">文本</span></div><div><span class="Element_Type" comID="Table">表格</span></div><div><span class="Element_Type" comID="Pic">图</span></div><div><span class="Element_Type" comID="WordFile">word文档</span></div>';
+	   Element += '</div>';
+	   Element += '<div class="Element_Layout"><div><span class="Element_LayoutTitle">布局</span></div>';
+	   Element += '<div><span class="Element_Type" comID="Title">标题</span></div><div><span class="Element_Type" comID="Newline">换行</span></div><div><span class="Element_Type" comID="PageBreak">分页符</span></div><div><span class="Element_Type" comID="Category">目录</span></div>';
+	   Element += '</div>';							           
+		 Element := '<div class="Element_EType">'+Element+'</div>';		
+	   if ifArray(r) and length(r) then
+	   begin
+	   	    EIDS := (`r)['EID'];
+	        EIDStr := '';
+	        for i := 0 to length(EIDS)-1 do
+	        begin
+	        	   EIDStr += ifthen(EIDStr,',','')+"'"+EIDS[i]+"'";
+	        end;
+	        EIDStr := "("+EIDStr+")";
+	        queryData['Table'] := 'TS_RTemplateElement';
+	        queryData['QueryStr'] := "EID in "+EIDStr;
+	        EIDArr := class(ExecuteSql).query(queryData);
+	        if not ifArray(EIDArr) or not length(EIDArr) then
+	        begin
+	             rightContent := '';
+	             ulList := '';	            
+	        end
+	        else
+	        begin	        	  
+	        	   EIDArr := select * from EIDArr left join r on [1].['EID']=[2].['EID'] order by ['SERIESID'] asc end;
+	        	   for j := 0 to length(EIDArr)-1 do
+	        	   begin	        	        	        	        
+	        	        if EIDArr[j]['CONF'] then
+	        	        EIDArr[j]['CONF'] := stm(EIDArr[j]['CONF'])
+	        	        else
+	        	        EIDArr[j]['CONF'] := array();	 
+	        	        EIDArr[j]['CONF']['SID'] := EIDArr[j]['SERIESID']; 
+	        	        EIDArr[j]['CONF']['EName'] :=  EIDArr[j]['NAME'];	        	        
+	        	        if EIDArr[j]['CONF']['Type'] = 'Title' then
+	        	        begin
+	        	             len := (EIDArr[j]['CONF']['Conf']['Level']-1)*10;      	   
+	        	        	   ullist += '<li><a href="javascript:void(0);" class="Model_Relocate Model_Title_Level'+tostring(EIDArr[j]['CONF']['Conf']['Level'])+'" eid="'+tostring(EIDArr[j]['EID'])+'" sid="'+tostring(EIDArr[j]['SERIESID'])+'">'+tostring(EIDArr[j]['CONF']['Content'])+'</a></li>';
+	        	        end;	        	        	        	        
+	        	        if EIDArr[j]['SRC1'] then 
+	        	        begin	        	        	   
+	        	        	   EIDArr[j]['CONF']['SetTitle'] := 1;
+	        	        	   EIDArr[j]['CONF']['TitleLevel'] := EIDArr[j]['SRC4'];
+	        	        	   EIDArr[j]['CONF']['Title'] := EIDArr[j]['SRC2'];
+	        	        	   EIDArr[j]['CONF']['TitleStyle'] := EIDArr[j]['SRC3'];
+	        	             len := (EIDArr[j]['CONF']['TitleLevel']-1)*10;
+	        	             ullist += '<li><a href="javascript:void(0);" class="Model_Relocate Model_Title_Level'+tostring(EIDArr[j]['CONF']['TitleLevel'])+'"  eid="'+tostring(EIDArr[j]['EID'])+'" sid="'+tostring(EIDArr[j]['SERIESID'])+'">'+tostring(EIDArr[j]['CONF']['Title'])+'</a></li>';
+	        	        end; 	        	        
+	        	        rightContent += genElement(EIDArr[j]);           
+	             end;	
+	             ullist := '<ul>'+ullist+'</ul>';
+	        end;        
+	   end
+	   else
+	   begin
+	   	    rightContent := '';	   	    
+	   end;	  
+	   rightContent := '<div class="Model_Bar"></div><div class="Model_RightBox main_content"><div class="Model_ModelName_Bar"><span class="Model_ModelName">'+tostring(TName)+'</span></div><ul class="Model_EditBox">'+rightContent+'</ul><div class="Model_BottomBox"><button class="Model_AddElement">添加元素</button><button class="Model_Save" tid="'+tostring(TID)+'">保存</button></div></div>';
+	   ulList := '<ul class="Model_LeftBox_TitleList">'+ulList+'</ul>';
+	   leftContent := '<div class="Model_LeftBox left_nav"><div class="Model_LeftBox_Title">文档结构</div><div><input type="text" class="Model_LeftBox_SearchContent" /><button class="Model_LeftBox_SearchButton">搜索</button></div><div class="Model_LeftBox_Titles">'+ulList+'</div></div>';	  
+	   html := leftContent+rightContent+Element;
+	   return html;
+end;
+}
+
+//**********************2014-8-29-Bin-输出完整模板****************************//
+function TComBox.genTemplate(TID,param);overload;
+begin
+     	
+end;
+
+function TComBox.genCategory(Data);
+begin
+	
+end;
+
+function TComBox.genTitle(Data);
+begin
+	   if not ifArray(Data) then return;
+	   html := '<h'+tostring(Data['Level'])+'>'+tostring(Data['Content'])+'</h'+tostring(Data['Level'])+'>';
+     return html;
+end;
+
+function TComBox.genTable(Data);
+begin
+	   if not ifArray(Data) or  not length(Data) then return '';
+	   IndexsArr := getAllIndexs(Data[0]);
+	   TableHeader := '';
+	   TableContent := '';
+	   trs := '';
+	   for i := 0 to length(Data)-1 do
+	   begin
+	   	    tds := '';
+	   	    for j := 0 to length(IndexsArr)-1 do
+	   	    begin
+	   	    	    tds += '<td>'+tostring(Data[i][IndexsArr[j]])+'</td>';
+	   	    end;
+	   	    trs += '<tr class="Element_Table_Content">'+tds+'</tr>';
+	   end;
+	   //**********获取表头配置************//
+	   Mlen := 1; 
+	   conf := array();
+	   r := array();
+	   for k := 0 to length(IndexsArr)-1 do
+	   begin
+	   	    if not ifString(IndexsArr[k]) then continue;
+	   	    arr := Str2Array(IndexsArr[k],'@');
+	   	    if length(arr)>Mlen then
+	   	    Mlen := length(arr);
+	   end;
+	   for j := 0 to length(IndexsArr)-1 do
+	   begin
+	   	    r[j] := array();
+	   	    arr := str2Array(IndexsArr[j],'@');
+	   	    for M := 0 to Mlen-1 do
+	   	    begin
+	   	         if not ifNil(arr[M]) then
+	   	         r[j][length(r[j])] := arr[M];  	             
+	        end;
+	   end;	   	   
+	   
+	   _r := `r;	   	  
+	   
+	   for i := 0 to length(_r)-1 do
+	   begin
+	   	    _r[i] := reshape(_r[i],1,length(_r[i]))[0];
+	   end;	   
+	   RowArr := array();	  
+	   for N := 0 to length(_r)-1 do
+	   begin
+	   	    RowArr[N] := array();
+	   	    x := 0;y := 1;
+	   	    while x< length(_r[N]) do 
+					begin 
+					     if ifnil(_r[N][x]) then
+					     begin
+					     	    X := X+1;
+					     	    y := 1;
+					     end;
+					     if _r[N][x] <> _r[N][X+Y] then
+					     begin					     	     
+					     	     len := length(RowArr[N]);
+					     	     RowArr[N][len]['ColSpan'] := y;
+					     	     RowArr[N][len]['Value'] := _r[N][x];
+					     	     X := x+y;
+					     	     y := 1;
+					     end
+					     else
+					     y++;
+					end; 
+	    end;	    
+	    ColArr := array();
+	    
+	    for N := 0 to length(r)-1 do
+	    begin
+	    	   ColArr[N] := array();
+	    	   x := 0;y := 1;	    	   
+	    	   while x< MLen do
+	    	   begin	    	   
+	    	   	    if x+y>= MLen then
+	    	   	    begin
+	    	   	    	    colArr[N][length(ColArr[N])] := y;
+	    	   	    	    break;
+	    	   	    end;
+	    	   	    if not ifNil(r[N][x+Y]) and x+y<>0  then
+	    	   	    begin
+	    	   	    	   x := x+y;
+	    	   	    	   colArr[N][length(ColArr[N])] := y;
+	    	   	    	   y := 1;
+	    	   	    end
+	    	   	    else
+	    	   	    y++;	    	   	    
+	    	   end;
+	    end;	   
+	    Col := `ColArr;
+	    CArr := array();
+	    for  M := 0 to length(Col)-1 do
+	    begin
+	    	   Col[M] := reshape(Col[M],1,length(Col[M]))[0];	         
+	         x := 0 ;y := 1;
+	         CArr[M] := array();
+	         while x<length(Col[M]) do
+	         begin
+	         	    if x = length(Col[M])-1 then
+	         	    begin
+	         	    	   CArr[M][length(CArr[M])] := Col[M][x];
+	         	    	   break;
+	         	    end;
+	         	    if _r[M][x]<>_r[M][x+y] then
+	         	    begin	         	    	   
+	         	    	   CArr[M][length(CArr[M])] := Col[M][x];
+	         	         x := x+y;
+	         	         y := 1;
+	         	    end
+	         	    else
+	         	    y++;
+	         end;
+	    end;		      	    
+	    conf := array();
+	    for i := 0 to length(RowArr)-1 do
+	    begin
+	    	   conf[i] := array();
+	    	   for j := 0 to length(RowArr[i])-1 do
+	    	   begin	    	   	    
+	    	   	    conf[i][j]['ColSpan'] := RowArr[i][j]['ColSpan'];
+	    	   	    conf[i][j]['Value'] := RowArr[i][j]['Value'];
+	    	   	    conf[i][j]['RowSpan'] := CArr[i][j];	    	   	   
+	    	   end;
+	    end;	           
+	   //**************END****************//
+	   //*************生成表头脚本****************//	   
+	   trs2 := '';
+	   for i := 0 to length(conf)-1 do
+	   begin
+	   	    ths := '';
+	   	    for j := 0 to length(conf[i])-1 do
+	   	    begin
+	   	    	    ths += '<th rowspan='+tostring(conf[i][j]['RowSpan'])+' colspan='+tostring(conf[i][j]['ColSpan'])+' >'+tostring(conf[i][j]['Value'])+'</th>';
+	   	    end;
+	   	    trs2 += '<tr class="Element_Table_Header">'+ths+'</tr>';
+	   end;
+	   //*****************END********************//	   
+	   //TableContent := '<tr class="Element_Table_Content"><td><table>'+trs+'</table></td></tr>';
+	   TableContent := trs;
+	   TableHeader := trs2;
+	   html := '<table class="Element_Table">'+TableHeader+TableContent+'</table>';
+     return html;
+end;
+
+function TComBox.genPic(Data);
+begin
+	   if not ifArray(data) then return;
+     conf := data['Conf'] ;
+     PicData := data['Data'];
+     JQGraph := createObject("TWebsiteJQGraph",PicData,conf);
+     return JQGraph.Draw();
+end;
+
+function TComBox.genTxt(Data);
+begin
+	   if not ifArray(data) then return;
+	   TxtData := data['Data'];
+	   return '<p class="Element_Txt">'+tostring(TxtData)+'</p>';
+end;
+//*****************************END********************************************//
+//**********************2014-8-29-Bin-新模式（勿删）**************************//
+function TComBox.genTemplate(TID);overload;
+begin
+	   html := '';
+	   leftContent := '';
+	   rightContent := '';
+	   ullist := '';
+	   if not TID then return html;	   
+	   queryData := array();
+	   queryData['Table'] := 'TS_RTemplateConf';
+	   queryData['QueryStr'] := "TID='"+tostring(TID)+"'";
+	   TData := class(ExecuteSQL).query(queryData);
+	   if not ifArray(TData) or not length(TData) then return html;
+	   TName := TData[0]['TNAME'];	   	      
+	   
+	   sql := "select * from TS_RTemplateE a left join TS_RTemplateElement b on a.EID=b.EID where a.TID='"+TID+"' order by a.SERIESID ASC";	   
+	   if not execSQL(class(TWebFundIDSConfig).getDBAlia(),sql,r) or not length(r)  then
+	   r := array();	   
+     
+     for i := 0 to length(r)-1 do
+     begin          
+          case r[i]['TYPE'] of
+		          'title':
+		          begin
+		               len := (r[i]['SRC3']-1)*10;      	   
+			        	   ullist += '<li><a href="javascript:void(0);" class="Model_Relocate Model_Title_Level'+tostring(r[i]['SRC3'])+'"  sid="'+tostring(r[i]['SERIESID'])+'">'+tostring(r[i]['SRC2'])+'</a></li>';
+		               conf := array('SID':r[i]['SERIESID'],'CONF':('Type':r[i]['TYPE'],'Level':r[i]['SRC3'],'Content':r[i]['SRC2']));
+		               rightContent += genElement(conf);		               
+		          end;
+		          'newline','pagebreak','category':
+		          begin
+		               conf := array('SID':r[i]['SERIESID'],'Conf':('Type':r[i]['TYPE']));		               
+		               rightContent += genElement(conf);
+		          end;
+		          else
+		          begin
+		               queryData['Table'] := 'TS_DataRight';
+		               queryData['QueryStr'] := "EID='"+tostring(r[i]['EID'])+"'";
+		               dataRights := class(ExecuteSQL).query(queryData);
+		               dataRights := ifArray(dataRights)?dataRights:array();
+		               r[i]['DataRights'] := DataRights;
+		               EConf := r[i]['CONF']?stm(r[i]['CONF']):array();
+		               r[i]['CONF'] := EConf;
+		               if r[i]['SRC1'] then 
+	        	       begin	        	        	  
+	        	        	   r[i]['SetTitle'] := 1;
+	        	        	   r[i]['Level'] := r[i]['SRC3']?r[i]['SRC3']:1;	        	        	  
+	        	        	   r[i]['Title'] := r[i]['SRC2'];
+	        	        	   r[i]['TitleStyle'] := r[i]['SRC4'];
+	        	             len := (r[i]['Level']-1)*10;
+	        	             ullist += '<li><a href="javascript:void(0);" class="Model_Relocate Model_Title_Level'+tostring(r[i]['TitleLevel'])+'"  eid="'+tostring(r[i]['EID'])+'" sid="'+tostring(r[i]['SERIESID'])+'">'+tostring(r[i]['Title'])+'</a></li>';
+	        	       end;		               
+		               rightContent += genElement(r[i]);
+		          end;
+          end;
+     end;	   
+	   Element := '<div class="Element_Base"><div><span class="Element_BaseTitle">基本</span></div>';
+	   Element += '<div><span class="Element_Type" comID="Txt">文本</span></div><div><span class="Element_Type" comID="Table">表格</span></div><div><span class="Element_Type" comID="Pic">图</span></div><div><span class="Element_Type" comID="WordFile">word文档</span></div>';
+	   Element += '</div>';
+	   Element += '<div class="Element_Layout"><div><span class="Element_LayoutTitle">布局</span></div>';
+	   Element += '<div><span class="Element_Type" comID="Title">标题</span></div><div><span class="Element_Type Element_Layout" comID="Newline">换行</span></div><div><span class="Element_Type Element_Layout" comID="PageBreak">分页符</span></div><div><span class="Element_Type Element_Layout" comID="Category">目录</span></div>';
+	   Element += '</div>';							           
+		 Element := '<div class="Element_EType">'+Element+'</div>';		
+	    
+	   rightContent := '<div class="Model_Bar"></div><div class="Model_RightBox main_content"><div class="Model_ModelName_Bar"><span class="Model_ModelName">'+tostring(TName)+'</span></div><ul class="Model_EditBox">'+rightContent+'</ul><div class="Model_BottomBox"><button class="Model_AddElement">添加元素</button><input type="hidden" class="Model_Save" tid="'+tostring(TID)+'" /></div></div>';
+	   ulList := '<ul class="Model_LeftBox_TitleList">'+ulList+'</ul>';
+	   leftContent := '<div class="Model_LeftBox left_nav"><h1 class="Model_LeftBox_Title LeftBox_Title">文档结构</h1><div><input type="text" class="Model_LeftBox_SearchContent LeftBox_SearchContent" /><button class="Model_LeftBox_SearchButton LeftBox_SearchButton">搜索</button></div><div class="Model_LeftBox_Titles LeftBox_Items">'+ulList+'</div></div>';	  
+	   html := leftContent+rightContent+Element;
+	   return html;
+end;
+
+
+function TComBox.genElement(data);
+begin	   
+	   if not ifArray(data) then return;	   
+	   arr := ElementConf();	   
+	   conf := data['CONF']?data['CONF']:data['Conf'];	   
+	   EType := ifArray(conf)?conf['Type']:'txt';
+	   EID := data['EID'];
+	   EName := data['NAME'];	 
+	   SID := data['SID'] ? data['SID']:data['SERIESID'];  
+	   SetTitle := data['SetTitle'];
+	   if EType in array('txt','table','pic','wordfile') then
+	   begin	   	    
+	   	    ETypeStr := arr[EType]?"（"+tostring(arr[EType])+"）":"";
+	        Addition := '';
+	        if data['TIP1']	then
+	        Addition += ifthen(Addition,' ','')+'报告期相关';  
+	        if data['TIP2'] then
+	        Addition += ifthen(Addition,' ','')+'产品相关';
+	        if data['TIP3'] then
+	        Addition += ifthen(Addition,' ','')+'模板通用';
+	        if data['TIP4'] then
+	        Addition += ifthen(Addition,' ','')+'自动沿用上期数据';
+	        if data['TIP5'] then
+	        Addition += ifthen(Addition,' ','')+'强调与上期数据的差异'; 
+	        
+	        DMStr := '';
+	        dataRights := data['DataRights']?data['DataRights']:array();
+	        Auditors := sselect ['USERID'] from dataRights where ['TYPE'] = 2 end;
+	        AuditorsStr := array2Str(Auditors,',');	        
+	        Editors := sselect ['USERID'] from dataRights where ['TYPE'] = 1 end;
+	        EditorsStr := array2Str(Editors,',');
+	        DMStr += '审核：'+AuditorsStr;
+	        DMStr += ifthen(DMStr,' ','')+'编辑：'+EditorsStr;
+	        content := '';	                
+	        content += '<div class="Model_Element_FirstLine"><span class="Model_Element_Name">'+EName+ETypeStr+'</span><span class="Model_Element_Addition">'+Addition+'</span></div>';
+	        if SetTitle then
+	        begin	           
+	             selects := '';
+	             options := '';
+	             outForm := createObject('OutForm');
+	             LevelArr := outForm.getElementConfig()['TitleLevel'];	             
+	             title := data['Title']?data['Title']:data['NAME'];
+	             level := data['Level'];
+	             for i := 0 to length(LevelArr)-1 do
+	             begin
+	             	    if LevelArr[i]['Value'] = Level then
+	             	    options += '<option selected=true value="'+tostring(LevelArr[i]['Value'])+'">'+LevelArr[i]['Txt']+'</option>';
+	                  else
+	                  options += '<option value="'+tostring(LevelArr[i]['Value'])+'">'+LevelArr[i]['Txt']+'</option>';
+	             end   
+	             selects := '<select class="Model_Element_TitleLevel">'+options+'</select>';          
+	             content += '<div class="Model_Element_SecondLine"><span class="Model_Element_Title">'+title+'</span>'+selects+'</div>';
+	        end;
+	        content += '<div class="Model_Element_ThirdLine"><span class="Model_Element_DataRights">'+DMStr+'</span></div>';	        
+	   end
+	   else if EType = 'title' then
+	   begin
+	   	     outForm := createObject('OutForm');
+	   	     ETypeStr := arr[EType]? tostring(arr[EType]):"";
+	   	     title := conf['Content']?conf['Content']:'';	   	     
+	   	     arr := outForm.getElementConfig()['TitleLevel'];	   	    
+	   	     grade := conf['Level'];	   	     
+	   	     level := arr[grade-1]['Txt'];
+	   	     content := '<div class="Model_Element_FirstLine"><h'+tostring(grade)+'>'+title+'</h'+tostring(grade)+'></div>';
+	   	     //content := '<div class="Model_Element_FirstLine"><span class="Model_Element_Name Model_Element_TitleLevel_'+tostring(grade)+'">'+title+'</span></div>';
+	         //content += '<div class="Model_Element_SecondLine"><span class="Model_Element_TitleLevel">'+tostring(level)+'</span></div>';
+	         (*content += '<div class="Model_Element_ThirdLine"><span class="Model_Element_Title">'+ETypeStr+'</span></div>';*)
+	   end
+	   else
+	   begin
+	   	    ETypeStr := arr[EType]?"（"+tostring(arr[EType])+"）":"";
+	   	    content := '<div class="Model_Element_FirstLine"><span class="Model_Element_Name">'+ETypeStr+'</span></div>';
+	   end;	   
+	   html := '<li class="Model_Element" SID="'+tostring(SID)+'"><div class="chooseCOM" EID="'+tostring(EID)+'" ctype="'+tostring(EType)+'">'+content+'</div></li>';
+	   return html;
+end;
+
+function TCombox.outElement(data);
+begin
+     if not ifArray(data) then return;
+
+end;

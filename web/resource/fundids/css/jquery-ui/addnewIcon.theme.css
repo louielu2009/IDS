@@ -1,0 +1,14 @@
+/*
+在jquery图片的原有的基础上新增图片
+设置图片位置
+*/
+.dotweb-moveup{ background-position: -96px -208px; } /*↑*/
+.dotweb-movedown{ background-position: -112px -208px; } /*↓*/
+.dotweb-moveright{ background-position: -128px -208px; } /*←*/
+.dotweb-moveleft{ background-position: -144px -208px; } /*→*/
+.dotweb-upadd{ background-position: -160px -208px; } /*↑+*/
+.dotweb-downadd{ background-position: -176px -208px; } /*↓+*/
+.dotweb-leftadd{ background-position: -192px -208px; } /**/
+.dotweb-rightadd{ background-position: -208px -208px; } /**/
+.dotweb-edit{ background-position: -224px -208px; }/**/
+.dotweb-layout{ background-position: -240px -208px; }/**/

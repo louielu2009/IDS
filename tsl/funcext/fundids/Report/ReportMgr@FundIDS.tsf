@@ -1,0 +1,46 @@
+type ReportMgr = class
+function getReportStatus(param);//获取报告数据进度及审核进度
+function deleteReport(ID);
+end;
+
+function ReportMgr.deleteReport(ID);
+begin
+	   deleteData := array();
+	   deleteData['Table'] := 'TS_ReportInfo';
+	   deleteData['QueryStr'] := "ID='"+tostring(ID)+"'";
+	   r := class(ExecuteSQL).Delete(deleteData);
+	   if r then return 1
+	   else return 0;
+end;
+
+function ReportMgr.getReportStatus(param);
+begin	   	     
+ 	    if ifArray(param) then
+ 	    RID := param['RID'];
+ 	    if ifString(param) then
+ 	    RID := param;
+ 	    if not RID then return;	   
+ 	    queryData := array();
+ 	    queryData['Table'] := 'TS_ReportInfo';
+ 	    queryData['QueryStr'] := "ID ='"+tostring(RID)+"'";
+ 	    ReportInfo := class(ExecuteSQL).query(queryData);	  	        
+ 	    if not ifArray(ReportInfo) or not length(ReportInfo) then return; 	    
+ 	    ReportInfo := ReportInfo[0];
+ 	    TID := ReportInfo['TID'];
+ 	    ReportDate := ReportInfo['REPORTDATE'];
+ 	    Product := ReportInfo['FUNDID'];
+ 	    Status := array(); 	   
+ 	    Status['AuditC'] := 0;
+ 	    Status['DataC'] := 0; 	    
+ 	    sql := "select distinct(a.EID),b.TIP1,b.TIP2,b.EID,(select count(*) from TS_RFormalData where (b.TIP1=0 or (b.TIP1=1 and TIP1='"+tostring(ReportDate)+"')) and (b.TIP2=0 or (b.TIP2=1 and TIP2 = '"+tostring(Product)+"')) and (EID=b.EID) and (STATUS=2 or STATUS=3 or STATUS=4 or STATUS=5)) as DataC, (select count(*) from TS_RFormalData where (b.TIP1=0 or (b.TIP1=1 and TIP1='"+tostring(ReportDate)+"')) and (b.TIP2=0 or (b.TIP2=1 and TIP2 = '"+tostring(Product)+"')) and (EID=b.EID) and (STATUS=4)) as AuditC  from	TS_RTemplateE a left join TS_RTemplateElement b on a.EID=b.EID where a.TID='"+tostring(TID)+"' and a.EID is not NULL"; 	 	    
+ 	    if not execSQL(class(TWebFundIDSConfig).getDBAlia(),SQL,Elements) or not length(Elements) then
+ 	    begin 	         
+ 	         Status['Count'] := 0;
+ 	         return Status;
+ 	    end; 	 	    
+ 	    Status['Count'] := length(Elements); 	    	    
+ 	    arr := sselect sumof(['DATAC']) as 'DataC',sumof(['AUDITC']) as 'AuditC' from Elements end;
+ 	    Status['DataC'] := arr[0]?arr[0]:0;
+ 	    Status['AuditC'] := arr[1]?arr[1]:0; 	         
+ 	    return Status;
+end;

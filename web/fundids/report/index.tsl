@@ -1,0 +1,52 @@
+
+Frame := CreateObject("TWebFrame","TWebFundIDSHeader");
+Frame.outHeader("信息披露系统-报告预览");
+setsysparam("ConfigClassName","TWebFundIDSConfig");
+
+//删除临时表数据
+//sql := "delete from TS_RTempData";
+//if execSQL(class(TWebFundIDSConfig).getDBAlia(),SQL,r) then
+//return echo r;	   
+
+
+r:= class(ExecuteSql).query(array("Table":"TS_RTempData","QueryStr":" EID='BE000040002' "));
+RETURN ECHO TOSTN(stm(R[0]["DATA"]));
+
+rid:= utf8toansi(urltotext(httpGetQueryValueByName('rid')));
+
+rid:= '20140903111609984_983068739542240554';
+ridArr:= class(ExecuteSql).query(array("Table":"TS_ReportInfo","QueryField":("ID","TITLE","FUNDID","FINANCIALDATE")));
+//RETURN ECHO TOSTN(ridArr);
+echo '<h3>报告模板数据初始化(',length(ridArr),'条)</h3>';
+for i:= 0 to length(ridArr)-1 do begin
+		rid:= ridArr[i]['ID'];
+		rInfo:= class(TgenReport).getReportInfoByID(rid);
+		fundid:=ridArr[i]['FUNDID'];
+		financialDate:=ridArr[i]['FINANCIALDATE'];
+		rptDate:= strtoint(tostring(yearof(financialDate))+formatfloat('00',Monthof(financialDate))+formatfloat('00',DaysInMonth(financialDate)));
+		(*rid:= '20140903110238562_323602817878657095';
+		fundid:=rInfo['FUNDID'] ;
+		financialDate:= rInfo['FINANCIALDATE'];
+		*)
+		data:= class(TgenReport).getReportData(rid,fundid,rptDate,'admin');
+		dispData:= data['dispData'];
+		data:= data['tableData'];
+		//return echo tostn(data);
+		//数据有四种情况：报告期相关+产品相关、报告期相关+产品无关、报告期无关+产品相关、报告期相关+产品无关
+		eidArr:= class(ExecuteSql).query(array("Table":"TS_RTempData","QueryField":("EID","TIP1","TIP2"),"QueryStr":" status>0 "));
+		 //echo tostn(data);
+		r1:= 1;
+		if  istable(data) and istable(eidArr) then begin
+			update data set ['flagCol']= tostring(['EID'])+tostring(['TIP1'])+tostring(['TIP2']) end;
+			update eidArr set ['flagCol']= ['EID']+['TIP1']+['TIP2'] end;
+			data:= select ['USERID'],['DATA'],['EID'],['TIP1'],['TIP2'] from data where not (['flagCol'] in (sselect ['flagCol'] from eidArr  end) ) end;
+		end;
+		 //echo tostn(data);
+		if istable(data) then begin
+			r1:= class(ExecuteSql).insert(array("Table":"TS_RTempData","Data":data));
+			if r1 then echo  '<br/>',rid,':',ridArr[i]['TITLE'],'====数据初始化成功！',r1;
+		end
+		else 
+			echo '<br/>无数据!';
+			
+end;

@@ -1,0 +1,8 @@
+Frame := CreateObject("TWebFrame","TWebFundIDSHeader");
+Frame.outHeader("‘§¿¿ ”Õº");
+
+id:= httpGetQueryValueByname("tid");
+eid:= '20140721154604396_1380571020_1728124803';
+TComBox := createObject("TComBox");
+arr:= TComBox.outElement(eid);
+return echo arr;

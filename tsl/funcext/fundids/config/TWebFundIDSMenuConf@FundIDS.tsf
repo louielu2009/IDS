@@ -1,0 +1,113 @@
+
+type TWebFundIDSMenuConf= class()
+		class function getMenuConf(Userid);//输出菜单配置
+		class function getRoleByUserID(UserID);
+		class function siteNavDisplay(UserID);
+		class function outsubmenu(sub,s,flag,MenuLen);
+end;
+
+
+class function TWebFundIDSMenuConf.getRoleByUserID(UserID);
+begin
+		//管理员-1、用户-2、游客-3
+		return 1;
+end;
+
+class function TWebFundIDSMenuConf.getMenuConf(Userid);
+begin			
+			arr:= array(
+									("ID":1,"ParentID":0,"RoleID":1,"NAME":"模板","Url":"/fundids/index.tsl?type=model",
+									"Sub":(("NAME":"创建","Url":"javascript:void(0)","Class":"Model_CreateTemplate"),
+									       ("NAME":"打开","Url":"javascript:void(0)","Class":"Model_OpenTemplate"),
+									       ("NAME":"复制","Url":"javascript:void(0)","Class":"Model_CopyTemplate"),
+									       ("NAME":"禁用","Url":"javascript:void(0)","Class":""),
+									       ("NAME":"查看本期数据状态","Url":"javascript:void(0)"),
+									       ("NAME":"生成报告","Url":"javascript:void(0)")
+									      )
+									),
+									("ID":2,"ParentID":0,"RoleID":1,"NAME":"元素","Url":"/fundids/index.tsl?type=EM"),
+									("ID":3,"ParentID":0,"RoleID":1,"NAME":"数据","Url":"/fundids/index.tsl?type=DM"),
+									("ID":4,"ParentID":0,"RoleID":1,"NAME":"报告","Url":"/fundids/index.tsl?type=report",
+											"Sub":(("NAME":"新建报告","Url":"javascript:void(0)","Class":"report_create")
+												)
+									),
+									("ID":5,"ParentID":0,"RoleID":1,"NAME":"权责","Url":"/fundids/index.tsl?type=DR"),
+									("ID":6,"ParentID":0,"RoleID":1,"NAME":"日志","Url":"/fundids/index.tsl?type=log"),
+									//("ID":6,"ParentID":0,"RoleID":1,"NAME":"用户","Url":"/website/security/members.tsl")
+									("ID":7,"ParentID":0,"RoleID":1,"NAME":"用户","Url":"/fundids/members.tsl")
+									
+			);
+			return arr;
+end;
+
+class function TWebFundIDSMenuConf.siteNavDisplay(UserID);
+begin
+		conf:= getMenuConf(Userid);
+		//roleID:= getRoleByUserID(UserID);
+		roles := CreateObject('TWSMemberDB',-1).GetMemberRoles(UserId);
+		AdminRoleID := Class(TWSMemberManager).GetAdminRoleId(-1);
+		if AdminRoleID in roles then
+			isAdmin := 1;
+		navStr:= '<ul 	id="navigation">';
+    	subSelect:=0;
+		for i:= 0 to length(conf)-1 do begin
+					//if not isAdmin and conf[i]['ID']=6 then continue;
+					if (i=0) then
+		        	Begin
+		        		if subSelect <> i then
+		        				navStr += '<li class="top-level">'
+		        		Else
+		        				navStr += '<li class="top-level">';
+		        	End Else Begin
+		        		if subSelect <> i then				
+		        				navStr += '<li class="top-level">'
+		        		Else
+		        				navStr += '<li class="top-level">';
+		        	End;
+		        	navStr += '<a href="'+conf[i]['Url']+'"'+ (ifNIL(conf[i]['Type'])?'':'target="_blank"') +'>'+tostring(conf[i]['NAME'])+'</a>';
+		        	if istable(conf[i]['Sub']) then
+		        	Begin
+		        		flag := 2; 
+		        		if i = 0 then
+		        				flag := 0;
+		        		Else if (i = length(conf)-1) then
+		        				flag := 1;
+		        		MenuLen := length(conf);
+		        		s:= '';
+		        		navStr+=outsubmenu(conf[i]['Sub'],s,flag,MenuLen);
+		        	End;
+		        	navStr += '</li>';
+		end;
+		navStr+= '</ul>';
+		return navStr;
+end;
+
+class function TWebFundIDSMenuConf.outsubmenu(sub,s,flag,MenuLen);
+Begin
+	if istable(sub) then
+	Begin
+			s += '<div class="submenu"><dl>';
+			ColumnLen := 1;
+			for kk:=0 to ColumnLen-1 do
+			Begin
+					for i:=0 to length(sub)-1 do
+					Begin
+							className := '';
+							if sub[i]['Class'] then className := 'class="'+tostring(sub[i]['Class'])+'"';
+							s += '<dt><a href="'+sub[i]['Url']+'" '+className+'>'+tostring(sub[i]['NAME'])+'</a></dt>';
+							if istable(sub[i]['Sub']) then
+							Begin
+									TempArr := array();
+									TempArr := sub[i]['Sub'];
+									for j:=0  to length(TempArr)-1 do
+									Begin					
+										s += '<dd><a href="'+TempArr[j]['Url']+'"><span>'+tostring(TempArr[j]['NAME'])+'</span></a></dd>';				
+									End;
+							End;
+					End;
+			End;
+			s += '</dl></div>';
+			return s;		
+	End;
+	return '';
+End;

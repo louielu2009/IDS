@@ -1,0 +1,4 @@
+function IDS_Execsql(sql,t);
+begin
+  return Execsql(class(TWebFundIDSConfig).getDBAlia(),sql,t);
+end;

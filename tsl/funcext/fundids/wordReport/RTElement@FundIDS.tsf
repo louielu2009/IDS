@@ -1,0 +1,20 @@
+type RTElement = class
+
+class function selectAll();
+class function query(condition);
+end;
+
+class function RTElement.selectAll();
+begin
+	
+end;
+
+class function RTElement.query(condition);
+begin
+	   sql := "select * from TS_RTemplateElement where "+tostring(condition);
+	   if execSQL(class(TWebFundIDSConfig).getDBAlia(),sql,r) then
+	   return r
+	   else
+	   return 0;
+end;
+

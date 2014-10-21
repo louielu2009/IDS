@@ -1,0 +1,651 @@
+type TWebsiteJQGauge = class
+  FData;   
+  FConf;
+  FTitle;
+  FDefaultConf;//默认配置
+  FColorArr;//区域颜色
+  FComFileName;
+  static FNum;
+  
+  function Create(data);overload;
+  function Create(data,conf);overload;
+	function Draw();
+	function DrawRadialGauge();//圆周仪表图
+	function DrawLinearGauge();//线性仪表图
+	function barMarkers();//条形设置
+	function Border();//边框
+	function Anchor();//中心点
+	function annotations();//注释
+	function Shadows();//阴影
+	function Tooltips();//提示框
+	function Scales();//表盘刻度、指针、范围	
+	function DefaultConf();//返回默认配置
+	function DealConf();//处理配置
+	function reConf(field);//返回默认配置
+	function test();
+end;
+
+function TWebsiteJQGauge.test();
+begin
+	   arr := array(("开始值3":100,"结束值3":150,"开始值2":70,"结束值2":100,"开始值1":30,"结束值1":70,"最大值":150,"最小值":5,"指针刻度":82));                  
+     return echo minValue(arr[0]);
+end;
+function TWebsiteJQGauge.Create(data,conf);overload;
+begin	
+
+	  FColorArr := array(
+	                 '#FF4444',
+	                 '#FFFF44',
+			             '#8FFF44',					         
+					         '#44FFFF',
+					         '#4444FF',
+					         '#DA44FF',					        
+					         '#FF44B4',
+					         '#FF7F50',
+					         '#F2F2F2', 
+					         '#EE3A8C',
+					         '#EE3A8C',
+					         '#DAA520',
+					         '#CD661D',
+					         '#C0FF3E'
+				           ) ;//默认颜色方案  
+	  if ifnil(FNum) then
+    	FNum:=1;      
+    else 
+    	FNum:=Fnum+1;
+    FData := data;    
+    FConf := conf;
+    FDefaultConf := array(									       
+									         'dispWay':1,
+									         'width':400,
+									         'height':400,               									       
+			                     '图表类型':1,
+			                     '图形背景颜色':'#ffffff',
+			                     '图形透明度':1,
+			                     '边框宽度':2,'边框颜色':'#76786A','边框边距':3,
+			                     '圆周垂直偏移':0.35,'圆周水平偏移':0.3,'圆点可视':1,'圆点大小':0.1,'圆点颜色':'#252E32','圆周半径':20,
+			                     '原点可视':1,'原点大小':0.08,
+			                     '标题名称':'标题1','标题横向偏移':0.5,'标题纵向偏移':0.5,'标题颜色':'#C5F80B','标题大小':12,'标题字体类型':'sans-serif',
+			                     '阴影可视':1,'阴影颜色':'gray','阴影聚焦度':10,'阴影横向偏移':3,'阴影纵向偏移':3,
+			                     '提示框':0,
+			                     '提示框高亮':0,                									                     
+                            '优先级':1,                                  
+                            '主刻度线可视':1,'主刻度线长度':5,'主刻度线宽度':5,'主刻度单位':5,'主刻度偏移':0.8,'主刻度线颜色':'#000',
+                            '次刻度线可视':0,'次刻度线长度':2,'次刻度线宽度':2,'次刻度单位':1,'次刻度偏移':0.8,'次刻度线颜色':'#000',
+                            '刻度方向':'horization','刻度间距':5,'刻度偏移':1,'刻度初始值':'true',
+                            '指针刻度':0,//指针刻度对应模型数据某一下标字段，根据当前下标数据变化而变化                                  
+                            '指针内部偏移':0,
+                            '指针外部偏移':0.9,
+                            '指针长度':0.7,
+                            '指针宽度':10,
+                            '指针颜色':'#252e32',
+                            '最小值':0,
+                            '最大值':0,
+                            '图形起始位置':180,//起始刻度位置，0即表示从水平0°位置开始
+                            '图形结束位置':360,//结束刻度位置,即顺时针从起始位置转动相差度数结束									                               								                    
+                          );
+end;
+
+function TWebsiteJQGauge.Create(data);overload;
+begin	  
+	  if ifArray(data) and ifArray(data['data']) and ifArray(data['conf']) then
+	  	create(data['data'],data['conf'])
+	  else
+	  	create(array(),array());
+end;
+
+function TWebsiteJQGauge.Draw(); 
+begin	
+	DealConf();
+	ssT:= FConf['图形属性']['图表类型'];
+	if ifnil(ssT) or  ssT= 1 or (not ifint(ssT))then
+	begin	
+			return DrawRadialGauge();
+	end
+	else if ssT= 2 then
+	return DrawLinearGauge();	
+end;
+
+function TWebsiteJQGauge.DealConf();
+begin
+	   if not ifArray(FConf['图形属性']) or not ifArray(FConf['图形属性']['图形系列']) then return;
+	   series := FConf['图形属性']['图形系列'];
+	   Mark := 0;
+	   for i := 0 to length(series)-1 do
+	   begin
+	   	    if not series[i]['最大值'] then
+	   	    begin	   	    	  	   	    	  
+	   	       if  ifArray(FData) and ifArray(FData[i]) then
+	   	       begin	   	       	   
+	   	       	   IndexArr := getAllIndexs(FData[i]);
+	   	       	   maxV := IndexArr[0];
+	   	       	   for  m := 1 to length(IndexArr)-1 do
+	   	       	   begin
+	   	       	   	    if FData[i][IndexArr[m]] > FData[i][maxV]  then
+	   	       	   	    maxV := IndexArr[m];
+	   	       	   end;
+	   	       end	   	       	   	       
+	   	       series[i]['最大值'] := maxV;
+	   	       {
+	   	        maxV := ifArray(FData) and ifArray(FData[i])? mfind(FData[i],mcell=maxvalue(FData[i]),1)[0][0]:0;	  
+	   	        series[i]['最大值'] := maxV; 	        
+	   	        }
+	   	    end          
+          if not series[i]['最小值'] then
+          begin
+          	 if ifArray(FData) and ifArray(FData[i]) then
+          	 begin          	    
+          	      IndexArr := getAllIndexs(FData[i]);
+          	      minV := IndexArr[0];
+          	      for n := 0 to length(IndexArr)-1 do
+          	      begin
+          	      	   if FData[i][IndexArr[n]] < FData[i][minV] then
+          	      	   minV := IndexArr[n];
+          	      end;
+          	 end
+          	 series[i]['最小值'] := minV;
+          	 {
+          	  minV := ifArray(FData) and ifArray(FData[i])? mfind(FData[i],mcell=minvalue(FData[i]),1)[0][0]:0;	  
+	   	        series[i]['最小值'] := minV;           	 
+             }
+          end            
+          if  not series[i]['刻度'] then
+          series[i]['刻度'] := array();
+          if series[i]['主刻度线'] and ifArray(series[i]['主刻度线']) then
+          begin
+          FDefaultConf['刻度间距'] := series[i]['主刻度线']['刻度单位']?:FDefaultConf['刻度间距'];
+          FDefaultConf['主刻度单位'] := FDefaultConf['刻度间距'];
+          if ifString(FDefaultConf['主刻度单位']) then
+          FDefaultConf['主刻度单位'] := strtofloat(FDefaultConf['主刻度单位']);
+          end
+          if series[i]['次刻度线'] and ifArray(series[i]['次刻度线']) and  not series[i]['次刻度线']['刻度单位'] then
+          FDefaultConf['次刻度单位'] := series[i]['次刻度线']['刻度单位']?:(FDefaultConf['主刻度单位']/10);          
+          scale := series[i]['区域'];          
+          Origin := 0.9;
+          if istable(scale) then begin
+	          for j := 0 to length(scale)-1 do
+	          begin
+	               scale[j]['标尺曲度'] := scale[j]['标尺曲度']? : 0.9;
+	               scale[j]['标尺初始宽度']:=scale[j]['标尺初始宽度']? : (Origin-0.05*i);
+	               scale[j]['标尺末尾宽度']:=scale[j]['标尺末尾宽度']? : (Origin-(i+1)*0.05);
+	               scale[j]['颜色'] := scale[j]['颜色']?:FColorArr[Mark++];
+	               Origin := Origin-(i+1)*0.05;
+		        end
+		        series[i]['区域'] := scale;
+	      	end;
+	        secOrigin := 0.9;
+	        if ifArray(series[i]['次轴']) and ifArray(series[i]['次轴']['区域']) and length(series[i]['次轴']['区域']) then
+	        begin
+	        	   Mark := 0;
+	        	   secScale := series[i]['次轴']['区域'];
+	        	   for k := 0 to length(secScale)-1 do
+	        	   begin
+	        	   	     secScale[k]['标尺曲度'] := secScale[k]['标尺曲度']? : 0.9;
+			               secScale[k]['标尺初始宽度']:= secScale[k]['标尺初始宽度']? : (secOrigin-0.5*i);
+			               secScale[k]['标尺末尾宽度']:=secScale[k]['标尺末尾宽度']? : (secOrigin-(i+1)*0.5);
+			               secScale[k]['颜色'] := secScale[k]['颜色']?:FColorArr[Mark++];	  
+			               secOrigin := secOrigin-(i+1)*0.5;   	   	
+	        	   end;
+	        	   series[i]['次轴']['区域'] := secScale;
+	        end;	        
+	   end	 
+	   FConf['图形属性']['图形系列'] := series;	   
+end;
+
+function TWebsiteJQGauge.reConf(field);
+begin	   
+    if ifnil(FDefaultConf[field]) then return '';
+    return FDefaultConf[field];                         
+end;
+
+function TWebsiteJQGauge.DrawRadialGauge();
+begin	 	 	  	  	  
+	  Gstr:='<div  class="comContainer" id="jqRadialGauge'+tostring(FNum)+'" style="width:'+tostring(FConf['width'])+'px;height:'+tostring(FConf['height'])+'px;"></div>';	 
+		//conf:="var gauge_tsl_conf = "+Class(TsTool).Arr2Json(FConf)									
+		conf:="var scalesC = "+ (Scales() ?:"[]")
+		+";$('#jqRadialGauge"+tostring(FNum)+"').jqRadialGauge({";		
+		if not isempty(FConf['图形属性']['图形背景颜色']) then 	     
+			  conf+="background:'"+tostring(FConf['图形属性']['图形背景颜色'])+"'";
+			  if not isempty(FConf['图形属性']['图形透明度']) then 
+					  conf+=",globalAlpha:"+tostring(FConf['图形属性']['图形透明度']?:1);
+				if not isempty(Border()) then 
+					  conf+=",border:"+Border();				
+					  conf+=",shadows:"+Shadows();					  			  
+					  conf+=",anchor:"+Anchor();
+				if not isempty(Tooltips()) then   
+					  conf+=",tooltips:"+Tooltips();
+				if not isempty(annotations()) then  	  
+					  conf+=",annotations:"+annotations();
+					  conf+=",scales: scalesC";
+					  conf+="});";
+					  //conf+="$('#jqRadialGauge"+tostring(FNum)+"').data({'gaugeConf':gauge_tsl_conf});";	     				
+		GSTR:=Gstr+'<script lang="javascript" type="text/javascript">$(document).ready(function () {'+conf+'});</script>';
+		//dolog("fj1107",'conf='+conf); 
+		return Gstr;
+end;
+
+function TWebsiteJQGauge.DrawLinearGauge();
+begin	  	  	   	   	   
+	   Gstr :='<div class="comContainer jqLinearGauge'+tostring(FNum)+'"  style="width:'+tostring(FConf['width'])+'px;height:'+tostring(FConf['height'])+'px"></div>'	;   
+	   conf := "var borderC = "+(Border()?:"{}")
+	   +";var tooltipsC = "+(Tooltips()?:"{}")
+	   +";var scalesC = "+(Scales() ?:"[]")
+	   +";var shadowsC = "+(Shadows()?:"{}")
+	   +";var annotationsC = "+(annotations()?:"[]")	  	 
+	   +";$('.jqLinearGauge"+tostring(FNum)+"').jqLinearGauge({
+	                                           orientation:'"+FConf['图形属性']['图形方向']+"',
+	                                           globalAlpha:"+tostring(FConf['图形属性']['图形透明度']?:1)+",
+	                                           border:borderC,
+	                                           shadows:shadowsC,
+	                                           tooltips:tooltipsC,
+	                                           annotations:annotationsC,
+	                                           scales:scalesC,	                                                                               
+	                                        });";        	  
+	   return '<script lang="javascript" type="text/javascript">$(document).ready(function(){'+conf+'});</script>'+Gstr;
+end;
+
+function TWebsiteJQGauge.barMarkers();//条形设置
+begin
+	    BarMarkersC := "";
+	    if not ifArray(FConf['图形属性']['柱形标签']) then return BarMarkersC;
+	    if not mcols(FData,0)then return BarMarkersC;
+	    for i := 0 to length(FConf['图形属性']['柱形标签'])-1 do
+	    begin
+	    	   BarMarkersC += ifthen(BarMarkersC,',','')+"{value:"+tostring(FData[0][FConf['图形属性']['柱形标签'][i]['值']])
+	    	                                            +",fillStyle:'"+tostring(FConf['图形属性']['柱形标签'][i]['颜色'])
+	    	                                            +"',innerOffset:"+tostring(FConf['图形属性']['柱形标签'][i]['内部偏移'])
+	    	                                            +",outerOffset:"+tostring(FConf['图形属性']['柱形标签'][i]['外部偏移'])
+	    	                                            +"}";	    	                                            	    	
+	    end;
+	    BarMarkersC := "["+BarMarkersC+"]";
+	    return BarMarkersC;
+end;
+
+function TWebsiteJQGauge.Border();//边框
+begin
+	   
+	   BorderC := '';
+	   if not istable(FConf['图形属性']['图形边框'])  then return '';
+	   bstr:="";
+	   if not isempty(FConf['图形属性']['图形边框']['边框宽度']) then begin 
+			       bstr+="lineWidth:"+tostring(FConf['图形属性']['图形边框']['边框宽度']);
+					   if not isempty(FConf['图形属性']['图形边框']['边框颜色']) then 
+					        bstr+=",strokeStyle:'"+FConf['图形属性']['图形边框']['边框颜色']+"'";
+					   if not isempty(FConf['图形属性']['图形边框']['边框边距']) then 
+					        bstr+=",padding:"+tostring(FConf['图形属性']['图形边框']['边框边距']);
+		 end;
+	   if not isempty(bstr) then
+	        BorderC := "{"+bstr+"}";    
+	   else BorderC:="";
+	   return BorderC;
+	      
+end;
+
+function TWebsiteJQGauge.Anchor();//中心点
+begin
+	   AnchorC := '';
+	   if not FConf['图形属性']['图形原点']['是否可视'] then return '{visible:false}';
+	   AnchorC := "{visible:true}";	              	              
+	  return  AnchorC;
+end;
+
+function TWebsiteJQGauge.annotations();//图表标题
+begin
+		annotationsC := '';			
+		if not  ifArray(FConf['图形属性']['标题']) then return annotationsC;
+		for i := 0 to length(FConf['图形属性']['标题'])-1 do
+		begin
+		  if not isempty(FConf['图形属性']['标题'][i]['名称']) then 
+		     	annotationsC += ifthen(annotationsC,',','')+ "
+		                  {
+		                   text:'"+tostring(FConf['图形属性']['标题'][i]['名称'])+"',
+		                   font:'"+tostring(FConf['图形属性']['标题'][i]['大小'])+"px "+tostring(FConf['图形属性']['标题'][i]['类型'])+"',
+		                   horizontalOffset:"+tostring(FConf['图形属性']['标题'][i]['横向偏移'])+",
+		                   verticalOffset:"+tostring(FConf['图形属性']['标题'][i]['纵向偏移'])+",
+		                   fillStyle:'"+FConf['图形属性']['标题'][i]['颜色']+"'		                   		                   
+		                  }";
+	  end;			                                
+		annotationsC := "["+annotationsC+"]";
+	  return annotationsC;
+end;
+
+function TWebsiteJQGauge.Shadows();//阴影
+begin
+	   ShadowsC := '';
+	   if not FConf['图形属性']['图形阴影']['是否可视']  then return  "{enabled:false}";
+	   return "{enabled:true}";
+	   //return ShadowsC;
+	    //shadowColor:'"+(FConf['图形属性']['图形阴影']['颜色']?:reConf('阴影颜色'))
+	                 // +"',shadowBlur:"+(tostring(FConf['图形属性']['图形阴影']['阴影聚焦度'])?:tostring(reConf('阴影聚焦度')))
+	                 // +",shadowOffsetX:"+(tostring(FConf['图形属性']['图形阴影']['横向偏移'])?:tostring(reConf('阴影横向偏移')))
+	                 // +",shadowOffsetY:"+(tostring(FConf['图形属性']['图形阴影']['纵向偏移'])?:tostring(reConf('阴影纵向偏移')))*/
+end;
+
+function TWebsiteJQGauge.Tooltips();//提示框
+begin
+	   TooltipsC := '';
+	   if not FConf['图形属性']['提示框'] then return TooltipsC;
+	   TooltipsC := "{disabled: false,highlighting:true
+	                   //highlighting: "+tostring(FConf['图形属性']['提示框高亮'])+"
+	                  //highlighting: "+(tostring(FConf['图形属性']['提示框高亮'])?:tostring(reConf('提示框高亮')))+"
+	                 }";
+	   return TooltipsC;
+end;
+
+function TWebsiteJQGauge.Scales();//表盘刻度、指针、范围
+begin     
+     if  not ifArray(FData) then  return '';
+     //if  not (mcols(FData,0)) then return '';
+     if  not FConf['图形属性']['图形系列'] then return '';
+     ScalesC := "";  
+     //echo tostn(FConf['图形属性']['图形系列']);      
+     for i := 0 to length(FConf['图形属性']['图形系列'])-1 do
+     begin
+          ScalesC += ifthen(ScalesC,',','')+"{
+                    minimum:"+tostring(FData[i][FConf['图形属性']['图形系列'][i]['最小值']]?:0)+",
+                    maximum:"+tostring(FData[i][FConf['图形属性']['图形系列'][i]['最大值']]?:0)+",
+                    startAngle:"+(tostring(FConf['图形属性']['图形系列'][i]['图形起始位置'])?:tostring(reConf('图形起始位置')))+",
+                    endAngle:"+(tostring(FConf['图形属性']['图形系列'][i]['图形结束位置'])?:tostring(reConf('图形结束位置')))+",
+                    labels:{
+                             orientation:'"+(FConf['图形属性']['图形系列'][i]['刻度']['方向']?:reConf('刻度方向'))+"',
+                             interval:"+(tostring(FConf['图形属性']['图形系列'][i]['刻度']['间距'])?:tostring(reConf('刻度间距')))+",
+                             offset:"+(tostring(FConf['图形属性']['图形系列'][i]['刻度']['偏移'])?:tostring(reConf('刻度偏移')))+",
+                             showFirstLabel:"+(FConf['图形属性']['图形系列'][i]['刻度']['显示初始值']?"true":"false")
+                           +"},
+                    zIndex:"+(FConf['图形属性']['图形系列'][i]['优先级']?tostring(FConf['图形属性']['图形系列'][i]['优先级']):tostring(reConf('优先级')));        
+          if ifArray(FConf['图形属性']['图形系列'][i]['圆周']) then
+          begin
+          	   ScalesC += ifthen(ScalesC,',','')+"vCenterOffset:"+(tostring(FConf['图形属性']['图形系列'][i]['圆周']['垂直偏移'])?:tostring(reConf('圆周垂直偏移')))
+          	                                    +",hCenterOffset:"+(tostring(FConf['图形属性']['图形系列'][i]['圆周']['水平偏移'])?:tostring(reConf('圆周水平偏移')))         	                                   
+          	                                    +",radius:"+(tostring(FConf['图形属性']['图形系列'][i]['圆周']['半径'])?:tostring(reConf('圆周半径')));            
+              if not FConf['图形属性']['图形系列'][i]['圆周']['圆点']['是否可视'] then
+              ScalesC += ",anchor:{visible:false}"
+              else
+              ScalesC += ",anchor:{visible:true,
+                                   radius:"+(tostring(FConf['图形属性']['图形系列'][i]['圆周']['圆点']['大小'])?:tostring(reConf('圆点大小')))
+                                   +",fillStyle:'"+(FConf['图形属性']['图形系列'][i]['圆周']['圆点']['颜色']?:reConf('圆点颜色'))
+                                   +"'}";
+          end;                             
+          if not FConf['图形属性']['图形系列'][i]['主刻度线']['是否可视'] then
+            ScalesC += ",majorTickMarks:{
+                                         visible:false          
+                                       }"
+          else 
+            ScalesC += ",majorTickMarks:{
+                                     visible:true,
+                                     length:"+(tostring(FConf['图形属性']['图形系列'][i]['主刻度线']['主刻度线长度'])?:tostring(reConf('主刻度线长度')))+",
+                                     lineWidth:"+(tostring(FConf['图形属性']['图形系列'][i]['主刻度线']['主刻度线宽度'])?:tostring(reConf('主刻度线宽度')))+",
+                                     interval:"+(tostring(FConf['图形属性']['图形系列'][i]['主刻度线']['刻度单位'])?:tostring(reConf('主刻度单位')))+",
+                                     offset:"+(tostring(FConf['图形属性']['图形系列'][i]['主刻度线']['偏移'])?:tostring(reConf('主刻度线偏移')))+",                  
+                                     strokeStyle:'"+(FConf['图形属性']['图形系列'][i]['主刻度线']['颜色']?:reConf('主刻度线颜色'))+"'
+                                   }";
+          if not FConf['图形属性']['图形系列'][i]['次刻度线']['是否可视'] then
+            ScalesC +=  ",minorTickMarks:{
+                                    visible:false                                    
+                                  }"
+          else
+            ScalesC +=  ",minorTickMarks:{
+                                          visible:true,
+                                          length:"+(tostring(FConf['图形属性']['图形系列'][i]['次刻度线']['次刻度线长度'])?:tostring(reConf('次刻度线长度')))+",
+                                          lineWidth:"+(tostring(FConf['图形属性']['图形系列'][i]['次刻度线']['次刻度线宽度'])?:tostring(reConf('次刻度线宽度')))+",
+                                          interval:"+(tostring(FConf['图形属性']['图形系列'][i]['次刻度线']['刻度单位'])?:tostring(reConf('次刻度单位')))+",
+                                          offset:"+(tostring(FConf['图形属性']['图形系列'][i]['次刻度线']['偏移'])?:tostring(reConf('次刻度线偏移')))+",
+                                          strokeStyle:'"+(FConf['图形属性']['图形系列'][i]['次刻度线']['颜色']?:reConf('次刻度线颜色'))+"'
+                                        }";
+            if ifArray(FConf['图形属性']['柱形标签']) and  mcols(FConf['图形属性']['柱形标签'],0) then                 
+            begin
+            ScalesC +=",barMarkers:"+(barMarkers()?:"[]");            	
+            end
+            else
+            begin
+            if FData[i][FConf['图形属性']['图形系列'][i]['指针刻度']] then
+            ScalesC+= ",needles:[
+                                 {                                   
+                                   value:"+tostring(FData[i][FConf['图形属性']['图形系列'][i]['指针刻度']]?:0)+",
+                                   type:'pointer',
+                                   innerOffset: "+tostring(FConf['图形属性']['图形系列'][i]['指针内部偏移']?:reConf('指针内部偏移'))+",
+                                   outerOffset:"+tostring(FConf['图形属性']['图形系列'][i]['指针外部偏移']?:reConf('指针外部偏移'))+",
+                                   mediumOffset:"+tostring(FConf['图形属性']['图形系列'][i]['指针长度']?:reConf('指针长度'))+",
+                                   width:"+tostring(FConf['图形属性']['图形系列'][i]['指针宽度']?:reConf('指针宽度'))+",
+                                   fillStyle:'"+tostring(FConf['图形属性']['图形系列'][i]['指针颜色']?:reConf('指针颜色'))+"'                                   
+                                 }
+                               ]";              
+            end;
+            ScalesC +=  ",ranges:[";  
+            rangeC := ""; 
+            area:=FConf['图形属性']['图形系列'][i]['区域'];  
+            if istable(area) then begin                          
+		            for j := 0 to length(area)-1 do
+		            begin
+		            	   rangeC += ifthen(rangeC,',','')+"{
+		            	                                      outerOffset:"+tostring(area[j]['标尺曲度']?:0)
+		            	                                      +",innerStartOffset:"+tostring(area[j]['标尺初始宽度']?:0)
+		            	                                      +",innerEndOffset:"+tostring(area[j]['标尺末尾宽度']?:0)
+		            	                                      +",startValue:"+tostring(FData[i][area[j]['开始值']]?:0) 
+		            	                                      +",endValue:"+tostring(FData[i][area[j]['结束值']]?:0)
+		            	                                      +",innerOffset:"+tostring(area[j]['内部偏移']?:0)
+		            	                                      +",outerStartOffset:"+tostring(area[j]['外部初始宽度']?:0)
+		            	                                      +",outerEndOffset:"+tostring(area[j]['外部末尾宽度']?:0)
+		            	                                      +",fillStyle:{
+		            	                                                     type:'linearGradient',
+		            	                                       	             x0:0.5,
+		            	                                       	             x1:1,
+		            	                                       	             y0:0.5,
+		            	                                       	             y1:1,
+		            	                                       	             colorStops:[
+		            	                                       	                          {offset:0,color:'"+area[j]['颜色']+"'},
+		            	                                       	                          {offset:1,color:'"+area[j]['颜色']+"'}
+		            	                                       	                        ]
+		            	                                                    }
+		            	                                     }";  	             
+		            end;
+          	end;
+            ScalesC += rangeC;
+            ScalesC +=  "]";
+            ScalesC+="}";                  
+            SecScales := SecScales ? SecScales:'';            
+         if ifArray(FConf['图形属性']['图形系列'][i]['次轴']) then
+          begin
+          	   SecScales += ",{
+                    minimum:"+tostring(FData[i][FConf['图形属性']['图形系列'][i]['次轴']['最小值']]?:0)+",
+                    maximum:"+tostring(FData[i][FConf['图形属性']['图形系列'][i]['次轴']['最大值']]?:0)+",
+                    startAngle:"+tostring(FConf['图形属性']['图形系列'][i]['次轴']['图形起始位置']?:0)+",
+                    endAngle:"+tostring(FConf['图形属性']['图形系列'][i]['次轴']['图形结束位置']?:0)+",
+                    labels:{
+                             orientation:'"+(FConf['图形属性']['图形系列'][i]['次轴']['刻度']['方向']?:reConf('刻度方向'))+"',
+                             interval:"+tostring(FConf['图形属性']['图形系列'][i]['次轴']['刻度']['间距']?:reConf('刻度间距'))+",
+                             offset:"+tostring(FConf['图形属性']['图形系列'][i]['次轴']['刻度']['偏移']?:reConf('刻度偏移'))+"
+                           }";
+              if not FConf['图形属性']['图形系列'][i]['次轴']['主刻度线']['是否可视'] then
+			            SecScales += ",majorTickMarks:{
+			                                         visible:false          
+			                                       }"
+			        else 
+			            SecScales += ",majorTickMarks:{
+			                                     visible:true,
+			                                     length:"+tostring(FConf['图形属性']['图形系列'][i]['次轴']['主刻度线']['主刻度线长度']?:reConf('主刻度线长度'))+",
+			                                     lineWidth:"+tostring(FConf['图形属性']['图形系列'][i]['次轴']['主刻度线']['主刻度线宽度']?:reConf('主刻度线宽度'))+",
+			                                     interval:"+tostring(FConf['图形属性']['图形系列'][i]['次轴']['主刻度线']['刻度单位']?:reConf('主刻度单位'))+",
+			                                     offset:"+tostring(FConf['图形属性']['图形系列'][i]['次轴']['主刻度线']['偏移']?:reConf('主刻度线偏移'))+",                    
+			                                     strokeStyle:'"+(FConf['图形属性']['图形系列'][i]['次轴']['主刻度线']['颜色']?:reConf('主刻度线颜色'))+"'
+			                                   }";
+             if not FConf['图形属性']['图形系列'][i]['次刻度线']['是否可视'] then
+             SecScales +=  ",minorTickMarks:{
+                                    visible:false                                    
+                                  }"
+             else
+             SecScales +=  ",minorTickMarks:{
+                                          visible:true,
+                                          length:"+tostring(FConf['图形属性']['图形系列'][i]['次轴']['次刻度线']['次刻度线长度']?:reConf('次刻度线长度'))+",
+                                          lineWidth:"+tostring(FConf['图形属性']['图形系列'][i]['次轴']['次刻度线']['次刻度线宽度']?:reConf('次刻度线宽度'))+",
+                                          interval:"+tostring(FConf['图形属性']['图形系列'][i]['次轴']['次刻度线']['刻度单位']?:reConf('次刻度单位'))+",
+                                          offset:"+tostring(FConf['图形属性']['图形系列'][i]['次轴']['次刻度线']['偏移']?:reConf('次刻度线偏移'))+",
+                                          strokeStyle:'"+(FConf['图形属性']['图形系列'][i]['次轴']['次刻度线']['颜色']?:reConf('次刻度线颜色'))+"'
+                                        }";
+                SecScales +=  ",ranges:[";  
+		            rangeC := "";              
+		            for j := 0 to length(FConf['图形属性']['图形系列'][i]['次轴']['区域'])-1 do
+		            begin
+		            	   rangeC += ifthen(rangeC,',','')+"{
+		            	                                      outerOffset:"+tostring(FConf['图形属性']['图形系列'][i]['次轴']['区域'][j]['标尺曲度'])
+		            	                                      +",innerStartOffset:"+tostring(FConf['图形属性']['图形系列'][i]['次轴']['区域'][j]['标尺初始宽度'])
+		            	                                      +",innerEndOffset:"+tostring(FConf['图形属性']['图形系列'][i]['次轴']['区域'][j]['标尺末尾宽度'])
+		            	                                      +",startValue:"+tostring(FData[i][FConf['图形属性']['图形系列'][i]['次轴']['区域'][j]['开始值']]) 
+		            	                                      +",endValue:"+tostring(FData[i][FConf['图形属性']['图形系列'][i]['次轴']['区域'][j]['结束值']])
+		            	                                      +",fillStyle:'"+FConf['图形属性']['图形系列'][i]['次轴']['区域'][j]['颜色']
+		            	                                    +"'}";
+		            	                                       	             
+		            end;
+		            SecScales += rangeC;
+		            SecScales +=  "]}";                
+          end
+     end
+     ScalesC :="["+ScalesC+SecScales+"]";          
+     return ScalesC;
+end;
+
+
+	{//-----------画图基本类型格式-------------
+	
+	
+	//圆周仪表盘配置
+  array(
+        "modelName":"432",
+        "dispWay":1,
+        "width":423,
+        "height":400,               
+        "图形属性": (
+                     '图表类型':1,
+                     '图形背景颜色':'red'/'#f7f7f7',
+                     '图形透明度':0-1,
+                     '图形边框':('边框宽度':2,'边框颜色':'blue'/'#76786A','边框边距':3),
+                     '图形原点':('是否可视':1,'原点大小':0.08),
+                     '标题':(('名称':'标题1','横向偏移':0.5,'纵向偏移':0.5,'大小':12,'类型':'sans-serif','颜色':'#C5F80B',),
+                             ('名称':'标题2','横向偏移':0.5,'纵向偏移':0.7,'大小':12,'类型':'sans-serif','颜色':'red')
+                            ),
+                     '图形阴影':('是否可视':1/0,'颜色':'gray'/'#fff','阴影聚焦度':10,'横向偏移':3,'纵向偏移':3),
+                     '提示框':1/0,
+                     '提示框高亮':1/0,                
+                     '图形系列':((
+                                  '优先级':3,                                  
+                                  '主刻度线':('是否可视':1/0,'主刻度线长度':2,'主刻度线宽度':3,'刻度单位':5,'偏移':0.8),
+                                  '次刻度线':('是否可视':1/0,'次刻度线长度':3,'次刻度线宽度':3,'刻度单位':1,'偏移':0-1),
+                                  '刻度':('方向':'horization/circular','间距':3,'偏移':0-1),
+                                  '指针刻度':'指针刻度',//指针刻度对应模型数据某一下标字段，根据当前下标数据变化而变化
+                                  '指针曲合度':0-1,
+                                  '指针长度':0-1,
+                                  '指针宽度':3,
+                                  '指针颜色':'red'/'#252e32',
+                                  '最小值':'最小值',
+                                  '最大值':'最大值',
+                                  '图形起始位置':140,//起始刻度位置，0即表示从水平0°位置开始
+                                  '图形结束位置':400,//结束刻度位置,400即顺时针从起始位置转动相差度数结束
+                                  '区域':(('标尺曲度':0-1,'标尺初始宽度':0-1,'标尺末尾宽度':0-1,'开始值':'开始值','结束值':'结束值','颜色':'green'/'#ff3366')),
+                                  '次轴':
+                                  ('主刻度线':('是否可视':1/0,'主刻度线长度':2,'主刻度线宽度':3,'刻度单位':5,'偏移':0.8),
+                                  '次刻度线':('是否可视':1/0,'次刻度线长度':3,'次刻度线宽度':3,'刻度单位':1,'偏移':0-1),                                 
+                                  '最小值':'最小值',
+                                  '最大值':'最大值',
+                                  '图形起始位置':140,//起始刻度位置，0即表示从水平0°位置开始
+                                  '图形结束位置':400,//结束刻度位置,400即顺时针从起始位置转动相差度数结束
+                                  '区域':(('标尺曲度':0-1,'标尺初始宽度':0-1,'标尺末尾宽度':0-1,'开始值':'开始值','结束值':'结束值','颜色':'green'/'#ff3366'))
+                                  )
+                                 ),
+                                 (
+                                  '优先级':2,
+                                  '圆周':('垂直偏移':0.35,'水平偏移':0.3,'圆点':('是否可视':1/0,'大小':0.1,'颜色':'#252E32'),'半径':20),
+                                  '主刻度线':('是否可视':1,'主刻度线长度':10,'主刻度线宽度':3,'刻度单位':5,'偏移':0.9,'颜色':'#000'),
+                                  '次刻度线':('是否可视':1,'次刻度线长度':5,'次刻度线宽度':3,'刻度单位':1,'偏移':0.9,'颜色':'#000'),
+                                  '刻度':('方向':'horization','间距':5,'偏移':1),
+                                  '指针刻度':'指针刻度',//指针刻度对应模型数据某一下标字段，根据当前下标数据变化而变化
+                                  '指针内部偏移':0,
+                                  '指针外部偏移':0.9,
+                                  '指针长度':0.7,
+                                  '指针宽度':10,
+                                  '指针颜色':'#252e32',
+                                  '最小值':'最小值',
+                                  '最大值':'最大值',
+                                  '图形起始位置':270,//起始刻度位置，0即表示从水平0°位置开始
+                                  '图形结束位置':630,//结束刻度位置,400即顺时针从起始位置转动相差度数结束
+                                  '区域':(
+                                          ('标尺曲度':0.9,'标尺初始宽度':0.88,'标尺末尾宽度':0.80,'开始值':'开始值1','结束值':'结束值1','颜色':'yellow')
+                                         )
+                                )
+                                 )
+                    )
+      );
+
+//线性仪表盘设置
+ array(
+        "modelName":"432",
+        "dispWay":1,
+        "width":423,
+        "height":400,              
+        "图形属性": (
+                     '图表类型':2,
+                     '图形方向':'horizontal',
+                     '图形背景颜色':'red'/'#f7f7f7',
+                     '图形透明度':0-1,
+                     '图形边框':('边框宽度':2,'边框颜色':'blue'/'#76786A','边框边距':3),                    
+                     '标题':(('名称':'标题1','横向偏移':0.5,'纵向偏移':0.5,'颜色':'#C5F80B','大小':12,'类型':'sans-serif'),
+                             ('名称':'标题2','横向偏移':0.8,'纵向偏移':0.5,'颜色':'#C6E93B'/'green','大小':12,'类型':'sans-serif')),
+                     '图形阴影':('是否可视':1/0,'颜色':'gray'/'#fff','阴影聚焦度':10,'横向偏移':3,'纵向偏移':3),
+                     '提示框':1/0,
+                     '提示框高亮':1/0,                   
+                     '图形系列':(('主刻度线':('是否可视':1/0,'主刻度线长度':2,'主刻度线宽度':3,'刻度单位':5,'偏移':0.8),
+                                  '次刻度线':('是否可视':1/0,'次刻度线长度':3,'次刻度线宽度':3,'刻度单位':1,'偏移':0-1),
+                                  '刻度':('方向':'horization','间距':3,'偏移':0-1),
+                                  '指针刻度':'指针刻度',//指针刻度对应模型数据某一下标字段，根据当前下标数据变化而变化
+                                  '指针曲合度':0-1,
+                                  '指针长度':0-1,
+                                  '指针宽度':3,
+                                  '指针颜色':'red'/'#252e32',
+                                  '最小值':'最小值',
+                                  '最大值':'最大值',                                  
+                                  '区域':(('标尺曲度':0-1,'标尺初始宽度':0-1,'标尺末尾宽度':0-1,'开始值':'开始值','结束值':'结束值','颜色':'green'/'#ff3366'))                                  
+                                 ))
+                    )
+      );
+
+
+
+
+//仪表图默认配置
+array(
+        "modelName":"432",
+        "dispWay":1,
+        "width":400,
+        "height":400,               
+        "图形属性": (
+                     '图表类型':1,
+                     '图形背景颜色':'#f7f7f7',
+                     '图形透明度':1,
+                     '图形边框':('边框宽度':2,'边框颜色':'#76786A','边框边距':3),
+                     '图形原点':('是否可视':1,'原点大小':0.08),
+                     '标题':(),
+                     '图形阴影':('是否可视':1,'颜色':'gray','阴影聚焦度':10,'横向偏移':3,'纵向偏移':3),
+                     '提示框':0,
+                     '提示框高亮':0,                
+                     '图形系列':((
+                                  '优先级':1,                                  
+                                  '主刻度线':('是否可视':1,'主刻度线长度':2,'主刻度线宽度':3,'刻度单位':5,'偏移':0.8),
+                                  '次刻度线':('是否可视':0,'次刻度线长度':3,'次刻度线宽度':3,'刻度单位':1,'偏移':0.8),
+                                  '刻度':('方向':'horization','间距':3,'偏移':1),
+                                  '指针刻度':0,//指针刻度对应模型数据某一下标字段，根据当前下标数据变化而变化                                  
+                                  '指针长度':0.7,
+                                  '指针宽度':10,
+                                  '指针颜色':'#252e32',
+                                  '最小值':nil,
+                                  '最大值':nil,
+                                  '图形起始位置':180,//起始刻度位置，0即表示从水平0°位置开始
+                                  '图形结束位置':360,//结束刻度位置,即顺时针从起始位置转动相差度数结束
+                                  '区域':(
+                                           ('标尺曲度':0.9,'标尺初始宽度':0.9,'标尺末尾宽度':0.85,'开始值':'开始值1','结束值':'结束值1','颜色':nil),
+                                           ('标尺曲度':0.9,'标尺初始宽度':0.85,'标尺末尾宽度':0.8,'开始值':'开始值2','结束值':'结束值2','颜色':nil),
+                                           ('标尺曲度':0.9,'标尺初始宽度':0.8,'标尺末尾宽度':0.75,'开始值':'开始值3','结束值':'结束值3','颜色':nil)
+                                         )                              
+                                 ))
+                    )
+      );
+
+} 

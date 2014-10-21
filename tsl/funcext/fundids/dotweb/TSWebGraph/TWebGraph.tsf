@@ -1,0 +1,355 @@
+type TWebGraph = class
+
+FNum;//当前图表序号
+
+Fwidth;//图表容器宽度
+Fheight;//图表容器高度
+Ftitle;//图表名称
+FGrid;//网格线标志位
+FGridConf;//网格线相关设置
+FLegendConf;//图例相关配置
+FXlineConf; //x轴配置
+FSeriesConf;//相关系列图表类型设置
+
+FData;//图表数据
+FConf;//图表配置
+FDac ;//图表数据和配置
+FDouble;//图表是否为双轴
+FChartType;//存储图表类型
+
+function Create();overload;
+function Create(data,conf);overload;
+function Draw();
+
+private
+function genHTML();
+function drawPie();
+function drawBar();
+function drawMultiType();
+function FormatData();
+function outConfStr();
+function ChartTypeList(cType); //图表类型列表
+Function convert(x); //返回tsl图表类型代码
+function Justify(cat);
+end;
+
+function TWebGraph.Create();overload;
+begin
+	    data:=array();
+	    conf:=array();
+	    Create(data,conf);	   
+end;
+
+function TWebGraph.Create(data,conf);overload;
+begin
+	   num := getSysParam('ChartNum');
+	   if  not ifnil(num) then	   
+			   FNum := ++num;			   
+     else 
+			   FNum := StrToInt(formatdatetime('hhmmsszzz',now()))+int(random()*1000);//0;			   	   
+	   setSysParam('ChartNum',FNum);
+	   FData := ifArray(data) ? data : array();
+	   FConf := ifArray(conf) ? conf : array();	 
+	   Fwidth := FConf['width'] ? : "100%";
+     Fheight:= FConf['height'] ? : "100%";
+     Ftitle := FConf['名称'] ? : "";
+     FGrid :=  FConf['图形属性']['背景网格']['是否画网格线'] ? 1:0;     
+     FGridConf := FGrid ? FConf['图形属性']['背景网格'] : array();
+     FLegendConf := FConf['图形属性']['图例格式'];
+     FXlineConf := FConf['图形属性']['X轴'];
+     FSeriesConf := FConf['图形属性']['图表类型和坐标轴'];
+     FDouble := 0;
+     FDac := array();  
+	  
+end;
+
+function TWebGraph.FormatData();
+begin
+	   //echo '----',tostn(FSeriesConf),tostn(fdata);
+     if not ifArray(FSeriesConf) then return 0;
+     if not length(FSeriesConf) then return 0;
+     dac := array();     
+     FChartType := array();
+     arrIndex := getAllIndexs(FData[0]);  //取得数据数组的下标
+     tmpArr := getAllIndexs(FSeriesConf); //取得系列配置数组的下标
+     if not istable(tmpArr) then return 0;
+     if not istable(arrIndex) then return 0;   
+     if ifnil(xIndex) then return 0;                
+      if tmpArr[0] = '*' then  begin tmpArr:=arrIndex; stype:="*"; end;      	  
+ 	    for i := 0 to  length(tmpArr)-1 do
+ 	    begin
+ 	    	  for j := 0 to length(arrIndex)-1 do
+	   	    begin
+	   	    	   if arrIndex[j]= FXlineConf['X轴列名'] then begin     	  
+				     	      xIndex := j; 
+				     	      dac[j]['series']:= 'xline';
+				     	      continue;    	      
+				     	 end; 
+	   	    	   if not (arrIndex[j] in tmpArr) then
+	   	    	   continue;
+	   	    	   if not ifnil(dac[j]['series']) and not ifnil(dac[j]['type']) then
+	   	    	   continue;	  	   	    	   
+	   	    	   if dac[j]['series'] = 'xline' then continue;
+	   	    	   dac[j]['title'] := arrIndex[j];
+	   	    	   if stype= '*' then 
+	   	    	      dac[j]['type'] := Justify(FSeriesConf[stype]['图形属性']);
+	   	    	   else dac[j]['type'] := Justify(FSeriesConf[tmpArr[i]]['图形属性']);
+	   	    	   dac[j]['series'] := 'yline';
+	   	    	   dac[j]['data'] := FData[:,array(arrIndex[xIndex],arrIndex[j])];   
+	   	    	   dac[j]['axes'] :=  FSeriesConf[tmpArr[i]]['坐标轴'] >= 1  ? 'y2' :'y1';
+	   	    	   if FSeriesConf[tmpArr[i]]['坐标轴'] >= 1	 then 
+	   	    	   FDouble := 1;    	
+	   	    end
+ 	   end; 
+ 	   //echo '======',tostn(dac); 	      
+     return dac;     
+end;
+
+
+
+function TWebGraph.Draw();//输出js脚本
+begin     
+     if not length(FData)  then return OutHighlightMsg("缺失相关数据！");     
+     if not length(FConf)  then return OutHighlightMsg("缺失相关图表配置！");     
+     FDac := FormatData();
+     if FDac = 0  then   return OutHighlightMsg("缺失图表配置！");
+     jsstr := genHTML();    
+     return jsstr;     
+end;
+
+function TWebGraph.genHTML();
+begin
+	   str := "";
+	   str += '<div  class="comContainer"  id="chart_'+tostring(Fnum)+'" style="width:'+tostring(Fwidth)+'; height:'+tostring(Fheight)+';"></div>';
+	   str += '<script type="text/javascript">var conf={};';
+	   str += outConfStr();	   
+	   str += '$(\'#'+'chart_'+tostring(Fnum)+'\').jqChart(conf);' ;      		   
+	   str += '</script>'; 
+	   return str;
+end;
+
+function TWebGraph.outConfStr();//输出调用插件需要的配置信息
+begin	   
+	   tmp := "";	  
+	   tmp :=  drawMultiType();
+	   //echo tostn(tmp);		     
+	   return tmp;
+end;
+
+Function TWebGraph.drawPie();//返回饼图图表配置
+begin
+	    tmp := "";
+	     if not length(FDac) then return tmp;
+	   tmp += Ftitle ? 'conf.title={text:"'+Ftitle+'"};':'';
+	   Location := array('n':'top','ne':'top','nw':'top','e':'right','s':'bottom','w':'left');
+	   FLegendConf['位置'] := Location[FLegendConf['位置']];
+	  tmp += FLegendConf['图例格式'] = '无' ? 'conf.legend={visible:false};':'conf.legend={location:"'+FLegendConf['位置']+'"};';
+	  tmp += length(FGridConf) ? (FGridConf['边框'] ? 'conf.border={lineWidth:1,strokeStyle:"#fff"};':''):'';	  
+	  series := '';	  
+	  for i := 0 to length(FDac)-1 do
+	  begin
+	       if ifnil(FDac[i]['type']) or ifnil(FDac[i]['series']) then continue;
+	       series += '{';
+	       series += 'type:"'+FDac[i]['type']+'",';
+	       series += 'labels: {
+                                    stringFormat: "%.1f%%",
+                                    valueType: "percentage",
+                                    font: "15px sans-serif",
+                                    fillStyle: "white"
+                                },';
+         series += 'data:'+class(TDataConverter).Table2JSON(FDac[i]['data'],0);
+	       series += '}';
+	       break;
+	  end
+	  tmp += 'conf.series = ['+series+'];';
+	    return tmp;
+end;
+
+
+Function TWebGraph.drawMultiType();//返回混合图表配置
+begin
+	   tmp := "";
+	   if not length(FDac) then return tmp;
+	   tmp += Ftitle ? 'conf.title={text:"'+Ftitle+'"};':'';
+	   //图表图例位置参数转换	   
+	   Location := array('n':'top','ne':'top','nw':'top','e':'right','s':'bottom','w':'left');	   
+	   FLegendConf['位置'] := Location[FLegendConf['位置']];
+	   tmp += FLegendConf['图例格式']='无' ? 'conf.legend={ visible: false };':'conf.legend={location: "'+FLegendConf['位置']+'"};'; 
+	   tmp += length(FGridConf) ? (FGridConf['边框'] ? 'conf.border={lineWidth: 1,strokeStyle: "#fff"};':''):'';
+	   
+	   axes := '';
+	   if  not 'pie' in FDac then begin
+			   axes += FGrid ? '{location:"bottom",majorGridLines:{strokeStyle: "#000"}},{location:"left",majorGridLines:{strokeStyle:"#000"}}'+(FDouble ? ',{location:"right",majorGridLines:{strokeStyle:"#000"}}':''):'{locaton:"left",majorGridLines:{strokeStyle:"#fff"}},{location:"bottom",majorGridLines:{strokeStyle:"#fff"}}'+(FDouble ? ',{location:"right",majorGridLines:{strokeStyle:"#fff"}}':'');
+			   tmp += axes ? 'conf.axes = ['+axes+'];':'';
+	   end;
+	   //************图表系列设置***********//
+	   series := '';	   
+	   for i := 0 to length(FDac)-1 do
+	   begin
+	   	    if ifnil(FDac[i]['type']) or ifnil(FDac[i]['series']) then continue;
+	   	    series += series  ? ',{':'{';	   	 
+	   	    series += 'type:"'+FDac[i]['type']+'",';
+	   	    series += 'axisY:"'+FDac[i]['series']+'",';
+	   	    series += 'title:"'+FDac[i]['title']+'",';
+	   	    series += 'markers:null,';
+	   	    series += 'data:'+class(TDataConverter).Table2JSON(FDac[i]['data'],0);	   	 	   		   	
+	   	    series += '}';	   	    
+	   end;
+	   //*****************end**************// 
+	   tmp += 'conf.series = ['+series+'];';
+	   return tmp;	
+end;
+
+
+Function TWebGraph.Justify(cat);
+begin
+	   
+	   chartType := convert(cat);	   
+	   if ifnil(chartType) then
+	   return 0;
+	   ChartList := ChartTypeList('all');
+	   if chartType in ChartTypeList('柱形图') then
+	   return 'column';
+	   if chartType in ChartTypeList('折线图') then
+	   return 'line';
+	   if chartType in ChartTypeList('饼图') then
+	   return 'pie';
+	   if chartType in ChartTypeList('条形图') then
+	   return 'bar';
+	   if chartType in ChartTypeList('面积图') then
+	   return 'area';
+	   if chartType in ChartTypeList('雷达图') then
+	   return 'radarLine';
+	   if chartType in ChartTypeList('股价图') then
+	   return 'stock';
+	   if chartType in ChartTypeList('散点图') then
+	   return 'scatter';
+	   if chartType in ChartTypeList('气泡图') then
+	   return 'bubble';
+	   return 0;
+end;
+
+Function TWebGraph.convert(x);
+begin
+	   h:=array(1:51,2:52,3:53,8:57,9:58,14:4,17:65,21:5,27:-4169,32:1,33:76,26:71,4:54,5:55,6:56,7:-4100,10:59,11:60,12:61,13:62,15:63,16:64,18:66,19:67,20:-4101,22:5,23:68,24:69,25:70,28:72,29:73,30:74,31:75,34:77,35:-4098,36:78,37:79,38:89,-4151:-4151);		
+		 return h[x];
+end;
+
+Function TWebGraph.ChartTypeList(cType);
+Begin
+	   ChartTypeArr := array("柱形图":("Column":(
+									                          xlColumnClustered(),//簇状柱形图
+									                          xlColumnStacked(),//堆积柱形图
+									                          xlColumnStacked100()),//百分比堆积柱形图
+	                                   "3DColumn":(
+									                          xl3DColumn(),//三维柱形图
+									                          xl3DColumnClustered(),//三维簇状柱形图
+									                          xl3DColumnStacked(),//三维堆积柱形图
+									                          xl3DColumnStacked100()),//三维百分比堆积柱形图
+	                                   "Cylinder":(
+									                          xlCylinderCol(),//三维柱形圆柱图
+									                          xlCylinderColClustered(),//簇状柱形圆柱图
+									                          xlCylinderColStacked(),//堆积柱形圆柱图
+									                          xlCylinderColStacked100(),//百分比堆积柱形圆柱图
+									                          xlCylinderBarClustered(),//簇状条形圆柱图
+								                            xlCylinderBarStacked100()),//百分比堆积条形圆柱图
+								                     "Cone":(
+								                            xlConeCol(),//三维柱形圆锥图
+																						xlConeColClustered(),//簇状柱形圆锥图
+																						xlConeColStacked(),//堆积柱形圆锥图
+																						xlConeColStacked100()),//百分比堆积柱形圆锥图
+																		 "Pyramid":(				
+																					  xlPyramidCol(),//三维柱形棱锥图
+																						xlPyramidColStacked(),//堆积柱形棱锥图
+																						xlPyramidColClustered(),//簇状柱形棱锥图
+																			      xlPyramidColStacked100())//百分比堆积柱形棱锥图
+                                    ),
+                            "折线图":("Line":(
+                                            xlLine(),//折线图
+                                            xlLineStacked(),//堆积折线图
+                                            xlLineStacked100()),//百分比堆积折线图
+                                      "Markers":(
+                                            xlLineMarkers(),//数据点折线图
+                                            xlLineMarkersStacked(),//堆积数据点折线图
+                                            xlLineMarkersStacked100()),//百分比堆积数据点折线图
+                                      "3DLine":(
+                                            xl3DLine())//三维折线图
+                                    ),
+                            "饼图":("Pie":(
+				                                    xlPie(),//饼图
+																						xlPieExploded(),//分离型饼图
+																						xlPieOfPie()),//复合饼图
+																		"3DPie":(												
+																						xl3DPie(),//三维饼图
+																						xl3DPieExploded()),//三维分离型饼图
+																		"BarPie":(
+                                            xlBarOfPie())//复合条饼图
+                                    ),
+                             "条形图":("Bar":(
+				                                    xlBarClustered(),//簇状条形图
+				                                    xlBarStacked(),//堆积条形图
+				                                    xlBarStacked100()),//百分比堆积条形图
+				                               "3DBar":(
+				                                    xl3DBarClustered(),//三维簇状条形图
+																						xl3DBarStacked(),//三维堆积条形图
+																						xl3DBarStacked100()),//三维百分比堆积条形图				                               )     
+																			"Cylinder":(
+																			      xlCylinderBarClustered(),//簇状条形圆柱图
+																			      xlCylinderBarStacked(),//堆积条形圆柱图
+																						xlCylinderBarStacked100()),//百分比堆积条形圆柱图			
+																			"Cone":(
+																			      xlConeBarClustered(),//簇状条形圆锥图
+																						xlConeBarStacked(),//堆积条形圆锥图
+																						xlConeBarStacked100()),//百分比堆积条形圆锥图
+																			"Pyramid":(
+																			      xlPyramidBarClustered(),//簇状条形棱锥图
+																						xlPyramidBarStacked(),//堆积条形棱锥图
+																						xlPyramidBarStacked100())//百分比堆积条形棱锥图
+																			),
+															"面积图":("Area":(
+																			      xlArea(),//面积图
+																						xlAreaStacked(),//堆积面积图
+																						xlAreaStacked100()),//百分比堆积面积图
+																				"3DArea":(
+																				    xl3DArea(),//三维面积图
+																						xl3DAreaStacked(),//三维堆积面积图
+																						xl3DAreaStacked100())//三维堆积面积图
+															         ),
+															"股价图":(
+															          xlStockHLC(),//盘高-盘低-收盘图
+																				xlStockOHLC(),//开盘-盘高-盘低-收盘图
+																				xlStockVHLC(),//成交量-盘高-盘低-收盘图
+																				xlStockVOHLC()//成交量-开盘-盘高-盘低-收盘图
+																				),
+															"散点图":(
+															          xlXYScatter(),//散点图
+																				xlXYScatterLines(),//折线散点图
+																				xlXYScatterLinesNoMarkers(),//无数据点折线散点图
+																				xlXYScatterSmooth(),//平滑线散点图
+																				xlXYScatterSmoothNoMarkers()//无数据点平滑线散点图
+																				),
+															"曲面图":(
+															          xlSurface(),//三维曲面图
+																				xlSurfaceTopView(),//曲面图（俯视图）
+																				xlSurfaceTopViewWireframe(),//曲面图（俯视框架图）
+																				xlSurfaceWireframe()//三维曲面图（框架图）
+																				),
+															"圆环图":(
+															          xlDoughnut(),//圆环图
+                                        xlDoughnutExploded()//分离型圆环图
+                                        ),
+                              "气泡图":(
+                                        xlBubble(),//气泡图
+                                        xlBubble3DEffect()//三维气泡图 
+                                        ),
+                              "雷达图":(
+                                        xlRadar(),//雷达图
+                                        xlRadarFilled(),//填充雷达图
+                                        xlRadarMarkers()//数据点雷达图
+                                        )
+                            );
+
+     if cType = 'all' then
+     return  ChartTypeArr;
+     return  ChartTypeArr[cType] ;                      
+End; 

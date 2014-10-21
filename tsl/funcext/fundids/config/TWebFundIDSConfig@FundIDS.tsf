@@ -1,0 +1,62 @@
+type TWebFundIDSConfig = class
+	  class function getDBAlia();
+	  class function getBaseRootPath();
+	  class function getFileBasePath();
+    class function getTemplateRootPath();
+		
+	  Class function GetEventAddr(); //事件服务器地址 
+	  Class function GetClientAlia();
+	  Class function getDefaultClientUser() ;//默认天软客户端用户ID  
+	  Class function GetServerLoginUser();
+	  Class function getTSLPath();//获取解释器地址
+	  Class function getMonitorReportCallPath();
+end;
+
+Class function TWebFundIDSConfig.getMonitorReportCallPath();
+begin
+	   return 'z:\\tinysoft\\web\\fundids\\task\\TgenReport.tsl';
+end;
+
+Class function TWebFundIDSConfig.getTSLPath();
+begin
+	   return 'z:\\tinysoft\\tsl\\tsl.exe';
+end;
+
+class function TWebFundIDSConfig.getTemplateRootPath();
+begin
+	   return 'z:\\tinysoft\\web\\resource\\fundids\\reportData\\Template\\';
+end;
+
+class function TWebFundIDSConfig.getFileBasePath();
+begin
+	   return 'z:\\tinysoft\\web\\resource\\fundids\\';
+end;
+
+class function TWebFundIDSConfig.getDBAlia();
+begin
+	   return 'FundIDS';
+end;
+
+class function TWebFundIDSConfig.getBaseRootPath();
+begin
+     return "/Resource/";
+end;
+
+Class function TWebFundIDSConfig.GetEventAddr(); //事件服务器地址 
+begin
+		return '127.0.0.1';
+end;
+Class function TWebFundIDSConfig.GetClientAlia();
+begin
+		return 'xxpl';
+end;
+
+Class function TWebFundIDSConfig.GetServerLoginUser();
+begin
+		return 'xxpl';
+end;
+
+Class function TWebFundIDSConfig.getDefaultClientUser() ;//默认天软客户端用户ID      
+begin
+		return 'model_xxpl';
+end;

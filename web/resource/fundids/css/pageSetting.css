@@ -1,0 +1,61 @@
+ .sys_webhomebar{width:532px;height:37px;float:right;background:url("/resource/website/images/homepage/homesetting.png") repeat-x}
+  .sys_WebhomeTopBar{background-position:-376px -746px;}
+  .sys_form_border_style{outline-style: dashed  ;outline-width:1px;}
+  
+  
+  .sys_com_formcontent .FormRow>td td div{background:#f8fbfb;}/*faffff;line-height: 27px;*/
+  .sys_com_formcontent .FormRow td>div{background:#f4f4f0}	
+  .sub_tform{margin:7px;}
+  .sys_com_formcontent .FormRow td div>div{background:#fafafa} 
+  .sys_com_formcontent .FormRow td div>div td div{background:#f5f5f5}/*F6FDFA*//*ECF4FD*//**/
+  .sys_com_formcontent .FormRow td div>div td div td div{background:#fafafa}
+
+  .sys_com_formcontent .FormRow td {padding:2px 3px 2px 3px}
+
+
+  .sub_tform{margin:7px;}
+ .sys_formcontainerstyle{margin:1px;border:1px dashed #f0f0f0;min-height:30px;width:99%;min-width: 100px;background:white;cursor:pointer;}
+  .sys_com_formcontent{min-height:100px;}
+  .sys_containerstyle{margin:0;border:1px dashed #e6e6e6;min-height:100px;_height:100px; overflow: visible;cursor:pointer;}
+  
+  .sys_link_menu{text-align: left;display: inline;float: right;margin-right:150px;list-style: none;/*border-right: 1px solid rgba(255, 255, 255, 0.0976562);border-left: 1px solid rgba(0, 0, 0, 0.347656);*/}
+  .sys_link_menu li{font: bold 13px/17px "Helvetica Neue", Helvetica, Arial, Geneva, sans-serif;float: left;/*border-left: 1px solid rgba(255, 255, 255, 0.0976562);border-right: 1px solid rgba(0, 0, 0, 0.347656);*/}
+  .sys_link_menu li a{color: #e6e6e6;font-weight: normal;font-style: normal;text-decoration: none;display: block;padding: 0px 0px 12px 12px;}
+ .sys_link_menu li a:hover{color: #FAA523;}
+ .sys_homebar_style{width:272px;height:55px;background:url("/resource/website/images/homepage/homesetting.png") no-repeat;}
+ .sys_homebar_style_color{background-position:-230px -75px;cursor:pointer;}
+ .sys_homebar_style_font{background-position:-230px -15px;cursor:pointer;}
+ 
+ .sys_homebar_add{width:240px;height:60px;background:url("/resource/website/images/homepage/homesetting.png") no-repeat;}
+ .sys_homebar_add_tsl{background-position:-0px -25px;cursor:pointer;}
+ .sys_homebar_add_table{background-position:-0px -70px;cursor:pointer;}
+ .sys_homebar_add_chart{background-position:-0px -126px;cursor:pointer;}
+ .sys_homebar_add_form{background-position:-0px -175px;cursor:pointer;}
+ .sys_homebar_add_link{background-position:-0px -224px;cursor:pointer;}
+ .sys_homebar_add_template{background-position:-0px -280px;cursor:pointer;}
+ .sys_homebar_add_list{background-position:-0px -328px;cursor:pointer;}
+ .sys_homebar_add_calendar{background-position:-0px -379px;cursor:pointer;}
+ .sys_homebar_add_message{background-position:-0px -435px;cursor:pointer;}
+ .sys_homebar_add_gauge{background-position:-0px -482px;cursor:pointer;}
+ .sys_homebar_add_image{background-position:-0px -530px;cursor:pointer;}
+ .sys_homebar_add_file{background-position:-0px -583px;cursor:pointer;}
+ .sys_homebar_add_text{background-position:-0px -636px;cursor:pointer;}
+ 
+ .sys_fontfamily{cursor:pointer;}
+
+ /*tsform*/
+ .layoutTd{background:#ebebeb;}
+ .tsFormNavigation{background:#ebebeb;width:56px;margin:0;padding:0}
+ .sys_tsform{min-width:311px;min-height:500px;background:#FAFAFA;}
+ .tsFormNavigation .ui-state-highlight{background:#FAFAFA;border:0px solid #FAFAFA;color:#D35B5B;}
+ .tsFormWrapper .tsFormNavigation{margin:0;padding:0}
+ .tsFormContentZone{margin:0;padding:0}
+ .tsFormNavigation .navigationItem{margin:0;padding:0}
+ .tsFormNavigation{width:90px;text-align:center;}
+ .navigationItem{height:35px;line-height:35px;border:none;border-bottom:1px solid #e0e0e0;}
+ .tsFormContentZone{background:#FAFAFA;}
+ .input_text{background:transparent;border-style: none none solid;border-color:gray;}
+ .more_text{color: #FA9300;cursor: pointer; font-size: 10px; margin-left: 8px;}
+ 
+ /*´´½¨ÍøÕ¾´°¿Ú*/
+ .sys_theme{float:left;}

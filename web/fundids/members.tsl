@@ -1,0 +1,29 @@
+Frame := CreateObject("TWebFrame","TWebFundIDSHeader");
+Frame.outHeader("信息披露系统");
+
+websiteid := -1;
+UserID := OnLineUserID();
+ifLogin := CreateObject('TWSSecurity',websiteid).CheckLogined();
+if not ifLogin then
+	CreateObject('TWebResponse').SendRedirect('/website/security/login.tsl');
+
+echo '<link rel="stylesheet" rev="stylesheet" href="/website/security/security.css" />';
+echo '<script  type="text/javascript" src="/website/security/security.js" ></script>';
+
+Manager := CreateObject('TWSMemberManager',websiteid);
+Manager.Init();
+<?tslx>
+<div class="dotweb-sec-members">
+	<div class="panel">
+		<div class="left-panel">
+			<?tsl manager.InitNav(); ?>
+		</div>
+		<div class="content-panel">
+			<?tsl Manager.EchoMemberManager(); ?>
+		</div>
+		<div style="clear:both"></div>
+	</div>
+	<?tsl Manager.InitEditMemberForm(); ?>
+</div>
+
+

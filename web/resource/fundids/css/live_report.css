@@ -1,0 +1,224 @@
+/*report_page live view */
+
+.left_content{
+	position: absolute;
+	top:0;
+	left: 0;
+	box-shadow: 1px 0 3px rgba(0,0,0,0.2);
+	float: left;
+	width:200px;
+	height: 100%;
+	background: white;
+
+}
+
+.left_content_switch{
+	/*background-color: #f8f8f8;
+	width: 16px;
+	height: 16px;
+	position: absolute;
+	right: -16;
+	top: 0;
+	text-align: center;
+	cursor: pointer;*/
+}
+
+.sys_content{
+	float: right;
+	overflow: auto;
+}
+
+
+/*导航窗口*/
+.report_navigator{
+	padding: 2em 0.5em;
+	height: 100%;	
+	overflow: auto;
+}
+
+.report_nav_contents{
+	list-style: none;
+}
+
+.report_navigator ul{
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.report_nav_contents li{	
+	padding-left:3em;
+}
+
+.report_nav_contents li a:active,.report_nav_contents a:link,.report_nav_contents a:visited{
+	color: #222;
+}
+
+.report_nav_contents li a{
+	line-height: 2em;
+	white-space: nowrap;
+	overflow: hidden;
+	display: block;
+	border:1px solid transparent;	
+	white-space: nowrap;
+	overflow: hidden;		
+	padding:0 .5em;
+}
+
+.report_nav_contents li a:hover{
+	border:1px solid rgb(0,112,192);
+}
+
+.report_nav_contents li.title_lv1{
+	padding-left:0.5em;	
+}
+
+.title_lv1 i{display: inline-block;width: 16px;height: 16px;float:left;margin-top:4px;}
+.ui-icon{background:url(jquery-ui/images/ui-icons_222222_256x240.png);}
+/*.ui-icon-triangle-1-se { background-position: -48px -16px; }
+.ui-icon-triangle-1-e { background-position: -32px -16px; }
+*/
+
+.report_nav_sel{
+	background: rgb(218,216,243);
+}
+
+
+/*报告页面*/
+.report_page{
+	font-family: "SimSun";
+	font-size: 14px;
+	line-height: 2em;
+	padding:3em;
+	background: white;
+	margin: 1em auto;
+	width:42em;
+	box-shadow: 0 0 3px rgba(0,0,0,0.1);
+	min-height: 70em;
+}
+
+.report_page *{line-height: 2em;}
+
+/*页眉*/
+.report_page_header{
+	color:#ccc;
+	font-size: 9px;
+	text-align: right;
+	border-bottom: 1px solid #ccc;
+	margin-bottom: 1em;
+}
+
+/*页脚*/
+.report_page_footer{
+	color:#DDD;
+	font-size: 9px;
+	text-align: center;
+}
+
+/*封面*/
+.report_page_cover{
+	text-indent: 6em;
+	font-size:14px;
+	font-weight: bold;
+}
+
+/*封面标题*/
+.report_page_cover_title{
+	font-size: 24px;
+	text-align:center;	
+}
+
+/*封面报告期*/
+.report_page_cover_report_date{
+	text-align:center;
+}
+
+/*目录*/
+.table_of_contents{
+	font-size: 1em;
+	border: none;
+	border-collapse: collapse;;
+}
+.table_of_contents td.table_of_contents_h1{
+	font-weight: bold;	
+	padding-left: 0;
+}
+.table_of_contents td{
+	padding-left: 2em;
+}
+
+/*章节序号*/
+.doc_order_no{
+	/*font-family: "Cambria,serif,Time New Roman";*/
+	margin-right: 0.2em;
+}
+
+.report_page h1,.report_page h2,.report_page h3,.report_page h4,.report_page h5{
+	margin:1em 0em;
+}
+
+.report_page h1{
+	font-size: 1.4em;
+	font-weight: bold;
+	line-height: 1em;
+	text-align: center;
+}
+
+.report_page h2,.report_page h3,.report_page h4,.report_page h5{
+	font-size: 1.1em;
+	font-weight: bold;
+}
+
+.report_page p{
+	text-indent: 2em;
+}
+
+/*注，备注，注释*/
+.report_page p.remark{
+	text-indent:0;	
+}
+
+/*金额单位*/
+.report_page p.amount_unit{
+	text-align: right;
+}
+
+.report_page table.default{
+	font-size: 1em;
+	border-collapse:collapse;
+	border:1px solid black;
+	width: 100%;
+}
+
+.report_page table.default th{
+	padding:2px 5px;
+	background: #e8e8e8;
+	text-align:center;
+	border: 1px solid black;
+}
+
+.report_page table.default td{
+	padding:0px 5px;
+	vertical-align:top;
+	border: 1px solid black;
+}
+
+/*数字表格单元*/
+.report_page table.default td.num{
+	text-align:right;
+}
+
+/*证券代码，证券名称*/
+.report_page table.default td.security{
+	text-align:right;
+}
+
+/*表格章节单元，表格合计行的单元*/
+.report_page table.default td.caption,.report_page table.default td.summation{
+	font-weight: bold;
+}
+
+/*小字体表格*/
+.report_page table.small_font{
+	font-size:9px;
+}

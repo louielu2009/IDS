@@ -1,0 +1,91 @@
+type SaveLog = class
+
+function TOpLog(param);//模板操作相关日志
+function EDataLog(param);//元素数据操作相关日志
+function EOpLog(param);//元素操作相关日志
+end;
+
+function SaveLog.EOpLog(param);
+begin
+	   if not ifArray(param) then return;
+	   UID := param['UID'] ? param['UID']:'';
+	   case param['OP'] of
+	        'activeElement':
+	        begin
+	        	   opType := 'activeElement';
+	        	   EName := param['EName'] ? param['EName']:'';
+	        	   info := '用户：'+tostring(UID)+' 启用元素：'+tostring(EName);	        	   
+	        end;
+	        'inactiveElement':
+	        begin
+	        	   opType := 'inactiveElement';
+	        	   EName := param['EName'] ? param['EName'] :'';
+	        	   info := '用户：'+tostring(UID)+' 禁用元素：'+tostring(EName);
+	        end;
+	        'editElement':
+	        begin
+	        	   opType := 'editElement';
+	        	   EName := param['EName'] ? param['EName']:'';
+	        	   info := '用户：'+tostring(UID)+' 编辑元素：'+tostring(EName);	        	   
+	        end;
+          'addElement':
+          begin
+          	   opType := 'addElement';
+          	   EName := param['EName'] ? param['EName']:'';
+          	   info := '用户：'+tostring(UID)+' 添加元素：'+tostring(EName);
+          end;
+      end;
+      insertData := array();
+      insertData['Table'] := 'TS_RTLog';
+      insertData['Data'] := array(('USERID':UID,'TYPE':opType,'INFO':info));
+      r := class(ExecuteSQL).insert(insertData);
+      if r then return 1
+      else return 0;
+end;
+
+function SaveLog.TOpLog(param);
+begin
+	   if not ifArray(param) then return;
+	   UID := param['UID'] ?param['UID']:'';	   
+	   case param['OP'] of
+			   'createTemplate':
+			    begin
+			          opType := 'createTemplate';
+			          TName := param['TName'] ?param['TName'] :'';
+			          info := '用户：'+tostring(UID)+' 创建模板：'+tostring(TName);	                    
+			    end;
+			    'copyTemplate':
+			    begin
+			    	   opType := 'copyTemplate';
+			    	   TName := param['TName'] ? param['TName'] :'';
+			    	   info := '用户：'+tostring(UID)+' 复制模板：'+tostring(TName);
+			    end;
+	    end;
+	    insertData := array();
+	    insertData['Table'] := 'TS_RTLog';
+	    insertData['Data'] := array(('USERID':UID,'TYPE':opType,'INFO':info));
+	    r := class(ExecuteSQL).insert(insertData);	  
+	    if r then return 1
+	    else return 0;
+end;
+
+function SaveLog.EDataLog(param);
+begin
+	   insertData := array();
+	   insertData['Table'] := 'TS_RTLog';
+	   UID := param['UID']?param['UID']:'';	   
+	   case param['OP'] of
+			   'updateData':begin
+			   	       opType := 'updateData';
+			   	       info := '用户：'+tostring(param['UID'])+' 更新元素：'+tostring(param['EID'])+' 数据'; 
+			     end;
+			   'checkData':begin
+			           opType := 'checkData';
+			           info := '用户：'+tostring(param['UID'])+' 审核元素：'+tostring(param['EID'])+' 数据';
+			     end;
+	   end;
+	   insertData['Data'] := array(('USERID':UID,'TYPE':opType,'INFO':info));
+	   r := class(ExecuteSQL).insert(insertData);	  
+	   if r then return 1
+	   else return 0;
+end;

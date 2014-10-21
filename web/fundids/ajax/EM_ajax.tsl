@@ -1,0 +1,6 @@
+httpSetHeadString("Content-Type:text/html; Charset=gb2312;\r\n\r\n") ;
+
+dowhat := utf8toansi(urltotext(httpGetQueryValueByName('dowhat')));
+
+UID := 'admin';
+setSysParam("ConfigClassName","TWebFundIDSConfig");

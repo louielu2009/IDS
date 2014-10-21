@@ -1,0 +1,40 @@
+Frame := CreateObject("TWebFrame","TWebFundIDSHeader");
+Frame.outHeader("报告模板编辑器");
+
+//模板列表
+arr:= array(("No":1,"名称":"XBRL模板第1号《季度报告》","创建人":"admin","创建日期":datetoStr(today())),
+				  ("No":2,"名称":"XBRL模板第1号年报","创建人":"admin","创建日期":datetoStr(today())),
+);
+dg:= CreateObject("datagrid");
+dg.data:= arr;
+dg.Title:= '报告模板列表';
+echo dg.GainHtml();
+
+	(*注：toolBartns中class改成了className防止转换成json后在IE下报关键字错误*)
+	toolBarBtns := array(
+		("pageState":1,"caption":"预览","id":"backScanPage","onclick":"","className":"sys_webhomeMenu"),
+		("pageState":1,"caption":"天软.Web","id":"reBack","onclick":"","className":"sys_webhomeMenu"),
+	);
+	
+	(*注：已将按钮输出放置在下面js中,配置未变*********)
+	//echo class(TWebsiteTabBar).AdminBar(btns,isPubliced);
+	<?tslx>
+	
+			<script type="text/javascript">
+			$(function(){
+					$(".sys_body").css({"margin-top":"32Px"});
+          }) ;
+			    var rightButtonConf = <?= Class(TsTool).arr2json(toolBarBtns)?> ;
+			    var isPubliced = <?=isPubliced?> ;
+			    $("body").dotWeb("initTopToolBar",{"rightButtonConf":rightButtonConf,"isPubliced":1}) ;
+			</script>
+
+<h3>第一步：基本信息</h3>
+<table>
+	<tr><td>标题</td><td><input type="text"> 分类</td><td><input type="text"> 启用</td><td><input type="checkbox"></td></tr>
+</table>
+<h3>第二步：报告内容</h3>
+
+<div class="choose sys_containerstyle chooseCOM"></div>
+<br/><div class="choose sys_containerstyle chooseCOM"></div>
+<br/><div class="choose sys_containerstyle chooseCOM"></div>

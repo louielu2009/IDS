@@ -1,0 +1,556 @@
+Type  TgenReport= class
+		function outCat(conf);
+		function outTbC();
+		function outPicC();
+		class function outEnd();
+		
+		function genWord();
+		//***********2014-2-11************//
+		function genContent(Content);
+		function outTxt(conf);
+		function outTitle(conf);
+		function outPic(conf);
+		function outTb(conf);
+		
+		//*************2014-6-27**********//
+		function outSE(conf);
+		function outWordContent(conf);
+		
+		//******2014-5-13*********//
+		function RedrawTab(tabObj,conf);//根据表格描述进行重绘
+		
+		class function getFundList();//获取产品列表
+		class function getReportInfoByUserID(userid);
+		class function getReportInitParam();
+		
+		class function getReportInfoByID(id);//根据报告编号获取报告信息
+		class function getReportAllElementByID(id);//根据报告编号获取元素
+		class function getReportData(id,productionID,RptID,Userid);//获取报告数据：array('dispData':data,'tableData':FData);
+
+		private
+		function MultiLevelTabHeader(tabObj,data);//生成多级表头
+end;
+
+function TgenReport.outCat(conf);
+begin	    
+	    confStr := '';
+	    if ifArray(conf['Style']) then
+	    begin
+	    	   for i := 0 to length(conf['Style'])-1 do
+	    	   begin
+	    	   	    confStr += "docObj.Styles('目录 "+tostring(conf['Style'][i]['Level'])+"').Font.NameFarEast = '"+tostring(conf['Style'][i]['Font']['Type'])+"';";
+	    	   	    confStr += "docObj.Styles('目录 "+tostring(conf['Style'][i]['Level'])+"').Font.Size ="+tostring(conf['Style'][i]['Font']['Size'])+";";
+	    	   	    confStr += "docObj.Styles('目录 "+tostring(conf['Style'][i]['Level'])+"').Font.Bold ="+tostring(conf['Style'][i]['Font']['Bold'])+";";
+	    	   end;
+	    end;
+	    TmpStr := "[tsl]docObj := wordgetcurrentdocument();"+confStr+"docObj.TablesOfContents.Add(wordGetCurrentRange(),true,1,3,false,'',true,true,'',true,true,false);docObj.application.wordBasic.UpdateTableOfContents(); [/"+"tsl]";
+      wordwrite(TmpStr);
+end;
+
+function TgenReport.outTbC();
+begin
+	    TslCode := 'TmpStr := "[tsl] docObj := wordgetcurrentdocument();docObj.TablesOfFigures.Add(wordGetCurrentRange(),\'表\',true,False,1,9,false,\'\',true,true,\'\',true,true);docObj.TablesOfFigures(1).TabLeader:= wdTabLeaderDots();docObj.TablesOfFigures.Format :=wdIndexIndent();docObj.content.fields.update();[/"+"\\"\\+\\"tsl]";wordwrite(\'[tsl]wordwrite("\'+TmpStr+\'");[/\'+\'tsl]\');';
+      wordWrite(tslCode);
+end;
+
+function TgenReport.outPicC();
+begin
+	    TslCode := 'TmpStr := "[tsl]docObj := wordgetcurrentdocument();docObj.TablesOfFigures.Add(wordGetCurrentRange(),\'图\',true,False,1,9,false,\'\',true,true,\'\',true,true);docObj.TablesOfFigures(1).TabLeader:=wdTabLeaderDots();docObj.TablesOfFigures.Format:=wdIndexIndent(); [/"+"\\"\\+\\"tsl]";wordwrite(\'[tsl]wordwrite("\'+TmpStr+\'");[/\'+\'tsl]\');';
+      wordWrite(tslCode);
+end;
+
+class function TgenReport.outEnd();
+begin
+	   tslCode := "[tsl]ExecStr := 'docObj := wordGetCurrentDocument();docObj.application.wordBasic.UpdateTableOfContents();docObj.content.fields.update();dotmObj := docObj.Application.Templates(\"Normal.dotm\");if ifObj(dotmObj) then dotmObj.Saved := true;'; WordWrite('[tsl]'+ExecStr+'[/'+'tsl]');[/tsl]";
+	   wordWrite(tslCode);
+end;
+
+function TgenReport.outTitle(conf);
+begin
+	   config := array(1:'标题 1',2:'标题 2',3:'标题 3',4:'标题 4',5:'标题 5',6:'标题 6',7:'标题 7',8:'标题 8',9:'标题 9');
+	   txt := conf['content'];	   
+	   if not txt or not ifString(txt) then
+	   return;
+	   wordWrite(txt);
+	   range := wordGetLastRange();	   
+	   if conf['lv'] then
+	   begin
+	        Name := config[conf['lv']] ? config[conf['lv']]:'';
+	        range.Style := wordgetcurrentdocument().Styles(Name); 
+	   end; 	   
+	   wordBr();    
+end;
+
+function TgenReport.outTxt(conf);
+begin
+    cconf := conf['Conf'];    
+    if conf['setTitle'] then
+    outTitle(conf);
+    txt := sysParams[conf['Data']];
+    if not txt or not ifString(txt) then return;    
+    r := wordWrite(txt);    
+    if not r then return;    
+    range := wordGetLastRange();    
+    if cconf['Name'] then
+    range.Style := cconf['Name'];
+end;
+
+function TgenReport.outPic(conf);
+begin	  	  
+	  if conf['setTitle'] then
+	  begin
+	       outTitle(conf);
+	       wordBr();
+	  end;
+	  pic := "[tsl]wordChartCopyPicFromExcel(sysParams['"+conf['Data']+"'],'Chart');[/"+"tsl]";   
+    wordwritetable(nils(1,1));
+	  SubTb := wordGetLastTable();
+	  SubTb.cell(1,1).Range.insertAfter(pic);
+end;
+
+function TgenReport.outTb(conf);
+begin	         
+    if conf['setTitle'] then
+    begin
+         outTitle(conf);
+         //wordBr();
+    end;
+    cconf := conf['Conf'];
+    arr := sysParams[conf['Data']];   
+    if not ifArray(arr) then
+    return;	   			    
+    if arr['Conf'] then
+    begin			        
+         data := arr['Data'];
+         wordwritetable(data);			         
+    end
+    else
+    wordwritetable(arr);			   
+    tb := wordGetLastTable();
+    if cconf['Name'] then
+    tb.Style := cconf['Name'];
+    else
+    tb.Style := '网格型';
+    if ifArray(arr['Conf']) then
+    begin
+         RedrawTab(tb,arr['Conf']);
+         if ifnil(arr['Conf']['ShowHeader']) or arr['Conf']['ShowHeader'] then
+         MultiLevelTabHeader(tb,sysParams[conf['Data']]);
+    end
+    else
+    MultiLevelTabHeader(tb,sysParams[conf['Data']]);
+end;
+
+function TgenReport.outSE(Conf);
+begin
+	   case Conf['Type'] of
+	       'pagebreak':
+	       begin
+	             Range := wordGetCurrentRange();
+	             Range.InsertBreak(wdPageBreak());
+	       end;
+	       'newline':
+	       begin
+	            wordBr();
+	       end;
+	   end;
+end;
+
+function TgenReport.outWordContent(Conf);
+begin
+	   if not conf['Data'] then return;
+	   getOleObject('word.application',3,wordApp);
+	   if not ifObj(wordApp) then
+	   return 0;
+	   wordPath := getSysparam(conf['Data']);
+	   doc := wordApp.documents.Open(wordPath);
+	   if not ifObj(doc) then
+	   return 0;
+	   Doc.Content.copy();
+	   r := WordPaste();
+	   doc.Application.Templates("Normal.dotm").Saved := true;
+     //doc.Application.Templates("Normal.dotm").Saved := false;
+     //doc.application.quit(wdSaveChanges());     
+     doc.close(-1);
+     return r;	   
+end;
+
+function TgenReport.RedrawTab(tabObj,conf);
+begin
+	   if not ifArray(conf) then return;	   
+	   ColConf := conf['ColConf'];
+	   M_S := conf['M&S'];
+	   ShowHeader := conf['ShowHeader'];
+	   //***********标题栏设置*********//
+	   if not ifnil(ShowHeader) and not ShowHeader then
+	   TabObj.Rows(1).Delete;
+	   //**************END*************//
+	   //***********列宽设置***********//
+	   if ifArray(ColConf) and length(ColConf) then
+	   begin
+	        tabObj.PreferredWidthType := wdPreferredWidthPercent();
+	        tabObj.PreferredWidth := 100;
+	        for i := 0 to length(ColConf)-1 do
+	        begin
+	              tabObj.Columns(ColConf[i]['Col']).PreferredWidthType := wdPreferredWidthPercent();
+	              tabObj.Columns(ColConf[i]['Col']).PreferredWidth := ColConf[i]['ColW'];
+	        end;	        
+	   end;
+	   //**************END*************//
+	   //**************单元格合并与拆分************//
+	   if ifArray(M_S) and length(M_S) then
+	   begin
+	        for i := 0 to length(M_S)-1 do
+	        begin
+	             case M_S[i]['Option'] of
+    	             'Merge':
+    	             begin
+    	                  try
+        	                  StartR := M_S[i]['Conf']['StartR']+1;
+        	                  StartC := conf[i]['Conf']['StartC'];
+        	                  EndR := conf[i]['Conf']['EndR']+1;
+        	                  EndC := conf[i]['Conf']['EndC'];
+        	                  tabObj.cell(StartR,StartC).Merge(tabObj.cell(EndR,EndC));     
+        	                  if M_S[i]['Conf']['Value'] then
+        	                  begin
+        	                       tabObj.cell(StartR,StartC).Range.Text := tostring(M_S[i]['Conf']['Value']);
+        	                  end;
+    	                  except
+    	                  
+    	                  end;
+    	             end;
+    	             'Split':
+    	             begin
+    	                  try
+        	                  Row := conf[i]['Conf']['Row']+1;
+        	                  Col := conf[i]['Conf']['Col'];
+        	                  RowC := conf[i]['Conf']['RowC'];
+        	                  ColC := conf[i]['Conf']['ColC'];
+        	                  tabObj.cell(Row,Col).Split(RowC,ColC);
+        	                  Value := M_S[i]['Conf']['Value'];
+        	                  if ifArray(Value) and length(Value) then
+        	                  begin
+        	                       Num := 0;
+        	                       for m := 0 to RowC-1 do
+        	                          for n := 0 to ColC-1 do
+        	                          begin        	                               
+        	                               tabObj.cell(Row+m,Col+n).Range.Text := tostring(Value[Num]);
+        	                               ++Num;
+        	                          end; 
+        	                  end;
+        	              except
+        	              
+        	              end;
+    	             end;
+    	          end;
+	        end;	      
+	   end; 
+	   //**************END************//	   
+end;
+
+function TgenReport.genContent(Content);
+begin	   	  	   	   	   
+	   CConf := Content;	      	   	   	   
+	   case CConf['Type'] of
+			   'pic':
+			   begin
+			   	    outPic(CConf);
+			   end;
+			   'table':
+			   begin
+			   	    outTb(CConf);
+		     end;
+			   'txt':
+			   begin
+			   	    outTxt(CConf);
+			   end;
+			   'title':
+			   begin
+			   	    outTitle(CConf);
+			   end;			   
+			   'category':
+			   begin
+			   	    outCat(CConf);
+			   end;
+			   'pagebreak','newline':
+			   begin
+			   	    outSE(CConf);
+			   end;
+			   'wordfile':
+			   begin
+			   	    outWordContent(CConf);
+			   end;			   
+	   end;	   
+	   if CConf['NewLine'] then
+	   wordBr();
+end;
+
+function TgenReport.MultiLevelTabHeader(tabObj,data);//生成多级表头
+begin	  
+	   if not ifarray(data) or not ifObj(tabObj) then return ;
+	   IndexArr := getAllIndexs(data[0]);	   
+	   colArr := array();	  
+	   FontName := tabObj.Cell(1,1).Range.Font.Name;
+	   FontSize := tabObj.Cell(1,1).Range.Font.Size;
+	   FontBold := tabObj.Cell(1,1).Range.Font.Bold;
+	   Border := tabObj.Cell(1,1).Range.Borders(wdBorderBottom()).LineStyle;
+	   BorderColor := tabObj.Cell(1,1).Range.Borders(wdBorderBottom()).Color;
+	   BorderWidth := tabObj.Cell(1,1).Range.Borders(wdBorderBottom()).LineWidth;
+	   BackgroundColor := tabObj.Cell(1,1).Shading.BackgroundPatternColor;	                    
+	  	  
+	   for i := length(IndexArr)-1 downto 0  do
+	   begin
+	   	    try
+	   	    arr := str2Array(IndexArr[i],'@');	   	   
+	   	    except
+	   	    continue;
+	   	    end;
+	   	    if  length(arr)= 1 then 
+	   	    begin	   	    	 	        	 
+	            tabObj.Cell(1,i+1).Range.Borders(wdBorderBottom()).LineStyle := Border;
+    	        tabObj.Cell(1,i+1).Range.Borders(wdBorderBottom()).Color := BorderColor;
+    	        tabObj.Cell(1,i+1).Range.Borders(wdBorderBottom()).LineWidth := BorderWidth;
+	            tabObj.Cell(1,i+1).VerticalAlignment := wdCellAlignVerticalCenter();
+	        	        	 	        	 
+	        	  colArr[length(colArr)] := 1;
+	        	  continue;
+	   	    end;
+          tabObj.cell(1,i+1).Split(length(arr),1);	   	             
+          for j := 1 to  length(arr) do
+          begin 
+          tabObj.Cell(j,i+1).Shading.BackgroundPatternColor := BackgroundColor;
+          tabObj.Cell(j,i+1).Range.delete;
+          tabObj.Cell(j,i+1).Range.insertAfter(arr[j-1]);  	   	            	   	                           	   	             
+          tabObj.Cell(j,i+1).Range.ParagraphFormat.Alignment := wdAlignParagraphCenter(); 	        	    	
+	    	  tabObj.Cell(j,i+1).VerticalAlignment := wdCellAlignVerticalCenter(); 
+	        tabObj.Cell(j,i+1).Range.Font.Name :=  FontName;              	    	
+	        tabObj.Cell(j,i+1).Range.Font.Size :=  FontSize;
+	        tabObj.Cell(j,i+1).Range.Font.Bold :=  FontBold;
+	        
+	        if j <>1 then
+	        begin
+	        tabObj.Cell(j,i+1).Range.Borders(wdBorderTop()).LineStyle := wdLineStyleNone();
+	        tabObj.Cell(j,i+1).Range.Borders(wdBorderBottom()).LineStyle := Border;
+	        tabObj.Cell(j,i+1).Range.Borders(wdBorderBottom()).Color := BorderColor;
+	        tabObj.Cell(j,i+1).Range.Borders(wdBorderBottom()).LineWidth := BorderWidth;
+	        end;   
+          end;	   	            
+	   	    rowNum := length(arr);
+	        colArr[length(colArr)] := rowNum;
+	   end;	  
+	   if length(colArr) then
+	   begin
+	   col := colArr;	
+	   len := length(col)-1;                 
+     for k := length(col)-1 downto 0 do 
+     begin	                    	                    
+          if k = 0  then 
+          begin
+          tabObj.Cell(1,k+1).Range.Borders(wdBorderBottom()).LineStyle := Border;
+          tabObj.Cell(1,k+1).Range.Borders(wdBorderBottom()).Color := BorderColor;
+          tabObj.Cell(1,k+1).Range.Borders(wdBorderBottom()).LineWidth := BorderWidth;
+          tabObj.Cell(1,k+1).VerticalAlignment := wdCellAlignVerticalCenter();
+          continue;
+          end                                         
+          if col[len-k]= 1 or col[len-k] <> col[len-(k-1)]  then 
+          continue;	                    	                   
+          for l := 1 to col[len-k] do
+          begin        	    
+        	    if tabObj.Cell(l,k+1).Range.Text = tabObj.Cell(l,k).Range.Text then
+        	    begin 
+        	    	   tabObj.Cell(l,k+1).Range.Delete;
+        	    	   tabObj.Cell(l,k).Merge(tabObj.cell(l,k+1));               	    	   	                    	    
+        	    end;	                
+          end;
+     end;
+     tabObj.Range.ParagraphFormat.Alignment := wdAlignParagraphCenter();     
+	   end;	               
+end;
+
+function TgenReport.genWord();
+begin	   
+     docObj := wordgetcurrentdocument();
+	   setSysParam('obj',docObj);
+     conf := getSysParam('Conf');                               
+     docObj.Application.CaptionLabels.Add('图');
+     docObj.Application.CaptionLabels.Add('表'); 	   
+ 	   
+ 	   for i := 0 to length(conf)-1  do
+ 	   begin		     		     				 																					 			
+			     if not ifArray(conf[i]) then continue;
+			     genContent(conf[i]);	             
+     End; 	
+end;
+//********************************end**********************************//
+
+class function TgenReport.getFundList();
+begin
+	{//2014-9-1 相应模型或提取方法
+	s:='return
+			Query("南方","",True,"","代码",DefaultStockID(),
+			"名称",CurrentStockName());
+	';
+     if not class(TSServer).execServerScript(s,array(),result,msg,class(SuggestConfig).getServerLoginUser() ) then 
+           return echo msg;
+         }
+    result:= array(
+										("代码":"OF000022","名称":"南方中债中期票据A"),
+										("代码":"OF000023","名称":"南方中债中期票据C"),
+										("代码":"OF000086","名称":"南方稳利1年定期开放"),
+										("代码":"OF000355","名称":"南方丰元信用A"),
+										("代码":"OF000356","名称":"南方丰元信用C"),
+										("代码":"OF000452","名称":"南方医药保健"),
+										("代码":"OF000493","名称":"南方现金通A"),
+										("代码":"OF000494","名称":"南方现金通B"),
+										("代码":"OF000495","名称":"南方现金通C"),
+										("代码":"OF000527","名称":"南方新优享"),
+										("代码":"OF000554","名称":"中国梦灵活配置"),
+										("代码":"OF000561","名称":"南方启元A"),
+										("代码":"OF000562","名称":"南方启元C"),
+										("代码":"OF000563","名称":"南方通利A"),
+										("代码":"OF000564","名称":"南方通利C"),
+										("代码":"OF000687","名称":"南方薪金宝"),
+										("代码":"OF159903","名称":"南方深证成份ETF"),
+										("代码":"OF159925","名称":"南方开元沪深300ETF"),
+										("代码":"OF160105","名称":"南方积极配置"),
+										("代码":"OF160106","名称":"南方高增长"),
+										("代码":"OF160119","名称":"南方中证500ETF联接"),
+										("代码":"OF160121","名称":"南方金砖四国"),
+										("代码":"OF160123","名称":"南方中证50A"),
+										("代码":"OF160124","名称":"南方中证50C"),
+										("代码":"OF160125","名称":"南方中国中小盘"),
+										("代码":"OF160127","名称":"南方新兴消费增长"),
+										("代码":"OF160128","名称":"南方金利A"),
+										("代码":"OF160129","名称":"南方金利C"),
+										("代码":"OF160130","名称":"南方永利1年定期开放A"),
+										("代码":"OF160131","名称":"南方聚利1年定期开放"),
+										("代码":"OF160132","名称":"南方永利1年定期开放C"));
+	return result;
+end;
+
+class function TgenReport.getReportInfoByUserID(userid);
+begin		
+		queryData := array();
+		queryData['Table'] := 'TS_ReportInfo';
+		//************(临时处理）*********//
+		manager := array('admin');
+		if not (userID in manager) then		
+		queryData['QueryStr'] := " USERID='"+tostring(userid)+"'";
+		//**************END*************//
+		r:= class(ExecuteSQL).query(queryData);
+		if not istable(r) then return array();
+		return select ['ID'],['TITLE'] as '报告名称',datetostr(['PUBLISHDATE']) as '披露时间' from r order by ['PUBLISHDATE'] desc end;
+	(*r:= array((“报告名称”:"南方稳健成长基金2014年半年度报告1","披露时间":datetostr(today()),"数据进度":"","审核进度":""),
+				   (“报告名称”:"南方稳健成长基金2014年半年度报告2","披露时间":datetostr(today()),"数据进度":"","审核进度":""),
+				   (“报告名称”:"南方稳健成长基金2014年半年度报告3","披露时间":datetostr(today()),"数据进度":"","审核进度":""),
+				   (“报告名称”:"南方稳健成长基金2014年半年度报告4","披露时间":datetostr(today()),"数据进度":"已完成","审核进度":"已完成"),
+	);
+	return r;*)
+end;
+
+class function TgenReport.getReportInfoByID(id);
+begin
+		queryData := array();
+		queryData['Table'] := 'TS_ReportInfo';
+		queryData['QueryStr'] := " ID='"+tostring(id)+"'";
+		r:= class(ExecuteSQL).query(queryData);
+		if not istable(r) then return array();
+		return r[0];
+end;
+
+class function TgenReport.getReportAllElementByID(id);
+begin
+	r:= getReportInfoByID(id);
+	if not istable(r) then return array();
+	TID:= r['TID'];
+	queryData:= array();
+	queryData['Table'] := 'TS_RTemplateE';
+	queryData['QueryStr'] := " TID='"+TID+"' order by SERIESID";
+	eArr:= class(ExecuteSQL).query(queryData);
+	if not istable(eArr) then return array();
+	return eArr;
+end;
+
+class function TgenReport.getReportData(id,productionID,RptID,UserID);
+begin
+	rInfo:= getReportInfoByID(id);
+	TID:= rInfo['TID'];
+	sql:= "select t.EID as EID,t.SRC2 as title,t.SRC3 as titleLevel ,t.TYPE as TYPE,e.NAME as NAME,e.CONF as CONF,e.TIP1 as TIP1,e.TIP2 as TIP2,e.TIP3 as TIP3,e.TIP4 as TIP4  from TS_RTemplateE t left join TS_RTemplateElement e on t.EID= e.EID where t.TID='"+TID+"'  and t.EID is not null and e.STATUS>0";
+	if not execSQL(class(TWebFundIDSConfig).getDBAlia(),sql,r) then return array();	
+	if not istable(r) then return array();
+	update r set ['CONF']= stm(['CONF']) where ['CONF']<>'' and (not ifnil(['CONF'])) END;
+	data:= array();
+	FData:= array();//入临时表、正式表
+	for i:= 0 to length(r)-1 do begin
+				if r[i]['EID'] in FData[:,array('EID')] then continue;
+				L:= length(data);
+				if isEmpty(r[i]['EID']) then//标题Title、换行Newline、分页符PageBreak、目录Category
+				begin
+					data[L]['type']:= r[i]['TYPE'];
+					case r[i]['TYPE'] of
+							'title':
+								begin
+									data[L]['content']:= r[i]['title'];
+									data[L]['lv']:= r[i]['titleLevel'];
+								end;
+					end;
+				end else //文本Txt、表格Table、图Pic、word文档WordFile
+				begin
+						CONF:= r[i]['CONF'];
+						if not istable(CONF) then continue;
+						data[L]['type']:= CONF['Type'];
+						tip1:= r[i]['TIP1'];//报告期相关0/1
+						tip2:= r[i]['TIP2'];//产品相关0/1					
+						//***********责权关系（临时插入）-Bin*************//						
+								insertData := array();
+								insertData['Table'] := 'TS_DataRight';
+								queryData := array();
+								queryData['Table'] := 'TS_DataRight';
+								queryData['QueryStr'] := "USERID = 'liuqingfeng' and EID='"+tostring(r[i]['EID'])+"' and TYPE=1";
+								r1 := class(ExecuteSQL).Query(queryData);
+								if not ifArray(r1) or not length(r1) then
+								begin
+								     arr1 := array(('USERID':'liuqingfeng','EID':tostring(r[i]['EID']),'TYPE':1,'PRODUCTS':tostring(productionID)));
+								     insertData['Data'] := arr1;						     				     
+							  end
+							  else
+							  begin
+							  	  //if r1[0]['PRODUCTS']<> tostring(productionID) then
+							  	  if not AnsiContainsStr(r1[0]['PRODUCTS'],productionID) then
+							  	  update sqlTable 'TS_DataRight' of class(TWebFundIDSConfig).getDBAlia() set ['PRODUCTS'] = ['PRODUCTS']+';'+tostring(productionID) where ['USERID'] = 'liuqingfeng' and ['EID']= tostring(r[i]['EID']) and ['TYPE'] = 1 end;
+							  end;
+							  f1 := class(ExecuteSQL).insert(insertData);
+							  queryData['QueryStr'] := "USERID = 'pengyongzhen' and EID='"+tostring(r[i]['EID'])+"' and TYPE=2";
+								r2 := class(ExecuteSQL).Query(queryData);
+								if not ifArray(r2) or not length(r2) then
+								begin
+								    arr2 := array(('USERID':'pengyongzhen','EID':tostring(r[i]['EID']),'TYPE':2,'PRODUCTS':tostring(productionID)));
+							      insertData['Data'] := arr2
+							  end
+							  else
+							  begin
+							  	  if r2[0]['PRODUCTS']<> tostring(productionID) then
+							  	  update sqlTable 'TS_DataRight' of class(TWebFundIDSConfig).getDBAlia() set ['PRODUCTS'] = ['PRODUCTS']+';'+tostring(productionID) where ['USERID'] = 'pengyongzhen' and ['EID']= tostring(r[i]['EID']) and ['TYPE'] = 2 end;
+							  end;
+							  f2 := class(ExecuteSQL).insert(insertData);						
+						//***************END************//
+						data[L]['content']:= class(TFIDSDataManager).getElementDataByConf(CONF,tip2?productionID:'',tip1?RptID:'');
+						
+						tL:= length(FData);
+						FData[tL]['USERID']:= userID;
+						FData[tL]['DATA']:= tostm(data[L]['content']);
+						FData[tL]['EID']:= r[i]['EID'];
+						FData[tL]['TIP1']:= tip1?RptID:'';	
+						FData[tL]['TIP2']:= tip2?productionID:'';
+				    FData[tL]['LIMITDATE'] := rInfo['PUBLISHDATE']; 
+				    FData[tL]['VERSION'] := 1;
+				end;
+	end;	
+	return array('dispData':data,'tableData':FData);
+end;
+
+class function TgenReport.getReportInitParam();
+begin
+	 html:= '<div class="report_param"><p>报告名称<input type="text"></p><p>财务时间<input type="text" class="inputdate" value="'+datetostr(today())+'" pflag="rpt"></p><p>披露时间<input type="text" class="inputdate" value="'+datetostr(today())+'"></p><p>创建时间<span class="report-param-span">'+formatdatetime('yyyyMMdd hh:mm:ss',now())+'</span></p></div>';
+	 return html;
+end;

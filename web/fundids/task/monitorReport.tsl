@@ -1,0 +1,42 @@
+//;CMD005=C:\web\tslTask\wordReport\monitorReport.cmd
+MutexLock:=createobject("AutoFreeMutex");
+dolog('wordReport','¼à¿Ø¿ªÊ¼...');
+while 1 do
+begin
+    sql := "select * from TS_ReportInfo where STATUS in (1,2)";								     
+    if NOT execSQL(class(TWebFundIDSConfig).getDBAlia(),sql,r) then 
+	   begin
+	       doLog('wordReport',r);
+	       return ;
+	   end; 	   	   
+	   for  i := 0 to length(r)-1 do
+	   begin					                 
+  				  execHandle := sysExec(class(TWebFundIDSConfig).getTSLPath(),class(TWebFundIDSConfig).getTSLPath()+' '+class(TWebFundIDSConfig).getMonitorReportCallPath()+' '+tostring(r[i]['ID']),0,0,returncode);
+  				  f:=sysWaitForSingleObject(ExecHandle,5*1000*60);
+  				  if f then
+  				  begin
+  				    SysTerminate(-1,ExecHandle);
+  				    echo "Error\r\n";
+  				  end
+  				  else
+  				    echo "OK\r\n";
+  	        SysCloseHandle(execHandle);					      
+  	        sleep(1*1000);				        
+    end; 
+    sleep(1*1000);
+end;
+
+type AutoFreeMutex=class
+  FMutex;
+  function create();
+  begin  	
+    FMutex:=SysCreateMutex("MonitorReport");   
+    statu := SysWaitForSingleObject(FMutex,-1);    
+  end;
+  function destroy();
+  begin
+    SysReleaseMutex(FMutex);
+    sysclosehandle(FMutex);  
+    dolog('wordReport','¼à¿Ø½áÊø...'); 
+  end;
+end;

@@ -1,0 +1,172 @@
+httpSetHeadString("Content-Type:text/html; Charset=gb2312;\r\n\r\n") ;
+HttpSetHeadString("Cahce-Control: no-cache;\r\n");
+HttpSetHeadString("Cahce-Control: no-store;\r\n");
+
+setSysParam("ConfigClassName","TWebFundIDSConfig");
+dowhat := utf8toansi(urltotext(httpGetQueryValueByName('dowhat')));
+//UserID:= utf8toansi(urltotext(httpGetQueryValueByName('UserID')));
+
+Ctype := utf8toansi(urltotext(httpGetQueryValueByName('Ctype')));
+//********获取当前登录用户*******//
+request := createObject('TWebRequest');
+TStrings := request.CookieFields;
+Uid := TStrings.Values('SecUserId');
+//****新建报告****//
+if Ctype= "report" then
+begin
+		
+		html :='<div class="main_content">';  
+		html += '<div class="SearchContent"><div class="Search_div"><input type="text" class="txt_search" /><button class="btn_search">搜索</button></div></div>';  
+		r:= class(TgenReport).getFundList();
+		html+='<div>';
+		if istable(r) then begin
+			for i:= 0 to length(r)-1 do 
+		 	 	html+= '<p>'+r[i]['代码']+r[i]['名称']+'</p>';
+		end;
+		html+= '</div></div>';
+		return echo html;
+end;
+
+if dowhat='step1' then begin
+		r:= class(TgenReport).getFundList();
+		if not istable(r) then return echo '暂无产品！';
+		html:='<div class="Search_div"><input type="text" class="txt_search"><button class="btn_search">搜索</button></div>';
+		html+= '<div style="clear:both"></div><div class="Model_TemplateList_div"><ul class="Model_TemplateList_List">';
+		for i:= 0 to length(r)-1 do begin
+			html+= '<li class="fundList"><span>'+r[i]['代码']+'</span><span>'+r[i]['名称']+'</span></li>'
+		end;
+		html+= '</ul></div>';
+		return echo html;
+end;
+
+if dowhat='step3' then begin
+		r:= class(TgenReport).getReportInitParam();
+		return echo r;
+end;
+
+if dowhat='rSubmit' then begin
+		fundid:= utf8toansi(urltotext(httpGetQueryValueByName('fundid')));
+		fundName:= utf8toansi(urltotext(httpGetQueryValueByName('fundName')));
+		tid:= utf8toansi(urltotext(httpGetQueryValueByName('tid')));
+		tName:= utf8toansi(urltotext(httpGetQueryValueByName('tName')));
+		financialDate:= utf8toansi(urltotext(httpGetQueryValueByName('financialDate')));
+		financialDate:= strtodate(financialDate);
+		pubDate:= utf8toansi(urltotext(httpGetQueryValueByName('pubDate')));
+		pubDate:= strtodate(pubDate);
+		reportName:= utf8toansi(urltotext(httpGetQueryValueByName('reportName')));		
+		if isEmpty(reportName) then reportName:= fundName+tName;
+		insertData := array(); 
+		insertData['Table'] := 'TS_ReportInfo';
+		dateStr := FormatDateTime('yyyymmddhhnnssz',now());
+		ID := dateStr+'_'+inttostr(random(2000000000))+inttostr(random(2000000000));
+		rptDate:= strtoint(tostring(yearof(financialDate))+formatfloat('00',Monthof(financialDate))+formatfloat('00',DaysInMonth(financialDate)));
+		insertData['Data'] := array(('ID':ID,'TITLE':reportName,'USERID':UID,'TID':tid,'FUNDID':fundid,'REPORTDATE':rptDate,'FINANCIALDATE':financialDate,'PUBLISHDATE':pubDate));
+		r := class(ExecuteSQL).insert(insertData);
+		
+		//新建报告后，初始化数据临时表
+		data:= class(TgenReport).getReportData(ID,fundid,rptDate,UID);
+		data:= data['tableData'];
+		//判断是否已存在数据临时表中
+		//数据有四种情况：报告期相关+产品相关、报告期相关+产品无关、报告期无关+产品相关、报告期相关+产品无关	
+		r1:= 1;
+		eidArr:= class(ExecuteSql).query(array("Table":"TS_RFormalData","QueryField":("EID","TIP1","TIP2"),"QueryStr":" status>0 "));
+		if istable(data) and istable(eidArr) then begin
+			update data set ['flagCol']= ['EID']+tostring(['TIP1']?['TIP1']:'')+tostring(['TIP2']?['TIP2']:'') end;
+			update eidArr set ['flagCol']= ['EID']+tostring(['TIP1']?['TIP1']:'')+tostring(['TIP2']?['TIP2']:'') end;
+			data:= select ['USERID'],['DATA'],['EID'],['TIP1'],['TIP2'],['LIMITDATE'],['VERSION'] from data where not (['flagCol'] in (sselect ['flagCol'] from eidArr  end) ) end;
+		end;
+		if istable(data) then
+		begin		     
+		     r1:= class(ExecuteSQL).insert(array("Table":"TS_RTempData","Data":data));
+		     r2:= class(ExecuteSQL).insert(array("Table":"TS_RFormalData","Data":data));
+		end;
+		return echo (r and r1 and r2);
+end;
+
+if Ctype = "RData" then
+begin	  
+	   RID := utf8toansi(urltotext(httpGetQueryValueByName('rid')));	  	     
+	   ElementData := createObject('ElementData');	   
+	   if rid then
+	   html := ElementData.genElementData(RID);	   	   	   
+	   html := html ? html :'';	    	   
+	   return echo html;
+end;
+
+if dowhat = "checkData" then
+begin
+	   RID := utf8toansi(urltotext(httpGetQueryValueByName('RID')));
+	   EID := utf8toansi(urltotext(httpGetQueryValueByName('EID')));
+	   ElementData := createObject('ElementData');
+	   htm := ElementData.genEData(array('EID':EID,'RID':RID));
+	   return echo htm;
+end;
+
+if dowhat = "checkReportStatus" then
+begin
+     rid := utf8toansi(urltotext(httpGetQueryValueByName('RID')));
+     if not rid then return ;
+     queryData := array();
+     queryData['Table'] := 'TS_ReportInfo';
+     queryData['QueryStr'] := "ID='"+tostring(rid)+"'";
+     r := class(ExecuteSQL).Query(queryData);
+     if not ifArray(r) or not length(r) then
+     return;
+     r := r[0];     
+     data := array();
+     case r['STATUS'] of
+           1:
+           begin
+                data['Status'] := 1;
+                data['htm'] := '任务已提交...';
+           end;
+           2:
+           begin
+                data['Status'] := 2;
+                data['htm'] := '正在生成...<img src="/resource/fundids/loading/loading1.gif" />';
+           end;
+           3:
+           begin
+                data['Status'] := 3;
+                data['htm'] := '生成成功->><a href="###" onclick="Report_Download()">下载</a>';
+           end;
+           4:
+           begin
+                data['Status'] := 4;
+                data['htm'] := '生成失败！';
+           end;
+           else
+           return;
+      end;
+      jsonStr := class(TSTool).Arr2Json(data);
+      return echo jsonStr;
+end;
+
+if dowhat = "getright" then 
+begin
+	RID := utf8toansi(urltotext(httpGetQueryValueByName('rid')));
+	obj:= createObject("ElementData");
+	str:= obj.genElementPower(rid);
+	return echo str;
+end;
+
+if dowhat = "saveright" then 
+begin
+	rstr := utf8toansi(urltotext(httpGetQueryValueByName('rstr')));
+	arr:= str2Array(rstr,';');
+	if not istable(arr) then return 0;
+	data:= array();
+	for i:= 0 to length(arr)-1 do begin
+			t:= str2Array(arr[i],',');
+			if not istable(t) then continue;
+			L:= length(data);
+			data[L]['QueryStr']:= "EID='"+t[0]+"' and STATUS<>0";
+			data[L]['Data']:= array(('Field':'DEPARTMENT','Type':'String','Value':t[1]));
+	end;
+   updateData := array();
+   updateData['Table'] := 'TS_RTemplateElement';
+   updateData['Conf'] := data;
+   r:= class(ExecuteSQL).update(updateData);
+   return echo r;
+	   
+end;

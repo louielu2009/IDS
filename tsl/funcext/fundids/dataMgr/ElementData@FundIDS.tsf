@@ -1,0 +1,1108 @@
+type ElementData = class
+  function getElementDataStatus(EID,param);
+  function getElementStatusConf(field);//获取相关状态信息
+  function getElementData(RID);//获取报告所有元素
+  function genElementData(RID);//获取报告元素数据状态
+  
+  function getElementPower(RID);//获取报告元素权责关系
+  function genElementPower(RID);//生成报告元素权责关系列表
+  
+  function getEData(param);//获取元素数据
+  function genEData(param);//生成元素预览界面
+  function genAllElementData(EData);//获取该用户所有元素数据状态列表
+  function getAllElementData(UID);//获取该用户所有元素数据相关状态  
+  function getAuditors(param);//返回元素所有审核人
+  function getEditors(param);//返回元素所有维护人
+
+  function outEditElement(param);//获取编辑数据
+  function changeElementStatus(param);//修改数据状态
+  function saveData(param);//保存数据并设置数据状态
+
+  function getDataRight(UID);//获取该用户所有元素的责权关系
+  function getDataRightData();//获取所有元素责权关系
+  //********2014-9-24(Bin)**********//
+  function getDataVersion(EID,FundID,rpt);//获得eid元素对应的所有的数据版本(fundid可选参数)
+  function genDataVersion(EID,FundID,rpt);//输出eid元素对应的版本
+  function GetDataRpts(EID,FundID);
+  //function reloadData(EID,Fundid,rpt);//重载数据(eid元素id,fundid产品代码,rpt报告期)
+  
+  //********2014-10-11(Bin)********//
+  function reloadData(param);//重载数据
+  function replaceData(param);//插入新版本数据
+  function genReloadData(param);//返回重载数据htm
+  //********2014-10-14(Bin)********//
+  function getSortRptData(param);//筛选数据  
+  //********2014-10-15(Bin)********//
+  function getMatchFunds(Data);//获取符合条件股票代码
+  function genFundList(Funds);//输出基金列表
+  //********2014-10-17(Bin)********//
+  function getMatchedElementData(param);//获取符合条件的元素状态及数据
+  //********2014-10-20(Bin)********//
+  function getMatchedTemplates(Data);//获取符合条件的模板列表数据
+  function genMatchedTemplates(Data);//获取符合条件的模板列表
+end;
+
+
+function ElementData.getMatchFunds(Data);
+begin     
+		 FundList := class(TgenReport).getFundList();
+     Funds := array();     
+     for i := 0 to length(Data)-1 do
+     begin
+          if not ifArray(Data[i]['Funds']) or not length(Data[i]['Funds']) then continue;          
+          for j := 0 to length(Data[i]['Funds'])-1 do
+          begin               
+               if not (Data[i]['Funds'][j] in Funds) then
+               Funds[length(Funds)] := Data[i]['Funds'][j];
+          end;
+     end;     
+     r := select * from FundList where ['代码'] in Funds end;
+     return r;
+end;
+
+function ElementData.genFundList(Funds);
+begin     
+     html := '';
+     if not ifArray(Funds) then return html;
+     lis := '';
+     for i := 0 to length(Funds)-1 do
+     begin
+          lis += '<li><a href="###" class="Fund_Item" FundID="'+tostring(Funds[i]['代码'])+'">'+tostring(Funds[i]['名称'])+'</a></li>';
+     end;
+     html := '<ul class="FundList">'+lis+'</ul>';
+     return html;
+end;
+
+function ElementData.getMatchedTemplates(Data);
+begin     
+     Templates := array();
+     if not ifArray(Data) then return Templates;
+     EIDs := Data[:,array('EID')];
+     EIDs := `EIDs;
+     EIDs := EIDs['EID'];
+     EIDStr := array2Str(EIDs,"','");
+     EIDStr := "('"+EIDStr+"')";     
+     queryData := array();
+     queryData['Table'] := 'TS_RTemplateConf';
+     queryData['QueryStr'] := "TID in (select distinct TID from TS_RTemplateE where EID in "+EIDStr+")";
+     r := class(ExecuteSQL).Query(queryData);
+     if not ifArray(r) then return Templates;
+     return r;     
+end;
+
+function ElementData.genMatchedTemplates(Data);
+begin     
+     html := '';
+     TData := getMatchedTemplates(Data);
+     if not ifArray(TData) then return html;
+     lis := '';
+     for i := 0 to length(TData)-1 do
+     begin
+          lis += '<li><a href="###" class="Template_Item" TID="'+tostring(TData[i]['TID'])+'">'+tostring(TData[i]['TNAME'])+'</a></li>';
+     end;
+     html := '<ul class="TemplateList">'+lis+'</ul>';
+     return html;     
+end;
+
+function ElementData.getSortRptData(param);
+begin
+     SType := param['SType']?param['SType']:'Model';    
+     data := array();
+     case SType of
+         'Report':
+         begin              
+              uid := param['UID'];
+              RID := param['RID'];
+              //***step1>>找到报告信息******//              
+              //***step2>>找到相关报告中本用户需要维护的元素****//
+              //***step3>>从正式表中找到元素所包含的数据***//
+              //sql := "select * from TS_RTemplateE where TID = (select TID from TS_ReportInfo where ID='"+tostring(RID)+"') and EID in (select EID from TS_DataRight where USERID='"+tostring(UID)+"') and STATUS = 1";
+              sql := "select distinct a.NAME,a.EID,a.Tip1,a.tip2,a.tip3,a.tip4,a.tip5,a.Department,a.Labels from TS_RTemplateE where TID = (select TID from TS_ReportInfo where ID='"+tostring(RID)+"') and EID in (select EID from TS_DataRight where USERID='"+tostring(UID)+"') and STATUS = 1";              
+         end;         
+         'Model':
+         begin
+              uid := param['UID'];
+              TID := param['TID'];
+              QueryData := array();
+              QueryData['Table'] := 'TS_RTemplateE';
+              QueryData['QueryData'] := "EID is not null and TID ='"+tostring(TID)+"' order by SERIESID asc";
+              QueryData['QueryField'] := array('EID','SERIESID');
+              r := class(ExecuteSQL).Query(QueryData);
+              ElementData := getMatchedElementData(param);
+              if not ifArray(r) or not length(r) then return r;                                                      
+              data := select [2].['Funds'],[2].['EID'],[2].['Data'],[2].['Name'] from r left join  ElementData  with([1].['EID'] on [2].['EID']) end;              
+         end;
+     end;
+     return data;  
+end; 
+
+function ElementData.genReloadData(param);
+begin
+     if not ifArray(param) then return ;
+     Data := reloadData(param);       
+     if Data['Error'] then return;
+     htm := '';     
+     Case Data['Type'] of
+         'txt':
+         begin
+              htm := toString(Data['Data']);
+         end;
+         'table','pic':
+         begin
+              TComBox := createObject('TComBox');
+              htm := TComBox.genTable(Data['Data']);      
+         end;
+         'wordfile':
+         begin
+              htm := '<button class="DownLoad">下载</button>';
+         end;
+     end;
+     return htm;
+end;
+
+function ElementData.replaceData(param);
+begin
+     fileName := param['FileName'];
+     filePath := class(TWebFundIDSConfig).getFileBasePath()+'reportData\\temp\\'+fileName;
+     EID := param['EID'];
+     tip1 := param['ReportDate'];
+     if tip1 then
+     begin
+          if ifString(tip1) then
+          tip1 := strtoint(tip1);
+     end; 
+     tip2 := param['FundID'];    
+     queryData := array();
+     queryData['Table'] := '';
+     f := ImportFile(ftStream(),'',filePath,Data);         
+     if not f then return 0;     
+     queryData := array();
+     queryData['Table'] := 'TS_RTemplateElement';
+     queryData['QueryStr'] := "EID='"+tostring(EID)+"'";
+     Element := class(ExecuteSQL).Query(queryData);
+     if not ifArray(Element) or not length(Element) then return 0;
+     Element := Element[0];     
+     if Element['TIP1'] and Element['TIP2'] then
+     begin
+          f1 := update sqlTable 'TS_RTempData' of class(TWebFundIDSConfig).getDBAlia() set ['DATA'] = tostm(Data) where ['EID'] = EID and ['TIP1'] = tip1 and ['TIP2'] = tip2 and ['STATUS'] <> 0 end;
+          f2 := update sqlTable 'TS_RFormalData' of class(TWebFundIDSConfig).getDBAlia() set ['DATA'] = tostm(Data) where ['EID'] = EID and ['TIP1'] = tip1 and ['TIP2'] = tip2 and ['STATUS'] <> 0 end;
+     end
+     else if Element['TIP1'] then
+     begin          
+          f1 := update sqlTable 'TS_RFormalData' of class(TWebFundIDSConfig).getDBAlia() set ['DATA'] = tostm(Data) where ['EID'] = EID and ['TIP1'] = tip1 and ['STATUS'] <> 0 end;
+          f2 := update sqlTable 'TS_RTempData' of class(TWebFundIDSConfig).getDBAlia() set ['DATA'] = tostm(Data) where ['EID'] = EID and ['TIP1'] = tip1 and ['STATUS'] <> 0 end;
+     end
+     else if Element['TIP2'] then
+     begin
+          f1 := update sqlTable 'TS_RFormalData' of class(TWebFundIDSConfig).getDBAlia() set ['DATA'] = tostm(Data) where ['EID'] = EID and ['TIP2'] = tip2 and ['STATUS'] <> 0 end;
+          f2 := update sqlTable 'TS_RTempData' of class(TWebFundIDSConfig).getDBAlia() set ['DATA'] = tostm(Data) where ['EID'] = EID and ['TIP2'] = tip2 and ['STATUS'] <> 0 end;
+     end
+     else
+     begin
+          f1 := update sqlTable 'TS_RFormalData' of class(TWebFundIDSConfig).getDBAlia() set ['DATA'] = tostm(Data) where ['EID'] = EID and ['STATUS'] <> 0 end;
+          f2 := update sqlTable 'TS_RTempData' of class(TWebFundIDSConfig).getDBAlia() set ['DATA'] = tostm(Data) where ['EID'] = EID and ['STATUS'] <> 0 end;     
+     end
+     if f1 and f2 then return 1;
+     else return 0;
+end;
+
+function ElementData.reloadData(param);
+begin     
+     tip1 := param['ReportDate'];
+     tip1 := ifString(tip1)? strtoint(tip1):tip1;
+     tip2 := param['FundID'];
+     EID  := param['EID'];
+     queryData := array();
+     queryData['Table'] := 'TS_RTemplateElement';
+     queryData['QueryStr'] := "EID='"+tostring(EID)+"'";
+     r := class(ExecuteSQL).query(queryData);
+     if not ifArray(r) or not length(r) then return array('Error':'元素不存在！');
+     r := r[0];
+     conf := r['CONF']?stm(r['CONF']):'';     
+     if not conf or not conf['DataSource']['From'] or conf['DataSource']['From']='userDefined' or not conf['DataSource']['ModelName'] then return array('Error':'缺失数据源配置！');     
+     modelName := conf['DataSource']['ModelName'];
+     paramArr := array();             
+     if r['TIP2'] then
+     paramArr[length(paramArr)] := tip2;         
+     if r['TIP1'] then     
+     paramArr[length(paramArr)] := tip1; 
+     ret:= class(TSServer).ExecServerFun(modelName,paramArr,result,Msg);
+     Etype := conf['Type'];
+     data := array();
+     data['Type'] := Etype;
+     if not ret then 
+     data['Error'] := Msg;
+     else
+     begin
+         data['Data'] := result;         
+         //***********导出临时文件**********//
+         randomize();
+         fileName := tostring(EID)+tostring(tip1)+tostring(tip2)+datetostr(now())+'.stm';
+         filePath := class(TWebFundIDSConfig).getFileBasePath()+'reportData\\temp\\'+fileName;
+         if fileExists('',filePath) then
+         fileDelete('',filePath);
+         if exportFile(ftStream(),'',filePath,result) then
+         data['FileName'] := fileName;         
+         //**************END***************//
+     end;     
+     return data;     
+end;
+
+function ElementData.getDataVersion(EID,FundID,rpt);
+begin
+	   queryData := array();
+	   queryData['Table'] := 'TS_RTemplateElement';	
+	   queryData['QueryStr'] := "EID='"+tostring(EID)+"'";
+	   Element := class(ExecuteSQL).Query(queryData);
+	   if not ifArray(Element) or not length(Element) then return array();
+	   Element := Element[0];
+	   queryStr := "EID='"+tostring(EID)+"'";
+	   if Element['TIP1'] then
+	   queryStr += " and TIP1='"+tostring(rpt)+"'";
+	   if Element['TIP2'] then
+	   queryStr += " and TIP2='"+tostring(FundID)+"'";
+	   
+	   queryStr += " order by VERSION asc";
+	   queryData['Table'] := 'TS_RFormalData';
+	   queryData['QueryStr'] := queryStr;
+	   r := class(ExecuteSQL).Query(queryData);
+	   if not ifArray(r) or not length(r) then return array();	 
+	   return r;	   
+end;
+
+function ElementData.genDataVersion(EID,FundID,rpt);
+begin
+     param:=Array();
+     param['EID']:=EID;
+     param['Product']:=FundID;
+     param['ReportDate']:=rpt;
+     ElementData := createObject('ElementData');	
+     disp:= ElementData.getDataVersion(EID,FundID,rpt);
+     html := '<select class="DM_DataVersion" >';
+     for i:=length(disp)-1 downto 0 do 
+   	 begin
+    	 		html+='<option  class="DM_DataVersion_value">本期版本'+tostring(disp[i]["VERSION"])+'</option>';	  
+     end;				 	
+     html+= '</select>';
+     return html;
+end;
+
+function ElementData.getEData(param);
+begin
+  Data := array();
+  EID := param['EID'];
+  RID := param['RID'];
+  queryData := array();
+  queryData['Table'] := 'TS_ReportInfo';
+  queryData['QueryStr'] := "ID='"+tostring(RID)+"'";
+  ReportInfo := class(ExecuteSQL).Query(queryData);
+  if not ifArray(ReportInfo) or not length(ReportInfo) then return data;
+  ReportInfo := ReportInfo[0];
+  queryData['Table'] := 'TS_RTemplateElement';
+  queryData['QueryStr'] := "EID='"+tostring(EID)+"'";
+  Element := class(ExecuteSQL).Query(queryData);
+  if not ifArray(Element) or not length(Element) then return data;
+  Element := Element[0];
+  queryStr := "EID='"+tostring(EID)+"'";
+  if Element['TIP1'] then      
+  queryStr += " and TIP1='"+tostring(ReportInfo['REPORTDATE'])+"'";
+  if Element['TIP2'] then
+  queryStr += " and TIP2='"+tostring(ReportInfo['FUNDID'])+"'";
+  queryStr += " and STATUS<>0";  
+  queryData['Table'] := 'TS_RFormalData';
+  queryData['QueryStr'] := QueryStr;    
+  Datas := class(ExecuteSQL).Query(queryData);
+  if not ifArray(Datas)or not length(Datas) then return data;
+  Datas := Datas[0];    
+  conf := Element['CONF'] ? stm(Element['CONF']):array();     
+  Datas['TYPE'] := conf['Type'];
+  return Datas;     
+end;
+
+function ElementData.genEData(param);
+begin
+	   htm := '';
+	   if not ifArray(param) then return htm;
+	   EData := getEData(param);	
+	   if not ifArray(EData) or not EData['DATA'] then return '没有相关数据！';
+	   if EData['TYPE'] <> 'wordfile' then
+	   EData['DATA'] := stm(EData['DATA']);	   
+	   if EData['TYPE'] = 'txt' then
+	       htm := '<div class="">'+tostring(EData['DATA'])+'</div>';  
+	   else if EData['TYPE'] = 'wordfile' then
+	   begin       
+	       htm := '暂未支持！';
+	   end
+	   else
+	   begin
+	   	   dg := CreateObject('DataGrid') ;
+				 dg.Data := EData['DATA'];
+			 	 dg.pageAble := true;
+			 	 dg.PageRowCount := 20 ;				
+				 dg.height := 300 ;				
+				 htm := dg.gainHtml(); 
+	   end;
+	   return htm;
+end;
+
+function ElementData.saveData(param);//保存数据
+begin			
+	DataStatus := getElementStatusConf('DataStatus');
+	if not ifArray(param) then return 0;
+	EID := PARAM['EID'];
+	ReportDate := param['ReportDate'];
+	if ifString(ReportDate) then
+	ReportDate := strtoint(ReportDate);
+	Product := param['Product'];
+	Status := ifString(param['Status'])? strtointDef(param['Status'],0):param['Status'];
+	UID := param['UID'];
+	param['Data'] := param['Data'] ? param['Data']:'';	
+	Data := tostm(param['Data']);
+	queryData := array();
+	queryData['Table'] := 'TS_RTemplateElement';
+	queryData['QueryStr'] := "EID='"+tostring(EID)+"'";
+	r := class(ExecuteSQL).Query(queryData);
+	if not ifArray(r) or not length(r) then return 0;
+	r := r[0];		
+  manager := array('admin');
+	case Status of
+    	2:
+    	begin    	    
+    	     if r['TIP1'] and r['TIP2'] then
+    	     begin
+    	          f := update sqlTable 'TS_RFormalData' of class(TWebFundIDSConfig).getDBAlia() set ['DATA'] = Data,['STATUS'] = 2,['USERID'] = UID  where ['TIP1'] = ReportDate and ['TIP2'] = Product and ['EID'] = EID and ['STATUS'] <> 0  end;    	         
+    	     end
+    	     else if r['TIP1'] then
+    	     begin
+    	          f := update sqlTable 'TS_RFormalData' of class(TWebFundIDSConfig).getDBAlia() set ['DATA'] = Data,['STATUS'] = 2,['USERID'] = UID  where ['TIP1'] = ReportDate and ['EID'] = EID and ['STATUS'] <> 0  end;
+    	     end
+    	     else if r['TIP2'] then
+    	     begin
+    	          f := update sqlTable 'TS_RFormalData' of class(TWebFundIDSConfig).getDBAlia() set ['DATA'] = Data,['STATUS'] = 2,['USERID'] = UID  where ['TIP2'] = Product and ['EID'] = EID and ['STATUS'] <> 0  end;
+    	     end
+    	     else
+    	     begin
+    	          f := update sqlTable 'TS_RFormalData' of class(TWebFundIDSConfig).getDBAlia() set ['DATA'] = Data,['STATUS'] = 2,['USERID'] = UID  where ['EID'] = EID and ['STATUS'] <> 0  end;
+    	     end;
+    	     if f then 
+    	     htm := datetimetostr(now())+';'+tostring(DataStatus[Status])+';'+'<a class="Data_Edit" href="###" status=2 role="1" reportDate="'+tostring(ReportDate)+'" product="'+tostring(product)+'" eid="'+tostring(EID)+'">编辑</a>';
+    	     else
+    	     return 0;
+    	     
+      end;
+      3:
+      begin
+           arr := array(('USERID':UID,'DATA':Data,'EID':EID,'STATUS':Status));
+           queryStr := "EID='"+tostring(EID)+"'";
+           if r['TIP1'] then
+           begin
+          	     queryStr += " and TIP1='"+tostring(ReportDate)+"'";
+          	     arr[0]['TIP1'] := tostring(ReportDate);
+           end;
+           if r['TIP2'] then
+           begin
+          	     queryStr += " and TIP2='"+tostring(Product)+"'";
+          	     arr[0]['TIP2'] := tostring(Product);
+           end;	
+           queryData['Table'] := 'TS_RFormalData';
+           queryData['QueryStr'] := queryStr;
+           OriginData := class(ExecuteSQL).query(queryData);
+           if not ifArray(OriginData) then return 0
+           else 
+           Version := length(OriginData)+1;
+           updateData := array();
+           updateData['Table'] := 'TS_RFormalData';
+           updateData['Conf'] := array(('QueryStr':queryStr,'Data':(('Field':'STATUS','Type':'Number','Value':0))));
+           f:= class(ExecuteSQL).update(updateData);
+           if not f then return 0;           
+           arr[0]['LIMITDATE'] := OriginData[0]?OriginData[0]['LIMITDATE']:'';
+           arr[0]['VERSION'] := Version;		
+           insertData := array();
+           insertData['Table'] := 'TS_RFormalData';
+           insertData['Data'] := arr;
+           f := class(ExecuteSQL).insert(insertData);
+           htm := datetimetostr(now())+';'+tostring(DataStatus[arr[0]['STATUS']]);
+           if UID in manager then
+	     	   htm += ';'+'<a class="Data_Audit" href="###"status=3 role="2" reportDate="'+tostring(reportDate)+'" product="'+tostring(product)+'" eid="'+tostring(EID)+'">审核</a>';
+	     	   else
+	     	   htm += ';'+'<a class="Data_Check" href="###"status=3 role="1" reportDate="'+tostring(reportDate)+'" product="'+tostring(product)+'" eid="'+tostring(EID)+'">查看</a>';
+      end;
+      else
+      return 0;
+  end;
+  return htm;
+end;
+
+function ElementData.changeElementStatus(param);
+begin     
+     DataStatus := getElementStatusConf('DataStatus');
+     if not ifArray(param) then return 0;
+     UID := param['UID'];
+     EID := param['EID'];
+     ReportDate := param['ReportDate'];
+     Product := param['Product'];
+     Status := param['Status'];
+     queryData := array();
+	   queryData['Table'] := 'TS_RTemplateElement';
+	   queryData['QueryStr'] := "EID='"+tostring(EID)+"'";
+	   r := class(ExecuteSQL).Query(queryData);
+	   if not ifArray(r) or not length(r) then return 0;
+	   r := r[0];
+	   
+	   queryStr := "EID ='"+tostring(EID)+"'";
+	   if r['TIP1'] then
+	   queryStr += "  and TIP1='"+tostring(ReportDate)+"'";
+	   if r['TIP2'] then
+	   queryStr += "  and TIP2='"+tostring(Product)+"'";
+	   queryStr += "  and Status <> 0";
+	   UpdateData := array();
+	   UpdateData['Table'] := 'TS_RFormalData';
+	   UpdateData['Conf'] := array(('QueryStr':queryStr,'Data':(('Field':'STATUS','Type':'Number','Value':Status))));	   
+	   f := class(ExecuteSQL).Update(UpdateData);	 
+	   if f then
+	   begin
+	   	    queryData['Table'] := 'TS_DataRight';
+			    queryData['QueryStr'] := "EID='"+tostring(EID)+"'";
+			    tmpArr := class(ExecuteSQL).Query(queryData);
+			    tmpArr := ifArray(tmpArr) ? tmpArr : array();
+			    Editors := select * from tmpArr where ['TYPE'] = 1 end;
+			    Auditors := select * from tmpArr where ['TYPE'] = 2 end;
+	   	    manager := array('admin');	   	    
+	   	    htm := tostring(DataStatus[Status]);
+	   	    case Status of			   	    
+			   	    5:
+			   	    begin
+			   	    	   if UID in manager or UID in Editors then
+			   	    	   htm += ';'+'<a class="Data_Edit" href="###" status=2 role="1" reportDate="'+tostring(ReportDate)+'" product="'+tostring(product)+'" eid="'+tostring(EID)+'">编辑</a>';
+			   	         else
+			   	         htm += ';'+'<a class="Data_Check" href="###"status=2 role="2" reportDate="'+tostring(reportDate)+'" product="'+tostring(product)+'" eid="'+tostring(EID)+'">查看</a>';
+			   	    end;
+			   	    4:
+			   	    begin
+			   	    	   if UID in manager then
+			   	    	   htm += ';'+'<a class="Data_Audit" href="###"status=4 role="2" reportDate="'+tostring(reportDate)+'" product="'+tostring(product)+'" eid="'+tostring(EID)+'">审核</a>';
+			   	         else
+			   	         htm += ';'+'<a class="Data_Check" href="###"status=4 role="1" reportDate="'+tostring(reportDate)+'" product="'+tostring(product)+'" eid="'+tostring(EID)+'">查看</a>';
+			   	    end;	     	     
+	     	  end;	     	 
+	   	    return htm;
+	   end
+	   else return 0;
+end;
+
+function ElementData.outEditElement(param);
+begin	   
+	   //********临时管理员配置**********//
+     manager := array('admin');
+	   if not ifArray(param) then return;
+	   EID := param['EID'];
+	   UID := param['UID']?param['UID']:'';
+	   ReportDate := param['ReportDate'];
+	   Product := param['Product'];
+	   Status := param['Status'];
+	   queryData := array();
+	   queryData['Table'] := 'TS_RTemplateElement';
+	   queryData['QueryStr'] := "EID='"+tostring(EID)+"'";
+	   r := class(ExecuteSQL).Query(queryData);
+	   if not ifArray(r) or not length(r) then return;
+	   r := r[0];
+	   conf := r['CONF'] ? stm(r['CONF']): array();
+	   EType := conf['Type'] ? conf['Type']:'';
+	   if not EType then return ;
+	   queryStr := "EID='"+tostring(EID)+"'";
+	   if r['TIP1'] then
+	   queryStr += "  and TIP1='"+tostring(ReportDate)+"'";
+	   if r['TIP2'] then
+	   queryStr += "  and TIP2='"+tostring(Product)+"'";
+	   queryStr += "  and STATUS <>0";
+	   queryData['Table'] := 'TS_RFormalData';
+	   queryData['QueryStr'] := queryStr;
+	   data := class(ExecuteSQL).Query(queryData);	   
+	   if not ifArray(data) or not length(data) then return;	   	   
+	   data := data[0];		   
+	   DataV := data['VERSION'];
+	   LimitDate := data['LIMITDATE'];	     
+	   htm := '';	    
+	   case EType of
+			   'txt':
+			   begin			   	    
+			   	    EData := data['DATA']? stm(data['DATA']):'';
+			   	    if Status = "1" or Status = "2" or Status = "5" then
+			   	    htm := '<textarea class="DM_dialogText" >'+tostring(EData)+'</textarea>';			   	
+			   	   //htm := '<div class="DM_dialogText" contentEditable="true">'+tostring(EData)+'</div>';			   	    
+			   	    else
+			   	    htm := '<div class="DM_dialogText">'+class(IDS_LiveReport).rpt_page_paragraph(tostring(EData))+'</div>';	       
+			   end;
+			   'table','pic':
+			   begin			   	    
+			   	    EData := data['DATA']? stm(data['DATA']):'';			   	    
+			   	    if ifString(EData) then			   	    			   	        
+			   	    EData := stn(EData);			   	    
+			   	    if not ifArray(EData) then
+			   	    begin
+			   	    	    htm := '';
+			   	    	    //htm := '<div class= "DM_dialogC" onpaste="CopyText()">数据为空或数据不合法！</div>';			   	    	 
+			   	    end
+			   	    else
+			   	    begin					   	    
+					   	    dg := CreateObject('DataGrid') ;
+									dg.Data := EData ;
+									dg.pageAble := false ;
+									dg.esc := true;							
+									dg.height := 300 ;												
+									if Status = '1' or Status = '2' then
+									begin								     	 
+								     	 param := array('EID':EID,'ReportDate':'','Product':'','UID':UID,'DataV':DataV,'LimitDate':LimitDate);
+								     	 if r['TIP1'] then
+										   param['ReportDate'] := ReportDate;
+										   if r['TIP2'] then
+										   param['Product'] := Product ;
+								       dg.Data := select thisRowIndex as 'Element_DataRowIndex' ,* from EData end;								      
+								     	 dg.colModel := array(("index":'Element_DataRowIndex',"display":"none")) ;
+								     	 dg.ShowBottomBar := false;								     	 
+								     	 dg.editable := true ;
+									     dg.button := array("save":("name":"保存","type":"tsf","fvar":param,"alia":"DataGrid","function":"Element.saveData","success":("dataType":"json","js":"Data_SaveRet"),"submitOnlyChange":false)									                       
+									                        );									     
+					        end;
+					        {
+					        if ifArray(EData) and length(EData) then
+					        begin
+					        	   indexArr := getAllIndexs(EData[0]);
+					        	   indexArr ::= ifnumber(mcell);
+					        	   if indexArr then
+					        	   dg.ShowHeader := false ;
+					        end;					        
+					        }
+					        htm := dg.gainHtml();
+					     end;
+			   end;
+			   'wordfile':
+			   begin
+			        EData := data['DATA']? data['DATA']:'';	
+			        htm := '';
+			        if not ifNil(EData) then 
+			        begin
+			             htm += '<button class="DM_Download">下载</button>';
+			        end;
+			        if Status = "1" or Status = "2" then
+			        htm += '<input type="text" class="Upload_FileName" readonly=true /><button class="DM_Upload">上传</button>';
+			        
+			        htm += '<iframe class="DM_Download_Frame" style="display:none;" src=""></iframe>';
+			        htm += '<iframe class="DM_Upload_Frame" style="display:none;" src="/fundids/file/DM_UploadFile.tsl?eid='+tostring(EID)+'&tip1='+tostring(ReportDate)+'&tip2='+tostring(Product)+'"></iframe>';
+			   end;
+	   end;
+	   return htm;	   
+end;
+
+//********获取所有元素所有数据**********//
+function ElementData.getAllElementData(UID);
+begin	   	   
+	   //*******************特殊账户权限设置-(临时)**************//
+	   Data := getMatchedElementData(array('UID':UID)); 
+	   return Data;	   	   	   
+end;
+
+//********获取符合条件元素数据**********//
+function ElementData.getMatchedElementData(param);
+begin    
+     //***********特殊用户权限设置***********//     
+     manager := array('admin');	   
+     //*****************END****************//
+     //**********代码名称映射表***********//
+     FundList := class(TgenReport).getFundList();
+     List := array();
+     for i := 0 to length(FundList)-1 do
+     begin
+     	    List[FundList[i]['代码']] := FundList[i]['名称'];
+     end;
+     //***************END****************//
+     DataStatus := getElementStatusConf('DataStatus'); 
+     UID := param['UID'];
+     Ref_RptDate := param['Ref_ReportDate'];
+     Ref_Fund := param['Ref_Fund'];
+     Status := param['Status'];
+     FundID := param['FundID'];           
+     addition1 := '';
+     addition2 := '';
+     condition := '';
+     if not (UID in manager) then 
+     begin     
+          condition += "a.USERID='"+tostring(UID)+"'";           
+          addition1 := "(select count(*) from TS_DataRight where USERID = '"+tostring(UID)+"' and TYPE=1)"; 
+          addition2 := "(select count(*) from TS_DataRight where USERID = '"+tostring(UID)+"' and TYPE=2)"; 
+     end
+     else
+     begin    
+          addition1 := "1";
+          addition2 := "2";
+     end;     
+     if Ref_RptDate then
+     condition += ifthen(condition,' and ','')+"b.TIP1=1";
+     else if Ref_RptDate = 0 then
+     condition += ifthen(condition,' and ','')+"b.TIP1=0";
+     
+     if Ref_Fund then
+     condition += ifthen(condition,' and ','')+"b.TIP2=1";
+     else if Ref_Fund = 0 then
+     condition += ifthen(condition,' and ','')+"b.TIP2=0";
+     
+     condition := condition ? 'where '+condition:condition;
+     sql := "select *,"+addition1+" as ER,"+addition2+" as SR from TS_DataRight a left join  TS_RTemplateElement b on a.EID=b.EID  ";
+     sql += condition;     
+     Data := array();    
+     EIDs := array();
+     if not Execsql(class(TWebFundIDSConfig).getDBAlia(),sql,Elements) or not length(Elements) then return Data;     
+     for i := 0 to length(Elements)-1 do
+     begin
+          if Elements[i]['EID'] in EIDs then continue;
+          EIDs[length(EIDs)] := Elements[i]['EID'];
+          l := length(Data);
+	   	    Data[l] := array();
+	   	    Data[l]['Name'] := Elements[i]['NAME'];	   	  	   	    	   	    	   	    
+	   	    
+	   	    Products := Elements[i]['PRODUCTS'];
+	   	    Products := replaceText(Products,';',"','");
+	        Products := "('"+Products+"')";	   
+	        if FundID and FundID <> 'all' then      
+	        begin
+	             if Elements[i]['TIP2'] and AnsiContainsStr(Products,FundID) then
+	             sql  := "select * from TS_RFormalData where TIP2 = '"+tostring(FundID)+"' and EID='"+tostring(Elements[i]['EID'])+"'";
+               else
+               continue;
+          end
+          else
+               sql  := "select * from TS_RFormalData where TIP2 in "+tostring(Products)+" and EID='"+tostring(Elements[i]['EID'])+"'";
+          if Status and Status <> 'all' then
+          sql += " and STATUS="+tostring(Status);
+          else
+          sql += " and STATUS<>0";          
+          if not Execsql(class(TWebFundIDSConfig).getDBAlia(),sql,Datas) or not length(Datas) then continue;
+	        tmpArr := array();
+	        Funds := array();
+	        for j := 0 to length(Datas)-1 do
+	        begin	             
+	             len := length(TmpArr);
+        	     {	             
+               Auditors := getAuditors(array('EID':Elements[i]['EID'],'Product':Datas[j]['TIP2']));
+               Editors := getEditors(array('EID':Elements[i]['EID'],'Product':Datas[j]['TIP2']));	      	        
+               }	             
+               if Elements[i]['TYPE'] = 1 then
+               begin
+                   Editors := '刘青凤';
+                   Auditors := '彭永振';
+               end
+               else
+               begin	              	   
+              	   //if Datas[j]['STATUS'] in array(1,2) then
+              	   //continue;
+              	   Editors := '刘青凤';
+                   Auditors := '彭永振';
+               end;	             
+	             if Datas[j]['TIP2'] then
+               Funds[length(Funds)] := Datas[j]['TIP2'];
+	             //******添加 产品ID列******//
+	             TmpArr[len]['FundID'] := Datas[j]['TIP2']?Datas[j]['TIP2']:'';
+	             TmpArr[len]['报告期'] := Datas[j]['TIP1']?tostring(Datas[j]['TIP1']):'报告期无关';
+	             TmpArr[len]['产品'] := Datas[j]['TIP2']?tostring(List[Datas[j]['TIP2']]):'';
+	             TmpArr[len]['维护人'] := Editors;
+	             TmpArr[len]['审核人'] := Auditors;	              
+	             TmpArr[len]['维护期限'] := Datas[j]['LIMITDATE'] ? datetimetostr(Datas[j]['LIMITDATE']):'';
+	             TmpArr[len]['更新时间'] := datetimetostr(Datas[j]['CREATEDDATE']);
+	             TmpArr[len]['数据状态'] := DataStatus[Datas[j]['STATUS']]?DataStatus[Datas[j]['STATUS']] :'<span class="Data_Element_Status_None">无</span>';	             
+	             case datas[j]['STATUS'] of
+	                  0,1,2,5:
+	                  begin	                       	                      
+		                     if Elements[i]['ER'] = 1 or UID in manager  then
+		                     TmpArr[len]['-'] := '<a class="Data_Edit" href="###" status="'+tostring(datas[j]['STATUS'])+'" role="'+tostring(Elements[i]['TYPE'])+'" reportDate="'+tostring(Datas[j]['TIP1'])+'" product="'+tostring(Datas[j]['TIP2'])+'" eid="'+tostring(Elements[i]['EID'])+'">编辑</a>'
+		                     else
+		                     TmpArr[len]['-'] := '<a class="Data_Check" href="###"status="'+tostring(datas[j]['STATUS'])+'" role="'+tostring(Elements[i]['TYPE'])+'" reportDate="'+tostring(Datas[j]['TIP1'])+'" product="'+tostring(Datas[j]['TIP2'])+'" eid="'+tostring(Elements[i]['EID'])+'">查看</a>';				                     	                       
+	                  end;
+	                  3:
+	                  begin	                                      
+	                       if Elements[i]['ER'] = 1 and Elements[i]['DR'] <> 1 and not UID in manager then
+		                     TmpArr[len]['-'] := '<a class="Data_Check" href="###"status=3 role="'+tostring(Elements[i]['TYPE'])+'" reportDate="'+tostring(Datas[j]['TIP1'])+'" product="'+tostring(Datas[j]['TIP2'])+'" eid="'+tostring(Elements[i]['EID'])+'">查看</a>';
+		                     else
+	                       TmpArr[len]['-'] := '<a class="Data_Audit" href="###"status=3 role="'+tostring(Elements[i]['TYPE'])+'" reportDate="'+tostring(Datas[j]['TIP1'])+'" product="'+tostring(Datas[j]['TIP2'])+'" eid="'+tostring(Elements[i]['EID'])+'">审核</a>'; 
+	                  end;
+	                  4:
+	                  begin
+	                  	   if UID in manager then
+	                  	   TmpArr[len]['-'] := '<a class="Data_Audit" href="###"status=4 role="0" reportDate="'+tostring(Datas[j]['TIP1'])+'" product="'+tostring(Datas[j]['TIP2'])+'" eid="'+tostring(Elements[i]['EID'])+'">审核</a>';
+	                  	   else if Elements[i]['ER'] = 1 then
+		                     TmpArr[len]['-'] := '<a class="Data_Check" href="###"status=4 role="1" reportDate="'+tostring(Datas[j]['TIP1'])+'" product="'+tostring(Datas[j]['TIP2'])+'" eid="'+tostring(Elements[i]['EID'])+'">查看</a>';
+		                     else if Elements[i]['DR'] = 1 then
+	                       TmpArr[len]['-'] := '<a class="Data_Check" href="###"status=4 role="2" reportDate="'+tostring(Datas[j]['TIP1'])+'" product="'+tostring(Datas[j]['TIP2'])+'" eid="'+tostring(Elements[i]['EID'])+'">查看</a>';	                                 
+	                  end;
+			         end;
+	         end;          
+           Data[l]['Funds'] := Funds;
+           Data[l]['Data'] := TmpArr;
+	         Data[l]['EID'] := Elements[i]['EID'];
+     end;               
+     return Data;  
+end;
+
+function ElementData.genAllElementData(EData);//生成所有元素数据状态情况
+begin     
+     r := EData;          
+     divStr := '';
+     indexsArr := getAllIndexs(r);        
+     for i := 0 to length(r)-1 do
+     begin
+     	    data := r[i]['Data'];     	    
+     	    trs := '';
+     	    tdS := '';
+     	    if ifArray(data) and length(data) then
+     	    begin							 
+						  data := select ['报告期'],['产品'],['维护人'],['审核人'],['维护期限'],['更新时间'],['数据状态'],['-'] from data end;
+							fieldArr := getAllIndexs(data[0]);     	         	     	   
+							for j := 0 to length(fieldArr)-1 do
+							begin							      
+							      tds += '<th class="data_table_col'+tostring(j+1)+'">'+tostring(fieldArr[j])+'</th>';
+							end;
+							trs += '<thead>'+tds+'</thead>';
+							for k := 0 to length(data)-1 do
+							begin
+								tds := '';
+								for l := 0 to length(fieldArr)-1 do
+								begin									
+									tds += '<td>'+tostring(data[k][fieldArr[l]])+'</td>';
+								end; 
+								trs += '<tr>'+tds+'</tr>';    	    	  
+							end; 
+							table := '<table class="underlineTable">'+trs+'</table>';
+							divStr += '<div><h3 class="Data_Element_Item">'+tostring(r[i]['Name'])+'</h3><div class="Data_Element_Content">'+table+'</div></div>';
+     	    end;
+     end;
+     return divStr;
+end;
+
+function ElementData.getElementPower(RID);
+begin
+     data := array();
+     queryData := array();
+     queryData['Table'] := 'TS_ReportInfo';
+     queryData['QueryStr'] := "ID='"+tostring(RID)+"'";
+     r := class(ExecuteSQL).Query(queryData);
+     if not ifArray(r) then return data;
+     r := r[0];
+     TID := r['TID'];
+     sql := "select distinct a.EID,a.NAME,a.DEPARTMENT,b.SERIESID from TS_RTemplateElement a left join TS_RTemplateE b on a.EID=b.EID where b.TID='"+tostring(TID)+"' order by b.SERIESID ASC";
+     if not Execsql(class(TWebFundIDSConfig).getDBAlia(),sql,Elements) or not length(Elements) then begin
+     	echo sqlerrormsg();
+     	return data;
+     end;
+     TCombox := createObject('TComBox');     
+     for i := 0 to length(Elements)-1 do
+     begin
+          len := length(data);
+          selectStr := '';
+          selectStr := TCombox.genDepartments(Elements[i]['DEPARTMENT']);
+          data[len] := array('序号':i+1,'名称':Elements[i]['NAME'],'部门':selectStr,'EID':Elements[i]['EID']);
+     end;
+     return data;
+end;
+
+function ElementData.genElementPower(RID);
+begin     
+	 data := getElementPower(RID);
+	 if not (ifArray(data) and length(data)) then return '';
+	 html:= '<table class="underlineTable right-deparment-table"><thead><tr><th>序号</th><th>元素名称</th><th>部门</th></thead></tr>';
+	for i := 0 to length(data)-1 do
+	begin
+			html+= '<tr eid="'+data[i]['EID']+'"><td>'+inttostr(data[i]['序号'])+'</td><td>'+data[i]['名称']+'</td><td>'+data[i]['部门']+'</td></tr>';
+	end;
+     (*
+     trs := '';
+     tds := '';
+     fieldArr := getAllIndexs(data[0]);
+     for j := 0 to length(fieldArr)-1 do
+     tds += '<th>'+tostring(fieldArr[j])+'</th>';
+     trs += '<thead>'+tds+'</thead>';
+     for i := 0 to length(data)-1 do
+     begin
+          tds := '';
+          for k := 0 to length(fieldArr)-1 do
+          begin
+               tds += '<td>'+tostring(data[i][fieldArr[k]])+'</td>';
+          end;
+          trs += '<tr>'+tds+'</tr>';
+     end;
+     html := '<table class="underlineTable">'+trs+'</table>';
+     *)
+     return html;     	 
+end;
+
+function ElementData.genElementData(RID);
+begin     
+     data := getElementData(RID);               
+     divStr := '';     
+	   trs := '';
+	   tdS := '';
+     if ifArray(data) and length(data) then
+	   begin
+	   	   fieldArr := getAllIndexs(data[0]);
+     end
+     else
+        return '';    	   
+     for j := 0 to length(fieldArr)-1 do
+	   tds += '<th>'+tostring(fieldArr[j])+'</th>';
+     trs += '<thead>'+tds+'</thead>';
+	   for k := 0 to length(data)-1 do
+     begin
+	    	   tds := '';
+	    	   for l := 0 to length(fieldArr)-1 do
+	    	   begin	    	   	    
+	    	   	    tds += '<td>'+tostring(data[k][fieldArr[l]])+'</td>';
+	    	   end; 
+	    	   trs += '<tr>'+tds+'</tr>';    	    	  
+	   end; 
+	   table := '<table class="underlineTable">'+trs+'</table>';     	 
+	   divStr += '<div class="TData_Element_Content">'+table+'</div>';
+     return divStr;     
+end;
+
+function ElementData.getElementData(RID);
+begin	   
+	   DataStatus := getElementStatusConf('DataStatus');
+	   if not RID then return;
+	   queryData := array();
+	   queryData['Table'] := 'TS_ReportInfo';
+	   queryData['QueryStr'] := "ID='"+tostring(RID)+"'";
+	   r := class(ExecuteSQL).Query(queryData);	     
+	   if not ifArray(r) or not length(r) then return;
+	   r := r[0];
+	   TID := r['TID'];	     
+	   sql := "select a.EID,a.NAME,b.* from TS_RTemplateElement a left join TS_RFormalData b on a.EID = b.EID where (b.STATUS<>0) and (a.TIP1=0 or (a.TIP1 = 1 and b.TIP1 = '"+tostring(r['REPORTDATE'])+"')) and (a.TIP2=0 or (a.TIP2 = 1 and b.TIP2='"+tostring(r['FUNDID'])+"')) and a.EID in (select EID from TS_RTemplateE where TID='"+tostring(TID)+"' and EID IS NOT NULL)";	   
+	   if not execsql(class(TWebFundIDSConfig).getDBAlia(),sql,Elements) or not length(Elements) then	   
+	   return;	   
+	   data := array();
+	   sql := "select distinct a.EID,a.SERIESID,b.NAME from	TS_RTemplateE a left join TS_RTemplateElement b on a.EID = b.EID where a.TID='"+tostring(TID)+"' and a.EID is not null order by a.SERIESID ASC";	   
+	   if not execsql(class(TWebFundIDSConfig).getDBAlia(),sql,EIDs) or not length(EIDs) then return;   
+	    	   	  
+	   EData := select [1].*,[2].['STATUS'] from EIDs left join Elements on [1].['EID']=[2].['EID'] end;	   
+	   
+	    EIDs := array();
+	    List := array();
+	    for j := 0 to length(EData)-1 do
+	    begin
+	         
+	         if EData[j]['EID'] in list then continue;	        
+	         list[length(list)] := EData[j]['EID'];
+	         EIDs[length(EIDs)] := EData[j];
+	    end;	
+	    EData := EIDs;   
+	   
+	   for i := 0 to length(EData)-1 do
+	   begin
+	        //Auditors := getAuditors(array('EID':Elements[i]['EID'],'Product':r['FUNDID']));
+	        //Editors := getEditors(array('EID':Elements[i]['EID'],'Product':r['FUNDID']));
+	        Auditors := '彭永振';
+	        Editors := '刘青凤';
+	        len := length(data);	        
+	        StatusStr := DataStatus[EData[i]['STATUS']]?DataStatus[EData[i]['STATUS']]:'<span class="TData_Element_Status_None">无</span>';
+	        linkStr := '<a href="###" class="TData_Element_Check" eid='+tostring(EData[i]['EID'])+'>查看</a>';
+	        data[len] := array("序号":len+1,"名称":EData[i]['NAME'],'维护人':Editors,'审核人':Auditors,'维护期限':r['PUBLISHDATE']?datetostr(r['PUBLISHDATE']):'','数据状态':StatusStr,'-':linkStr);
+	   end;
+     return data;
+end;
+
+function ElementData.getAuditors(param);
+begin
+	   Auditors := '';
+	   EID := param['EID'];	   
+	   if not EID then return Auditors;	   
+	   queryStr := "EID='"+tostring(EID)+"'";
+	   if param['Product'] then
+	   queryStr += " and PRODUCTS like '%"+tostring(param['Product'])+"%'";	  
+	   queryData := array();
+	   queryData['Table'] := 'TS_DataRight';
+	   queryData['QueryStr'] := queryStr;
+	   r := class(ExecuteSQL).query(queryData);
+	   if not ifArray(r) or not length(r) then return Auditors;
+	   r := `r;
+	   Auditors := array2Str(r['USERID']);
+	   return Auditors;
+end;
+
+function ElementData.getEditors(param);
+begin
+	   Editors := '';
+	   EID := param['EID'];
+	   if not EID then return Editors;
+	   queryStr := "EID='"+tostring(EID)+"'";
+	   if param['Product'] then
+	   queryStr += " and PRODUCTS like '%"+tostring(param['Product'])+"%'";	 
+	   queryData := array();
+	   queryData['Table'] := 'TS_DataRight';
+	   queryData['QueryStr'] := queryStr;
+	   r := class(ExecuteSQL).query(queryData);
+	   if not ifArray(r) or not length(r) then return Editors;
+	   r := `r;
+	   Editors := array2Str(r['USERID']);
+	   return Editors;
+end;
+
+function ElementData.getElementStatusConf(field);
+begin
+	   config := array();
+	   config['StatusType'] := array("废弃","未处理","未提交","待审核","已审核");
+	   config['DataStatus'] := array(1:'<span class="Data_Element_Status_Undo Element_Status" statu="1">未处理</span>',2:'<span class="Data_Element_Status_Processed Element_Status" statu="2">未提交</span>',3:'<span class="Data_Element_Status_Uncheck Element_Status" statu="3">待审核</span>',4:'<span class="Data_Element_Status_Checked Element_Status" statu="4">已审核</span>',5:'<span class="Data_Element_Status_Reject Element_Status" statu="5">已驳回</span>');
+	   return config[field];
+end;
+
+function ElementData.getElementDataStatus(EID,param);
+begin
+	   if not EID or not ifArray(param) then return 0;
+	   queryData := array();
+	   queryData['Table'] := 'TS_RFormalData';
+     if param['ReportDate'] then
+     QueryStr += "TIP1 ='"+tostring(param['ReportDate'])+"'";
+     if param['Product'] then
+     QueryStr += " and TIP2 ='"+tostring(param['Product'])+"'";
+	   QueryStr += " and EID='"+tostring(EID)+"'";
+	   QueryStr += " and STATUS <>0";
+	   queryData['QueryStr'] := QueryStr;
+	   r1 := class(ExecuteSQL).Query(queryData);
+	   if not ifArray(r1) then return 0;		   
+	   config := getElementStatusConf('StatusType');	   
+	   data := select ['TIP1'] as '报告期',['TIP2'] as '产品',['Editors'] as '维护人',['Auditors'] as '审核人',['DateLine'] as '维护期限',['CREATEDDATE'] as '更新时间',config[['STATUS']] as '数据状态'  from  r end;
+     return data;
+end;
+
+function ElementData.getDataRightData();
+begin
+     //**********代码名称映射表***********//
+     FundList := class(TgenReport).getFundList();
+     List := array();
+     reindex(FundList,FundList[:,"代码"]);
+     List := FundList[:,'名称'];
+     {
+     for i := 0 to length(FundList)-1 do
+     begin
+     	    List[FundList[i]['代码']] := FundList[i]['名称'];
+     end;
+     }
+     //***************END****************//
+     data := array();
+     sql1 := "select * from TS_RTemplateElement where STATUS = 1";
+     if not execSQL(class(TWebFundIDSConfig).getDBAlia(),sql1,Elements) or not length(Elements) then
+     return ;
+     sql2 := "select * from TS_DataRight where USERID IS NOT NULL and IsValid!=0";     
+     if not execSQL(class(TWebFundIDSConfig).getDBAlia(),sql2,DataRights) or not length(DataRights) then
+     
+     DataRights := array();
+     for i := 0 to length(Elements)-1 do
+     begin
+          DLen := length(data);
+          data[DLen] := array('Name':Elements[i]['NAME']);         
+          EDataRights := array();
+          Arr := select * from DataRights where ['EID'] = Elements[i]['EID'] end;          
+          for j := 0 to length(Arr)-1 do
+          begin
+               len := length(EDataRights);
+               if not Arr[j]['PRODUCTS'] then
+               begin
+                    EDataRights[len]['Product'] := '';
+                    if Arr[j]['TYPE'] = 1 then
+                    EDataRights[len]['Editor'] := Arr[j]['USERID']
+                    else
+                    EDataRights[len]['Auditor'] := Arr[j]['USERID'];
+               end
+               else
+               begin
+                    PArr := str2Array(Arr[j]['PRODUCTS']);
+                    for k := 0 to length(PArr)-1 do
+                    begin
+                         l := length(EDataRights);
+                         //if List[PArr[k]] in EDataRights[:,array('Product')] then continue;                         
+                         EDataRights[l]['Product'] := List[PArr[k]]?List[PArr[k]]:'';
+                         EDataRights[l]['fundID'] := PArr[k];
+                         if Arr[j]['TYPE'] = 1 then
+                         EDataRights[l]['Editor'] := Arr[j]['USERID']
+                         else
+                         EDataRights[l]['Auditor'] := Arr[j]['USERID'];
+                    end;
+               end;
+          end;
+          data[DLen]['Data'] := EDataRights;
+          data[DLen]['EID'] := Elements[i]['EID'];
+     end;      
+     return data;    
+end;
+
+function ElementData.getDataRight(UID);//生成所有元素责权关系
+begin   
+  r :=getDataRightData();  
+  divStr := '';
+  indexsArr := getAllIndexs(r);  
+
+  for i := 0 to length(r)-1 do
+  begin
+      _data := r[i]['Data'];
+      //return echo tostn(_data);
+      auditors := sselect distinct ['Auditor'] from _data end;    
+      data := array();
+      obj:= createObject("TWSMemberDB",-1);
+	  userInfo:= obj.GetMembers(); 
+      for m := 0 to length(auditors) - 1 do
+      begin        
+        n := length(data);
+        a := auditors[m];
+        if not a then continue;  
+        data[n]['Auditor'] := a;
+        data[n]['Products'] := '';
+        p := sselect distinct ['Product'] from _data where ['Auditor'] = a end;
+        if istable(p) then data[n]['Products']:= array2Str(p,';');
+      end;
+      
+      editors := sselect distinct ['Editor'] from _data end;     
+      for m := 0 to length(editors) - 1 do
+      begin        
+        e := editors[m];
+        if not e then continue;
+        len := length(data);
+        data[len]['Editor'] := e;
+        data[len]['Products'] := '';
+        p := sselect distinct ['Product'] from _data where ['Editor'] = e end;
+        if istable(p) then data[len]['Products']:= array2Str(p,';');
+      end;
+            
+      trs := '';
+      tdS := '';
+      tds1 := '';      
+      if not (ifArray(data) and length(data)) then continue;
+      for k := 0 to length(data)-1 do
+      begin
+        tds := tds1 := '';
+        if data[k]['Auditor'] then
+        begin
+            tds += '<td class="DRtd1"><b>审核人</b></td>';    	 
+          	uName:= vselect ['MemberName'] from userInfo where ['MemberId']= data[k]['Auditor'] end;
+            tds += '<td class="DRtd2 td-auditor" uid="'+data[k]['Auditor']+'">'+tostring(uName)+'</td>';
+            tds += '<td class="DRtd3"><b>产品</b></td>';   
+            tds += '<td class="DRtd4 td-products">'+tostring(data[k]['Products'])+'</td>';
+            tds += '<td class="DRtd5"></td>';
+            trs += '<tr class="tr-auditor">'+tds+'</tr>';
+        end
+        else if data[k]['Editor'] then
+        begin        
+            tds1 += '<td class="DRtd1"><b>维护人</b></td>';  
+            eName:= vselect ['MemberName'] from userInfo where ['MemberId']= data[k]['Editor'] end; 
+            tds1 += '<td class="DRtd2 td-editor" uid="'+data[k]['Editor']+'">'+tostring(eName)+'</td>';
+            tds1 += '<td class="DRtd3"><b>产品</b></td>';   
+            tds1 += '<td class="DRtd4 td-products">'+tostring(data[k]['Products'])+'</td>';
+            tds1 += '<td class="DRtd5"></td>';
+            trs += '<tr class="tr-editor">'+tds1+'</tr>';	
+        end;    	  
+      end; 
+      
+      ElementId := r[i]['EID'];
+      table := '<table class="underlineTable">'+trs+'</table>';
+      divStr += '<div class="layout-row" id="'+ElementId+'"><h3 class="Data_Element_Item">'+tostring(r[i]['Name'])+'</h3>'
+           + '<div class="Data_Element_Content">'+table+'</div>'
+           + '<div class="btns-container"><button class="btn btn_AddAudit">+审核</button><button class="btn btn_AddDm">+维护</button></div>'
+           + '</div>';
+  end;  
+  return divStr;
+end;

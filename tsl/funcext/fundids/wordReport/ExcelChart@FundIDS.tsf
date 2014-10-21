@@ -1,0 +1,632 @@
+Type ExcelChart = Class
+     FData ;
+     FFileSavePath ;//生成的excel文件存放路径
+     FChart;//图表类型和系列名
+     FChartType ;//图形类型
+     FPlotBy ;//数据分割方式:xlColumns()--以列分割;xlRows()--以行分割
+     FIfFormatData;//是否格式化数据(字符下标转换成数值下标,同时会将字符下标存放在转换后的数组的第一条记录)
+     FColorArr ;
+     FDataRowCount ;
+     FDataColCount ;
+     FMsg ;//错误信息
+     FChartName;//进行操作的Excel图表对象名
+     FSheetName;//进行操作的Excel表格对象名
+     
+     FYPrimary_MajorUnit ;//Y坐标轴主坐标主要刻度
+     FYPrimary_MinorUnit ;//Y坐标轴主坐标次要刻度
+     FYSecondary_MajorUnit ;//Y坐标轴次坐标主要刻度
+     FYSecondary_MinorUnit ;//Y坐标轴次坐标次要刻度
+     FChartConf;//图表配置
+     FRotation ;//三维图仰角
+     FElevation ;//三维图转角
+     FExplosion ;//分离度---饼图
+     
+     FSpecialChart;//特殊表格
+     FPageID; //该图表所属网页ID
+     FDateFormat;//临时配置 ---- 文本格式
+     Property  Conf read FChartConf write FChartConf;     
+     Property  ChartName read FChartName write FChartName;
+     Property  SheetName read FSheetName write FSheetName;
+     Property  FileSavePath read FFileSavePath write FFileSavePath ;
+     Property  PlotBy read FPlotBy write FPlotBy ;
+     Property  IfFormatData read FIfFormatData write FIfFormatData ;
+     Property  Msg read FMsg write FMsg ;
+     Property  ColorArr read FColorArr write FColorArr ;
+
+     Property  Rotation read FRotation write FRotation ;
+     Property  Elevation read FElevation write FElevation ;
+     Property  Explosion read FExplosion write FExplosion ;
+     
+     Property  YPrimary_MajorUnit read FYPrimary_MajorUnit write FYPrimary_MajorUnit ;
+     Property  YPrimary_MinorUnit read FYPrimary_MinorUnit write FYPrimary_MinorUnit ;
+     Property  YSecondary_MajorUnit read FYSecondary_MajorUnit write FYSecondary_MajorUnit ;
+     Property  YSecondary_MinorUnit read FYSecondary_MinorUnit write FYSecondary_MinorUnit ;
+
+     Public
+     Function Create(data);overLoad ;
+     Function Create(data,chartType);overLoad ;
+     Function GenChart() ;//生成图形
+
+     Private
+     Function SpecialChart(chart,chartArr);
+     Function Convert(x);
+     Function ReSetChart(obj);//调整图表系列
+     Function FormatArrayForExcel(Data) ;//格式化数据
+     Function SetExcelData();//将数据导入到excel
+     Function SetChart(ChartObj,Conf,seriesNum);
+     Function ChartTypeList(cType);
+     function DoubleAdapt(chart);//双轴图坐标轴调整    
+End ;
+
+Function ExcelChart.Create(data);overLoad;
+Begin
+      Create(data,xlColumnClustered());//默认为簇状柱形图
+End ;
+
+Function ExcelChart.Create(data,chartType);overLoad;
+Begin
+	   
+	   FIfFormatData := true ;
+	   FPlotBy := xlColumns() ;//默认以列分割数据
+	   FData := data;
+	   FChartType := chartType[0]['type'] ;
+	   FChart := chartType;	  
+	   FColorArr := array(
+	                 RGB(248,147,67),
+	                 RGB(249,208,93),
+			             RGB(239,250,92),					         
+					         RGB(251,83,87),
+					         RGB(114,82,252),
+					         RGB(251,83,227),					        
+					         RGB(118,252,82),
+					         RGB(90,90,90),
+					         RGB(252,26,20), 
+					         RGB(252,98,82)
+				 ) ;//默认颜色方案     
+End ;
+
+Function ExcelChart.GenChart();
+Begin
+		   //ReportBox := createObject("ReportBox");
+		   //ReportBox.pageID := getSysParam('ReportType');		   		   
+		   if not istable(FData) then 		   		       
+		   return;		   
+		   DataArr := SetExcelData();//导入数据到excel
+		   r := GetOleObject("Excel.application",3,excelObj); 			     
+	     App:= excelObj.Workbooks.Open(FFileSavePath);             
+       if not ifobj(App) then return;
+       Chart := App.Charts(FChartName);
+       DataSheet := App.WorkSheets(FSheetName); 
+       //if FChartConf['Xtype']='文本' then DataSheet.Columns("A:A").NumberFormatLocal := "@"; 
+       //调整类型后，再设置一次2014-6-17 11:48:39 zhangwei@tinysoft.com.cn
+       //DataArr := SetExcelData();//导入数据到excel
+		   if not istable(DataArr) then 
+		   begin
+		        App.Application.Quit;
+		        return;
+		   end; 	
+	 
+			 DataRowCount := mRows(DataArr)-1; //第一行为分类坐标轴标签
+			 DataColCount := mCols(DataArr);
+       if FPlotBy = xlColumns() then
+			 begin			      
+			       for i := 0 to DataColCount-1 do
+					   begin
+						    	if i = 0 then continue;//第1列是坐标轴分类标签						   						      
+						      DataName := Convert(i);//数据的起始行
+						      if FChart[i]['series'] ='yline'  then
+						      begin
+						      FChartType := FChart[i]['type'];							      			
+						      DataBegin := DataSheet.Range(DataName).Offset(1, 0);//offset是对于行，列的偏移位置
+						      DataEnd := DataSheet.Range(DataName).Offset(DataRowCount, 0);//系列数据的截止行
+						      DAddress := DataBegin.Address() + ":" + DataEnd.Address();//系列数据的地址;
+						      Chart.SeriesCollection.Add(DataSheet.Range(DAddress));//系列-值
+
+						      SeriesCount := Chart.SeriesCollection.Count;//系列个数
+                  
+						      NameAddress := DataSheet.Range(DataName).Offset(0,0).Address();//系列名称地址
+						      Chart.SeriesCollection(SeriesCount).Name := DataSheet.Range(NameAddress);//图例名称                                    
+						      xDataBegin := DataSheet.Range("A1").Offset(1, 0);//X轴分类标签的起始单元格
+						      xDataEnd := DataSheet.Range("A1").Offset(DataRowCount, 0);//X轴分类标签的截止单元格
+						      xDAddress := xDataBegin.Address() + ":" + xDataEnd.Address();//系列-X轴分类标签地址
+						      Chart.SeriesCollection(SeriesCount).XValues := DataSheet.Range(xDAddress);//生成x轴分类标签                  
+                  setChart(Chart,FChart[i],SeriesCount) ;                                                      
+                  if FChartType = -4169 and FChartConf['Xtype']='文本'  then
+                  begin                  
+                  Chart.SeriesCollection.Add(DataSheet.Range(DAddress));
+                  SeriesCount := Chart.SeriesCollection.Count;                                   
+                  Chart.SeriesCollection(SeriesCount).ChartType := xlLine();
+                  Chart.SeriesCollection(SeriesCount).Format.Line.Visible := 0;
+                  Chart.Legend.LegendEntries(SeriesCount).Delete;
+                  Chart.SeriesCollection(SeriesCount).XValues := DataSheet.Range(xDAddress);                   
+                  end
+                
+                  if not ifnil(FChart[i]['second']) then                      
+                  Chart.SeriesCollection(SeriesCount).AxisGroup := 2;                 
+                  end                 
+						end			            
+			 end
+			 else if FPlotBy = xlRows() then
+			 begin
+			   		 for i := 0 to DataRowCount-1 do
+						 begin
+								  DataName := "A1" ;
+								  //获取一个系列的数据并添加到图表中
+								  DataBegin := DataSheet.Range(DataName).Offset(i+1,1);//数据的起始单元格
+								  DataEnd := DataSheet.Range(DataName).Offset(i+1,DataColCount-1);//数据的截止单元格
+								  DAddress := DataBegin.Address() + ":" + DataEnd.Address();//数据的地址
+								  Chart.SeriesCollection.Add(DataSheet.Range(DAddress));//将新系列添加到图表中
+								  //系列名称处理
+								  SeriesCount := Chart.SeriesCollection.Count;//系列个数
+								  NameAddress := DataSheet.Range(DataName).Offset(i+1,0).Address();//系列-名称地址,每行第一个单元格内容
+								  Chart.SeriesCollection(SeriesCount).Name := DataSheet.Range(NameAddress);//添加系列名称
+								  //x轴分类标签
+								  xDataBegin := DataSheet.Range("A1").Offset(0,1);//X轴分类标签的起始单元格
+								  xDataEnd := DataSheet.Range("A1").Offset(0,DataColCount-1);//X轴分类标签的截止单元格
+								  xDAddress := xDataBegin.Address() + ":" + xDataEnd.Address();//分类标签地址
+								  Chart.SeriesCollection(SeriesCount).XValues := DataSheet.Range(xDAddress);//输出x轴分类标签
+						      setChart(Chart,FChart[i],SeriesCount);						      
+						 end ;
+       end
+
+       //设置Chart格式
+       if Chart.SeriesCollection.Count<>0 then
+       begin       	            	       	    	            												
+            //图例字体大小设置  次轴设置           
+            if not ifnil(Chart.Axes(xlValue(),xlSecondary())) then
+            begin            	           	
+                 DoubleAdapt(chart);                 
+            end;                     
+            Chart.ChartArea.Border.LineStyle := xlLineStyleNone();//无边框
+            Chart.ChartArea.Interior.ColorIndex := xlColorIndexNone() ;//无填充颜色,xlColorIndexAutomatic()--自动填充; 		    
+       end
+      
+     if FChartConf['LegendPos'] then
+     begin
+          Chart.HasLegend := true;
+          Chart.Legend.Position := FChartConf['LegendPos'];          
+     end
+     else
+          Chart.HasLegend := false;
+     if not ifnil(FChartConf['Title']) then
+     begin     	     
+            Chart.HasTitle := true;		
+            Chart.ChartTitle.Text := FChartConf['Title'];
+            Chart.ChartTitle.Font.Size := FChartConf['Title-Font-Size'];
+            Chart.ChartTitle.Font.Color := FChartConf['Title-Font-Color'];
+            Chart.ChartTitle.Font.Name := FChartConf['Title-Font-Type'];
+     end
+     else
+           Chart.HasTitle := false;
+   	 if not ifnil(FChartConf['Xangle']) then
+   	   if not ifnil(Chart.Axes(xlCategory()).TickLabels) then  Chart.Axes(xlCategory()).TickLabels.Orientation := FChartConf['Xangle'];
+   	 
+   	 if not ifnil(FChartConf['Xtitle'])  then
+   	 begin
+   	 	    Chart.setElement(301);//添加x轴title标签
+   	      Chart.Axes(xlCategory(), xlPrimary()).AxisTitle.Text := FChartConf['Xtitle'];//Chart.Axes(xlCategory()).AxisTitle.Text := FChartConf['Xtitle'];   	     
+   	 end;
+   	 if FChartConf['XPosition'] then
+   	 begin
+   	 	    Chart.Axes(xlCategory()).AxisBetweenCategories := FChartConf['XPosition'];
+   	 end;
+   	 if FChartConf['Xtype']='日期' then
+   	 begin
+   	 	    Chart.Axes(xlCategory()).TickLabels.NumberFormatLocal := "yyyy-mm-dd";
+   	 end;
+   	 if FChartConf['XColor'] then
+   	 begin
+   	 	    Chart.Axes(xlCategory()).Format.Line.ForeColor.RGB := FChartConf['XColor'];
+   	 end;
+   	 
+   	 if FChartConf['YLeftColor'] then
+   	 begin
+   	 	    Chart.Axes(xlValue()).Format.Line.ForeColor.RGB := FChartConf['YLeftColor'];
+   	 end;
+   	 
+   	 if FChartConf['YLeftMax'] then
+   	 begin
+   	 	    if ifString(FChartConf['YLeftMax']) then
+   	 	    begin
+   	 	         FChartConf['YLeftMax'] := strToIntDef(FChartConf['YLeftMax'],0);
+   	 	         if FChartConf['YLeftMax'] then
+   	 	         Chart.Axes(xlValue()).MaximumScale := FChartConf['YLeftMax'];
+   	 	    end
+   	 	    else
+   	 	    Chart.Axes(xlValue()).MaximumScale := FChartConf['YLeftMax'];
+   	 end;
+   	 
+   	 if FChartConf['YLeftMin'] then
+   	 begin
+   	 	    if ifString(FChartConf['YLeftMin']) then
+   	 	    begin
+   	 	         FChartConf['YLeftMin'] := strToIntDef(FChartConf['YLeftMin'],0);
+   	 	         if FChartConf['YLeftMin'] then
+   	 	         Chart.Axes(xlValue()).MinimumScale := FChartConf['YLeftMin'];
+   	 	    end
+   	 	    else
+   	 	    Chart.Axes(xlValue()).MinimumScale := FChartConf['YLeftMin'];
+   	 end;
+   	 
+   	 if FChartConf['Ytitle'] then
+   	 begin
+   	 	    Chart.setElement(309);//添加x轴title标签
+   	 	    Chart.Axes(xlValue(), xlPrimary()).AxisTitle.Text := FChartConf['Ytitle'];//Chart.Axes(xlValue()).AxisTitle.Text := FChartConf['Ytitle'];
+   	 end;
+   	 
+   	 if FChartConf['Border'] then
+   	 begin
+   	 	    Chart.PlotArea.Format.Line.Visible := 1;
+   	 	    Chart.PlotArea.Format.Line.Weight :=  FChartConf['Border_Width'];
+   	 	    Chart.PlotArea.Format.Line.ForeColor.RGB := FChartConf['Border_Color'];
+   	 end;
+   	 
+   	 if FChartConf['BackgroundColor'] then
+   	 begin
+   	 	    Chart.PlotArea.Format.Fill.ForeColor.RGB := FChartConf['BackgroundColor'];
+   	 end;
+   	    	
+   	 if FChartConf['Gridding'] then
+     begin   	   
+        try  	   	     	
+         Chart.Axes(xlValue()).HasMajorGridlines := 1;
+         if FChartConf['Gridding']['YLeftMajorGridlines'] then
+         begin
+         	    Chart.Axes(xlValue()).MajorGridlines.Format.Line.ForeColor.RGB := FChartConf['Gridding']['YLeftMajorGridlines']['颜色'];
+         	    Chart.Axes(xlValue()).MajorGridlines.Format.Line.Weight := FChartConf['Gridding']['YLeftMajorGridlines']['线宽']?FChartConf['Gridding']['YLeftMajorGridlines']['线宽']:1;
+         end
+         if FChartConf['Gridding']['YLeftSecondGridlines'] then
+         begin
+         	    Chart.Axes(xlValue()).HasMinorGridlines := 1;
+              Chart.Axes(xlValue()).MinorGridlines.Format.Line.ForeColor.RGB := FChartConf['Gridding']['YLeftSecondGridlines']['颜色'];
+         	    Chart.Axes(xlValue()).MinorGridlines.Format.Line.Weight := FChartConf['Gridding']['YLeftSecondGridlines']['线宽']?FChartConf['Gridding']['YLeftSecondGridlines']['线宽']:1;
+         end;
+         if Chart.ChartGroups(1).AxisGroup >1 then
+         begin
+		         if FChartConf['Gridding']['YRightMajorGridlines'] then
+		         begin
+		         	     Chart.Axes(xlValue(),xlSecondary()).HasMajorGridlines := 1;
+		         	     Chart.Axes(xlValue(),xlSecondary()).MajorGridlines.Format.Line.ForeColor.RGB := FChartConf['Gridding']['YRightMajorGridlines']['颜色'];
+		         	     Chart.Axes(xlValue(),xlSecondary()).MajorGridlines.Format.Line.Weight := FChartConf['Gridding']['YRightMajorGridlines']['线宽']?FChartConf['Gridding']['YRightMajorGridlines']['线宽']:1;
+		         end;
+		         if FChartConf['Gridding']['YRightSecondGridlines'] then
+		         begin
+		         	    Chart.Axes(xlValue(),xlSecondary()).HasMinorGridlines := 1;
+		         	    Chart.Axes(xlValue(),xlSecondary()).MinorGridlines.Format.Line.ForeColor.RGB := FChartConf['Gridding']['YRightSecondGridlines']['颜色'];
+		         	    Chart.Axes(xlValue(),xlSecondary()).MinorGridlines.Format.Line.Weight := FChartConf['Gridding']['YRightSecondGridlines']['线宽']?FChartConf['Gridding']['YRightSecondGridlines']['线宽']:1;
+		         end;
+        end;
+        except   	   	         
+        end;
+        
+        Chart.Axes(xlCategory()).HasMajorGridlines := 1;
+        if FChartConf['Gridding']['XMajorGridlines'] then
+        begin
+        	    Chart.Axes(xlCategory()).MajorGridlines.Format.Line.ForeColor.RGB := FChartConf['Gridding']['XMajorGridlines']['颜色'];
+         	    Chart.Axes(xlCategory()).MajorGridlines.Format.Line.Weight := FChartConf['Gridding']['XMajorGridlines']['线宽']?FChartConf['Gridding']['XMajorGridlines']['线宽']:1;
+        end;
+        if FChartConf['Gridding']['XSecondGridlines'] then
+        begin
+        	    Chart.Axes(xlCategory()).HasMinorGridlines := 1;
+        	    Chart.Axes(xlCategory()).MajorGridlines.Format.Line.ForeColor.RGB := FChartConf['Gridding']['XSecondGridlines']['颜色'];
+         	    Chart.Axes(xlCategory()).MajorGridlines.Format.Line.Weight := FChartConf['Gridding']['XSecondGridlines']['线宽']?FChartConf['Gridding']['XSecondGridlines']['线宽']:1;
+        end;
+     end
+     else
+	   try
+	      Chart.Axes(xlValue()).MajorGridlines.Format.Line.Visible := 0;  
+	   except   	   	         
+	   end; 	   	        	   	   	      	
+   	   //ReportBox.AlterChart(chart,DataSheet);            	                
+		   //App.Save;
+		   //excelObj.Workbooks.Close;
+		  //App.Application.Quit;
+		   
+		   ExcelSave(FFileSavePath); 
+			 ExcelClose(FFileSavePath);
+			 //ExcelQuit();						  			        
+End ;
+
+Function ExcelChart.FormatArrayForExcel(data);
+Begin
+	    dataArr := Data ;
+	    excelData := array() ;
+	    if ifarray(dataArr) and length(dataArr) then 
+	    begin 
+				    IndxsArr := getAllIndexs(dataArr[0]) ;
+				    excelData &= array(indxsArr) ;//取得字符串下标为第一条记录				   
+				    rowCount := mRows(dataArr) ;
+				    colCount := mcols(dataArr) ;
+			 	    arr := nils(rowCount,colCount);
+			 	    arr[:,:] := dataArr[:,:]; 			 	   
+			 	    excelData &= arr ;
+ 	    end
+ 	    return excelData ;
+End; 
+
+Function ExcelChart.SetExcelData() ;
+Begin	   
+	   if FIfFormatData then DataArr := FormatArrayForExcel(FData);//格式化数据     
+     a := ExcelSetCells(FFileSavePath,FSheetName,1,1,mRows(DataArr),mCols(DataArr),DataArr);	   
+	   if a then
+	       begin
+	        excelSave(FFileSavePath);
+	        return DataArr;
+	       end
+	   else
+	       FMsg := "数据导入Excel出错！问题原因可能为:文件路径出错！FFileSavePath="+tostring(FFileSavePath);
+	       
+End;
+
+Function ExcelChart.SetChart(ChartObj,Conf,seriesNum);
+Begin
+	   Chart := ChartObj ;
+	   if FChartType in  ChartTypeList("柱形图") then
+     begin
+      	  Chart.SeriesCollection(seriesNum).ChartType := FChartType;
+          Chart.SeriesCollection(seriesNum).Border.LineStyle := xlLineStyleNone();
+          Chart.SeriesCollection(seriesNum).Interior.Color := ifnumber(Conf['color']) ? Conf['color']:FColorArr[seriesNum-1];
+
+          if (FChartType in ChartTypeList("柱形图")["3DColumn"]) or (FChartType in ChartTypeList("柱形图")["Cylinder"]) then //三维柱形图
+          begin
+          	    if not ifnil(FRotation) then
+          	       Chart.Rotation := FRotation ;//仰角
+
+          	    if not ifnil(FElevation) then
+                   Chart.Elevation := FElevation ;//转角
+          end
+     end
+	   else if FChartType in ChartTypeList("折线图") then  //折线图
+     begin
+          Chart.SeriesCollection(seriesNum).ChartType := FChartType ;
+          Chart.SeriesCollection(seriesNum).Border.Weight := xlMedium();
+			    Chart.SeriesCollection(seriesNum).Border.Color := ifnumber(Conf['color']) ? Conf['color']:FColorArr[seriesNum-1];
+
+			    if FChartType in ChartTypeList("折线图")["Markers"] then //折线数据点图
+			    begin
+						    Chart.SeriesCollection(seriesNum).MarkerForegroundColor := ifnumber(Conf['color']) ? Conf['color']:FColorArr[seriesNum-1];
+			          Chart.SeriesCollection(seriesNum).MarkerBackgroundColor := ifnumber(Conf['color']) ? Conf['color']:FColorArr[seriesNum-1];
+			          //Chart.SeriesCollection(seriesNum).MarkerSize := 5 ;//数据点大小
+			    end
+
+			    if FChartType in ChartTypeList("折线图")["3DLine"] then //三维柱折线图
+          begin
+          	    if not ifnil(FRotation) then
+          	       Chart.Rotation := FRotation ;//仰角
+
+          	    if not ifnil(FElevation) then
+                   Chart.Elevation := FElevation ;//转角
+          end
+     end
+     else if FChartType in ChartTypeList("饼图") then //饼图--以行分割数据
+		 begin
+			    Chart.SeriesCollection(seriesNum).ChartType := FChartType ;
+			    if not ifnil(FExplosion) then
+			    begin 
+			       Chart.SeriesCollection(seriesNum).Explosion := FExplosion ;//分离度
+			    end
+			    else
+			    begin
+			       Chart.SeriesCollection(seriesNum).Explosion := 0 ;//分离度
+			    end
+			    
+			    if FChartType in ChartTypeList("饼图")["3DPie"] then //3D饼图
+			    begin
+			          if not ifnil(FRotation) then
+          	       Chart.Rotation := FRotation ;//仰角
+
+          	    if not ifnil(FElevation) then
+                   Chart.Elevation := FElevation ;//转角
+			    end
+		 end
+		 else if FChartType in ChartTypeList("条形图") then
+		 begin
+		       Chart.SeriesCollection(seriesNum).ChartType := FChartType ;
+		       Chart.SeriesCollection(seriesNum).Interior.Color := ifnumber(Conf['color']) ? Conf['color']:FColorArr[seriesNum-1];
+		       
+		       if (FChartType in ChartTypeList("条形图")["3DBar"]) or (FChartType in ChartTypeList("条形图")["Cylinder"]) or (FChartType in ChartTypeList("条形图")["Cone"]) or (FChartType in ChartTypeList("条形图")["Pyramid"]) then
+ 			     begin
+			          if not ifnil(FRotation) then
+          	       Chart.Rotation := FRotation ;//仰角
+
+          	    if not ifnil(FElevation) then
+                   Chart.Elevation := FElevation ;//转角
+			     end
+		 end
+		 else if FChartType in ChartTypeList("面积图") then
+		 begin
+		       Chart.SeriesCollection(seriesNum).ChartType := FChartType;
+		       Chart.SeriesCollection(seriesNum).Interior.Color := ifnumber(Conf['color']) ? Conf['color']:FColorArr[seriesNum-1];
+
+		       if (FChartType in ChartTypeList("面积图")["3DArea"]) then
+ 			     begin
+			          if not ifnil(FRotation) then
+          	       Chart.Rotation := FRotation ;//仰角
+
+          	    if not ifnil(FElevation) then
+                   Chart.Elevation := FElevation ;//转角
+			     end
+		 end
+		 else if FChartType in ChartTypeList("股价图") then
+		 begin
+		      Chart.ChartType := FChartType ;
+		 end
+		 else if FChartType in ChartTypeList("散点图") then
+		 begin			 	 	 		     
+		     Chart.SeriesCollection(seriesNum).ChartType := FChartType ;
+		     Chart.SeriesCollection(seriesNum).Border.Color := FColorArr[seriesNum-1];
+		     Chart.SeriesCollection(seriesNum).MarkerForegroundColor := ifnumber(Conf['color']) ? Conf['color']:FColorArr[seriesNum-1];
+         Chart.SeriesCollection(seriesNum).MarkerBackgroundColor := ifnumber(Conf['color']) ? Conf['color']:FColorArr[seriesNum-1];
+         Chart.SeriesCollection(seriesNum).ChartType := FChartType ;        
+         	 //趋势线属性
+       	 //Chart.SeriesCollection(seriesNum).Trendlines.isTrendZone := 0;
+       	 //Chart.SeriesCollection(seriesNum).Trendlines.color := 'Yellow';
+       	 //Chart.SeriesCollection(seriesNum).Trendlines.dashed :=1;
+         //Chart.SeriesCollection(seriesNum).MarkerSize := 5 ;//数据点大小
+		 end
+		 else if FChartType in ChartTypeList("曲面图") then
+		 begin
+		     Chart.SeriesCollection(seriesNum).ChartType := FChartType ;
+		     Chart.SeriesCollection(seriesNum).Interior.Color := ifnumber(Conf['color']) ? Conf['color']:FColorArr[seriesNum-1];
+		 end
+		 else if FChartType in ChartTypeList("圆环图") then
+		 begin
+		     Chart.SeriesCollection(seriesNum).ChartType := FChartType ;
+		     Chart.SeriesCollection(seriesNum).Interior.Color := ifnumber(Conf['color']) ? Conf['color']:FColorArr[seriesNum-1];
+		 end
+		 else if FChartType in ChartTypeList("气泡图") then
+		 begin
+		     Chart.SeriesCollection(seriesNum).ChartType := FChartType ;
+		     Chart.SeriesCollection(seriesNum).Interior.Color := ifnumber(Conf['color']) ? Conf['color']:FColorArr[seriesNum-1];
+		 end
+		 else if FChartType in ChartTypeList("雷达图") then
+		 begin
+		     Chart.SeriesCollection(seriesNum).ChartType := FChartType ;
+		     Chart.SeriesCollection(seriesNum).Border.Color := ifnumber(Conf['color']) ? Conf['color']:FColorArr[seriesNum-1];
+		     //Chart.SeriesCollection(seriesNum).MarkerForegroundColor := FColorArr[seriesNum-1];
+         //Chart.SeriesCollection(seriesNum).MarkerBackgroundColor := FColorArr[seriesNum-1];
+		 end
+End;
+
+Function ExcelChart.ChartTypeList(cType);
+Begin
+	   ChartTypeArr := array("柱形图":("Column":(
+									                          xlColumnClustered(),//簇状柱形图
+									                          xlColumnStacked(),//堆积柱形图
+									                          xlColumnStacked100()),//百分比堆积柱形图
+	                                   "3DColumn":(
+									                          xl3DColumn(),//三维柱形图
+									                          xl3DColumnClustered(),//三维簇状柱形图
+									                          xl3DColumnStacked(),//三维堆积柱形图
+									                          xl3DColumnStacked100()),//三维百分比堆积柱形图
+	                                   "Cylinder":(
+									                          xlCylinderCol(),//三维柱形圆柱图
+									                          xlCylinderColClustered(),//簇状柱形圆柱图
+									                          xlCylinderColStacked(),//堆积柱形圆柱图
+									                          xlCylinderColStacked100(),//百分比堆积柱形圆柱图
+									                          xlCylinderBarClustered(),//簇状条形圆柱图
+								                            xlCylinderBarStacked100()),//百分比堆积条形圆柱图
+								                     "Cone":(
+								                            xlConeCol(),//三维柱形圆锥图
+																						xlConeColClustered(),//簇状柱形圆锥图
+																						xlConeColStacked(),//堆积柱形圆锥图
+																						xlConeColStacked100()),//百分比堆积柱形圆锥图
+																		 "Pyramid":(				
+																					  xlPyramidCol(),//三维柱形棱锥图
+																						xlPyramidColStacked(),//堆积柱形棱锥图
+																						xlPyramidColClustered(),//簇状柱形棱锥图
+																			      xlPyramidColStacked100())//百分比堆积柱形棱锥图
+                                    ),
+                            "折线图":("Line":(
+                                            xlLine(),//折线图
+                                            xlLineStacked(),//堆积折线图
+                                            xlLineStacked100()),//百分比堆积折线图
+                                      "Markers":(
+                                            xlLineMarkers(),//数据点折线图
+                                            xlLineMarkersStacked(),//堆积数据点折线图
+                                            xlLineMarkersStacked100()),//百分比堆积数据点折线图
+                                      "3DLine":(
+                                            xl3DLine())//三维折线图
+                                    ),
+                            "饼图":("Pie":(
+				                                    xlPie(),//饼图
+																						xlPieExploded(),//分离型饼图
+																						xlPieOfPie()),//复合饼图
+																		"3DPie":(												
+																						xl3DPie(),//三维饼图
+																						xl3DPieExploded()),//三维分离型饼图
+																		"BarPie":(
+                                            xlBarOfPie())//复合条饼图
+                                    ),
+                             "条形图":("Bar":(
+				                                    xlBarClustered(),//簇状条形图
+				                                    xlBarStacked(),//堆积条形图
+				                                    xlBarStacked100()),//百分比堆积条形图
+				                               "3DBar":(
+				                                    xl3DBarClustered(),//三维簇状条形图
+																						xl3DBarStacked(),//三维堆积条形图
+																						xl3DBarStacked100()),//三维百分比堆积条形图				                               )     
+																			"Cylinder":(
+																			      xlCylinderBarClustered(),//簇状条形圆柱图
+																			      xlCylinderBarStacked(),//堆积条形圆柱图
+																						xlCylinderBarStacked100()),//百分比堆积条形圆柱图			
+																			"Cone":(
+																			      xlConeBarClustered(),//簇状条形圆锥图
+																						xlConeBarStacked(),//堆积条形圆锥图
+																						xlConeBarStacked100()),//百分比堆积条形圆锥图
+																			"Pyramid":(
+																			      xlPyramidBarClustered(),//簇状条形棱锥图
+																						xlPyramidBarStacked(),//堆积条形棱锥图
+																						xlPyramidBarStacked100())//百分比堆积条形棱锥图
+																			),
+															"面积图":("Area":(
+																			      xlArea(),//面积图
+																						xlAreaStacked(),//堆积面积图
+																						xlAreaStacked100()),//百分比堆积面积图
+																				"3DArea":(
+																				    xl3DArea(),//三维面积图
+																						xl3DAreaStacked(),//三维堆积面积图
+																						xl3DAreaStacked100())//三维堆积面积图
+															         ),
+															"股价图":(
+															          xlStockHLC(),//盘高-盘低-收盘图
+																				xlStockOHLC(),//开盘-盘高-盘低-收盘图
+																				xlStockVHLC(),//成交量-盘高-盘低-收盘图
+																				xlStockVOHLC()//成交量-开盘-盘高-盘低-收盘图
+																				),
+															"散点图":(
+															          xlXYScatter(),//散点图
+																				xlXYScatterLines(),//折线散点图
+																				xlXYScatterLinesNoMarkers(),//无数据点折线散点图
+																				xlXYScatterSmooth(),//平滑线散点图
+																				xlXYScatterSmoothNoMarkers()//无数据点平滑线散点图
+																				),
+															"曲面图":(
+															          xlSurface(),//三维曲面图
+																				xlSurfaceTopView(),//曲面图（俯视图）
+																				xlSurfaceTopViewWireframe(),//曲面图（俯视框架图）
+																				xlSurfaceWireframe()//三维曲面图（框架图）
+																				),
+															"圆环图":(
+															          xlDoughnut(),//圆环图
+                                        xlDoughnutExploded()//分离型圆环图
+                                        ),
+                              "气泡图":(
+                                        xlBubble(),//气泡图
+                                        xlBubble3DEffect()//三维气泡图 
+                                        ),
+                              "雷达图":(
+                                        xlRadar(),//雷达图
+                                        xlRadarFilled(),//填充雷达图
+                                        xlRadarMarkers()//数据点雷达图
+                                        )
+                            );
+
+     return  ChartTypeArr[cType] ;                      
+End; 
+
+function ExcelChart.convert(x);
+begin
+	    if  x<=25 and x>=0 then
+	       return chr(x+65)+'1'
+	    else if x>25 then
+	       begin
+	       	    y := x div 26;
+	       	    z := x mod 26;
+	       	    return chr(y+64)+chr(z+65)+'1';	       	    
+	       end;
+	
+end;
+
+
+
+function ExcelChart.DoubleAdapt(chart);
+begin	         
+     if Chart.Axes(xlValue()).MinimumScale = 0 then return ;
+     GNUM := (Chart.Axes(xlValue()).MaximumScale  -  Chart.Axes(xlValue()).MinimumScale)/Chart.Axes(xlValue()).MajorUnit;
+     GGNUM := Chart.Axes(xlValue()).MaximumScale/Chart.Axes(xlValue()).MajorUnit;
+     SecondaryCount :=   Chart.Axes(xlValue(),xlSecondary()).MaximumScale * GNUM/GGNUM;
+     Chart.Axes(xlValue(),xlSecondary()).MinimumScaleIsAuto := -1;
+     Chart.Axes(xlValue(), xlSecondary()).MinimumScale := Chart.Axes(xlValue(), xlSecondary()).MaximumScale - SecondaryCount;          
+end;
+

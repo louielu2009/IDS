@@ -1,0 +1,247 @@
+type IDS_LiveReport=class
+
+  class function SetDocOrderNo(const d);
+  class function rpt_page_header(txt);
+  class function rpt_page_footer(txt);
+  class function rpt_page_cover_title{txt};
+  class function rpt_page_cover_date(txt);
+  class function rpt_page_cover_cotent();
+  class function rpt_page_tableOfContents(data);
+  class function rpt_page_nav(data);
+  class function rpt_page_h1(txt);
+  class function rpt_page_h2(txt);
+  class function rpt_page_h3(txt);
+  class function rpt_page_h4(txt);
+  class function rpt_page_h5();
+  
+  class function rpt_page_paragraph(txt);
+  class function rpt_page_table(t);
+end;
+
+class function IDS_LiveReport.SetDocOrderNo(const d);
+begin
+	data := d;
+	lv1_order := lv2_order := lv3_order := lv4_order := lv5_order := lv6_order := 1;
+	nth_title := 1;
+	update data set ['org_content'] = ['content'] end;
+	for i := 0 to length(data) - 1 do
+	begin
+		if data[i]['type'] = 'title' then
+		begin
+			case data[i]['lv'] of 
+				1:
+				begin
+					lv2_order := lv3_order := lv4_order := lv5_order := lv6_order := 1;
+					data[i]['content'] := '<span class="doc_order_no" >§'
+										+ inttostr(lv1_order++)
+										+ '</span>'+data[i]['content'];
+				end;
+				2:
+				begin
+					data[i]['content'] := '<span class="doc_order_no" >' 
+									   + inttostr(lv1_order-1) + '.' 
+									   + inttostr(lv2_order++) 
+									   + '</span>'+ data[i]['content'];	
+					lv3_order := lv4_order := lv5_order := lv6_order := 1;
+				end;
+				3:
+				begin
+					data[i]['content'] := '<span class="doc_order_no" >' 
+									    + inttostr(lv1_order-1) + '.' 
+									    + inttostr(lv2_order-1) + '.' 
+									    + inttostr(lv3_order++) 
+									    + '</span>'+ data[i]['content'];	
+					lv4_order := lv5_order := lv6_order := 1;
+				end;
+				4:
+				begin
+					data[i]['content'] := '<span class="doc_order_no" >' 
+									    + inttostr(lv1_order-1) + '.' 
+										+ inttostr(lv2_order-1) + '.' 
+										+ inttostr(lv3_order-1) + '.' 
+										+ inttostr(lv4_order++) 
+										+ '</span>'+ data[i]['content'];	
+					lv5_order := lv6_order := 1;
+				end;
+				5:
+				begin
+					data[i]['content'] := '<span class="doc_order_no" >' 
+										+ inttostr(lv1_order-1) + '.' 
+										+ inttostr(lv2_order-1) + '.' 
+										+ inttostr(lv3_order-1) + '.'
+										+ inttostr(lv4_order-1) + '.' 
+										+ inttostr(lv5_order++) 
+										+ '</span>'+ data[i]['content'];
+					lv6_order := 1;
+				end;
+				6:
+				begin
+					data[i]['content'] := '<span class="doc_order_no" >' 
+										+ inttostr(lv1_order-1) + '.' 
+										+ inttostr(lv2_order-1) + '.' 
+										+ inttostr(lv3_order-1) + '.'
+										+ inttostr(lv4_order-1) + '.' 
+										+ inttostr(lv5_order-1) + '.' 
+										+ inttostr(lv6_order++) 
+										+ '</span>'+ data[i]['content'];
+				end;
+			end;
+		end;
+	end;
+	return data;
+end;
+
+class function IDS_LiveReport.rpt_page_header(txt);
+begin
+	return '<div class="report_page_header">'+txt+'</div>';
+end;
+
+class function IDS_LiveReport.rpt_page_footer(txt);
+begin
+	return '<div class="report_page_footer">'+txt+'</div>';
+end;
+
+
+class function IDS_LiveReport.rpt_page_cover_title{txt};
+begin
+end;
+
+class function IDS_LiveReport.rpt_page_cover_date(txt);
+begin
+end;
+
+class function IDS_LiveReport.rpt_page_cover_cotent();
+begin
+end;
+
+//目录
+class function IDS_LiveReport.rpt_page_tableOfContents(data);
+begin
+	contents := select * from data where ['type'] = 'title' and ['lv'] < 3 end;
+	html := '<table class="table_of_contents">';
+	for i := 0 to length(contents) - 1 do
+	begin
+		if contents[i]['lv'] = 1 then tdClass := ' class="table_of_contents_h1" '
+		else tdClass := "";
+		html += '<tr><td '+tdClass+' >'+contents[i]['content']+'</td></tr>';
+	end;
+	html += '</table>';
+	return html;
+end;
+
+//导航栏
+class function IDS_LiveReport.rpt_page_nav(data);
+begin
+	contents := select * from data where ['type'] = 'title' and ['lv'] < 3 end;
+	html := '<ul class="report_nav_contents">';
+	for i := 0 to length(contents) - 1 do
+	begin
+		liClass := '';
+		
+		
+		if i > 0 and contents[i]['lv'] = 2 and contents[i-1]['lv'] = 1  then
+			html += '<ul>';
+	
+		if contents[i]['lv'] = 1 then
+			html += '<li class="title_lv1" title="'+contents[i]['org_content']+'"><i '
+				  + ( (i<length(contents)-2 and contents[i+1]['lv'] = 2) ? 'class="ui-icon ui-icon-triangle-1-se"' : '') + '></i><a href="#nth_title_'+ inttostr(i+1) +'">'+contents[i]['content']+'</a></li>';
+		else
+			html += '<li title="'+contents[i]['org_content']+'"><a href="#nth_title_'+ inttostr(i+1) +'">'+contents[i]['content']+'</a></li>';
+		
+		if contents[i]['lv'] = 2 and (i = length(contents) - 1 or contents[i+1]['lv'] = 1) then
+			html += '</ul>';
+	end;
+	html += '</ul>';
+	return html;
+end;
+
+class function IDS_LiveReport.rpt_page_h1(txt);
+begin
+	sysparams['nth_title_no'] := sysparams['nth_title_no']+1;
+	return '<h1><a name="nth_title_'+inttostr(sysparams['nth_title_no'])+'">'+txt+'</a></h1>';
+end;
+
+class function IDS_LiveReport.rpt_page_h2(txt);
+begin
+	sysparams['nth_title_no'] := sysparams['nth_title_no']+1;
+	return '<h2><a name="nth_title_'+inttostr(sysparams['nth_title_no'])+'">'+txt+'</a></h2>';
+end;
+
+class function IDS_LiveReport.rpt_page_h3(txt);
+begin
+	
+	return '<h3>'+txt+'</h3>';
+end;
+
+class function IDS_LiveReport.rpt_page_h4(txt);
+begin
+	return '<h4>'+txt+'</h4>';
+end;
+
+class function IDS_LiveReport.rpt_page_h5();
+begin
+end;
+
+class function IDS_LiveReport.rpt_page_paragraph(txt);
+begin
+	txt := replaceStr(trim(txt),'\r\n','</p><p>');
+	txt := replaceStr(trim(txt),'\n','</p><p>');
+	return '<p>'+txt+'</p>';
+end;
+
+class function IDS_LiveReport.rpt_page_table(t);
+begin
+	if not istable(t) or (ifarray(t) and length(t) = 0 ) then 
+	begin
+		if not ifstring(t) then t := tostn(t);
+		return rpt_page_paragraph(t);
+	end;
+	
+	indexes := getAllIndexs(t[0]);
+	html := '<table class="default">';
+	
+	//如果数字，则不输出表头；
+	ifIndexesNumber := false;
+	for i := 0 to length(indexes) - 1 do
+	begin
+		if ifnumber(indexes[i]) then ifIndexesNumber := true;
+	end;
+	
+	if not ifIndexesNumber then
+	begin
+		html += '<thead>';	
+		for i := 0 to length(indexes) - 1 do
+		begin
+			html += '<th>'+indexes[i]+'</th>';
+		end;	
+		html += '</thead>';
+	end;
+	
+	html += '<tbody>';
+	for i := 0 to length(t) - 1 do
+	begin
+		html += '<tr>';
+		for j := 0 to length(t[i]) - 1 do
+		begin
+			d := t[i][indexes[j]];
+			tdClass := '';
+			if indexes[j] <> '序号' and ifnumber(d) then 
+			begin
+				d := FormatFloat('0.00',d);
+				tdClass := 'class="num"';
+			end;
+			
+			if ifnil(d) then 
+			begin
+				d := '-';
+				tdClass := 'class="num"';
+			end;
+			
+			html += '<td '+tdClass+'>'+tostr(d)+'</td>';
+		end;
+		html += '</tr>';
+	end;
+	html += '</tbody>';
+	html += '</table>';
+	return html;
+end;

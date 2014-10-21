@@ -1,0 +1,52 @@
+Frame := CreateObject("TWebFrame","TWebFundIDSHeader");
+Frame.outHeader("报告模板管理");
+uid := httpGetQueryValueByName('UID');
+UID := 'admin';
+
+queryData2 := array();
+queryData2['Table'] := 'TS_RTemplateType';
+queryData2['QueryStr'] := "";//"USERID='"+tostring(UID)+"'";
+r2 := class(ExecuteSql).query(queryData2);     
+
+tg := CreateObject("TTree") ;
+tg.Data := array(
+("name":"QDII型","group":"季度报告"),
+("name":"保本型","group":"季度报告"),
+("name":"股票型","group":"季度报告"),
+("name":"货币型","group":"季度报告"),
+("name":"理财型","group":"季度报告"),
+("name":"偏股型","group":"季度报告"),
+("name":"债券型","group":"季度报告"),
+("name":"指数型","group":"季度报告"),
+("name":"封闭式","group":"季度报告"),
+("name":"封闭式","group":"年金报告"),
+("name":"封闭式","group":"审批报告"),
+("name":"偏股型","group":"招募说明书"));
+treeHtml:= tg.GainHtml() ;
+
+
+html :='<div class="left_nav">'+treeHtml;
+for i:=0 to length(r2)-1 do 
+begin
+  //html +='<button class="EM_telabel">'+r2[i]['NAME']+'</button>';
+end;
+html +='</div>';
+     
+html +='<div class="main_content">';  
+data := array();
+data['Table'] := 'TS_RTemplateConf';
+data['QueryStr'] := "";//"USERID='"+tostring(UID)+"'";
+r := class(ExecuteSql).query(data);
+if not istable(r)  then html+='您尚无报告模板，创建.';
+html+= '<table class="underlineTable">';
+
+//("TID":"20140826142525296_927108892753885433151919231","USERID":"","TNAME":"南方消费分级基金季报模板","CREATEDDATE":41877.6009837963,"MODIFIER":"","MODIFYDATE":0.00,"STATUS":1.00,"LABELS":"南方消费;季报")
+// ("TID":"20140820162123980_46006768118095313511054330571","USERID":"","TNAME":"基本","CREATEDDATE":41871.6815162037,"MODIFIER":"","MODIFYDATE":0.00,"STATUS":1.00,"LABELS":"年报"), 
+
+for i:= 0 to length(r) -1 do begin
+		statusStr:= '启用';
+		if r[i]['STATUS'] then statusStr:= '<span style="color:rgb(204, 17, 17);">禁用</span>';
+		html+= '<tr tid="'+r[i]['TID']+'"><td>'+tostring(r[i]['TNAME']?:'--')+'-'+tostring(r[i]['LABELS'])+'</td><td>'+dateTimeToStr(r[i]['CREATEDDATE'])+'</td><td>'+(r[i]['USERID']?:"admin")+'</td><td><button onclick="return model_mgr(this,1);">编辑</button><button onclick="return model_mgr(this,2);">数据</button><button onclick="return model_mgr(this,3);">报告</button><button onclick="return model_mgr(this,4);">'+statusStr+'</button></td><tr/>';
+end;
+html+= '</table></div>';
+echo html;

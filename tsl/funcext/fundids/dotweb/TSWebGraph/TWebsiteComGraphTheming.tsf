@@ -1,0 +1,60 @@
+//图形皮肤2012-8-23,生成word报告和web图形皮肤设置都用此函数，有待完善
+type TWebsiteComGraphTheming=class
+  class function getDefaultTheming(); 
+  class function parse2JS(conf);
+end;
+
+
+class function TWebsiteComGraphTheming.getDefaultTheming();
+begin
+		titleConf:=array(
+							'textColor':'black'
+					);
+	
+		axesConf:=array(
+						 'seriesColors':('red','orange','yellow','green','blue','ingigo'),
+						 'highlightColors': ('lightpink', 'lightsalmon', 'lightyellow', 'lightgreen', 'lightblue', 'mediumslateblue'),   						 
+				     'borderWidth': 0,
+				     'ticks':(
+				               'fontSize': '12pt',
+				               'fontFamily': 'Times New Roman',
+				               'textColor': 'black'
+				           ),
+				     'label': (
+				               'fontFamily': 'Times New Roman',
+				               'textColor': 'black'
+				              ) 
+				           		         
+		);
+	
+	 gridConf:=array(
+            'backgroundColor': 'white',
+            'borderWidth': 0,
+            'gridLineColor': 'black',
+            'gridLineWidth': 2,
+            'borderColor': 'black'
+   );
+	
+	 legendConf:=array(
+            'background': 'white',
+            'textColor': 'black',
+            'fontFamily': 'Times New Roman',
+            'border': '1px solid black'
+   );
+	 
+		
+	arr:=array(
+		'title':titleConf,
+		'axesSyle':axesConf,
+		'grid':gridConf,
+		'legend':legendConf	 
+	);	
+	
+	
+	return arr;
+end;
+
+class function TWebsiteComGraphTheming.parse2JS(conf);
+begin
+return class(TDataConverter).TSData2Json(conf);
+end; 

@@ -1,0 +1,105 @@
+.dotWebMenuContent{
+   width:600px;
+   height:200px;
+   position:absolute;
+   display:none;
+   z-index:200;
+}
+
+.menuItemSetor{
+   width:300px;
+   height:200px;
+   border:1px solid #d9d9d9 ;
+   background:white ;
+   position:absolute;
+   z-index:1001 !important;
+}
+
+.menuItemSetor .menuItemSetorTopBar{
+   border-top : none ;
+   border-left : none ;
+   border-right : none ;
+}
+
+.menuItemSetor .menuItemSetorTopBar .btn-container{
+   cursor : pointer ;
+   padding : 1px 2px ;
+}
+
+.menuItemSetor .menuItemSetorTopBar tr td *{
+   vertical-align : middle ;
+}
+
+.menuItemSetor .menuItemSetorTopBar .ui-icon{
+   display : inline-block ;
+}
+
+.menuItemSetor table{
+   width :100% ;
+}
+
+.menuContentEditor_top{
+   border-top : none !important ;
+   border-left : none !important ;
+   border-right : none !important ;
+   padding : 3px ;
+}
+
+.dotWebMenuContent .menu-state{
+   display : none ;
+   position : absolute ;
+   padding : 2px 10px 2px 10px ;
+}
+
+.menuContentEditor_top *{
+   vertical-align : middle ;
+} 
+
+.dotWebMenuList{
+	 _border-top : solid 1px ;
+	 margin-left : 8px ;
+	 min-Height : 158px ;
+}
+
+.dotWebMenuList *{
+	 vertical-align : middle ;
+}
+
+.dotWebRootMenuList td{
+   vertical-align : top ;
+}
+
+.dotWebMenuContent .dotWebMenuButton{
+   cursor : pointer ;
+   display : inline-block ;
+   margin : 0 0 0 6px ;
+}
+
+.dotWebRootMenuList .dotWebMenuAddButton,.dotWebMenuContent .dotWebSubMenuFlag{
+   display : inline-block ;
+}
+
+.dotWebMenuContent .dotWebSubMenuFlag{
+   cursor : pointer ;
+   _position : absolute ;
+}
+
+.dotWebMenuContent .dotWebMenuItem{
+   cursor : pointer ;
+   margin : 0 20px 10px 0 ;
+}
+
+.dotWebRootMenuList .dotWebMenuButton{
+   vertical-align : middle ;	
+}
+
+.dotWebRootMenu,.dotWebMenuContent .menuNavigation{
+   _margin : 0 8px 0 0 ;
+   cursor : pointer ;
+}
+
+.dotWebMenuContent .menuArrow{
+   _margin : 0 8px 0 0 ;
+   vertical-align : middle ;
+   display : inline-block ;
+}
